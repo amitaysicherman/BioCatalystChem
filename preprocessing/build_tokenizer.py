@@ -2,6 +2,42 @@ from transformers import PreTrainedTokenizerFast
 from tokenizers import Tokenizer, models, pre_tokenizers
 import argparse
 
+SPACIAL_TOKENS = {"[PAD]": 0, "[UNK]": 1, "[BOS]": 2, "[EOS]": 3}
+
+
+def get_first_ec_token_index(tokenizer: PreTrainedTokenizerFast, ec_split):
+    for index in range(len(tokenizer.get_vocab())):
+        token = tokenizer.decode(index)
+        if ec_split and token.startswith("[v"):
+            return index
+        if not ec_split and token.startswith("[ec:"):
+            return index
+
+
+def get_ec_order(tokenizer: PreTrainedTokenizerFast, ec_split=0):
+    assert ec_split == 0
+    ec_order = []
+    for index in range(len(tokenizer.get_vocab())):
+        token = tokenizer.decode(index)
+        if token.startswith("[ec:"):
+            ec_order.append(unwrap_ec(token))
+    return ec_order
+
+
+def get_tokenizer_file_path(ec_split):
+    output_path = "./datasets/tokenizer"
+    if not ec_split:
+        output_path += "_no_ec"
+    return output_path
+
+
+def wrap_ec(ec):
+    return f"[ec:{ec}]"
+
+
+def unwrap_ec(ec):
+    return ec.split(":")[1][:-1]
+
 
 def ec_tokens_to_seq(ec_tokens_str):
     ec_tokens = ec_tokens_str.split()
@@ -12,72 +48,99 @@ def ec_tokens_to_seq(ec_tokens_str):
         assert token[0] in ["v", "u", "t", "q"]
         token = token[1:]
         ec.append(token)
-    return "[" + ".".join(ec) + "]"
+    return wrap_ec(".".join(ec))
+
+
+def redo_ec_split(text):
+    if "|" not in text:
+        return text
+    text_no_ec = text.split("|")[0].strip()
+    ec = text.split("|")[1].strip()
+    ec = ec_tokens_to_seq(ec)
+    return f"{text_no_ec} | {ec}"
 
 
 def read_files(file_paths, ec_split):
     contents = []
     for file_path in file_paths:
+        print(f"Reading {file_path}")
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.read().splitlines()
         if not ec_split and "|" in lines[0]:
-            lines_no_ec = [line.split("|")[0] for line in lines]
-            ec = [line.split("|")[1] for line in lines]
-            ec = [ec_tokens_to_seq(ec_tokens) for ec_tokens in ec]
-            lines = [f"{line} | {ec_}" for line, ec_ in zip(lines_no_ec, ec)]
+            lines = [redo_ec_split(line) for line in lines]
         contents.extend(lines)
     return contents
 
 
-def build_vocab(texts):
+def build_vocab(texts, ec_split):
     all_word = set()
     for text in texts:
         words = text.split()
         all_word.update(words)
-    return {word: i for i, word in enumerate(all_word)}
+    words_dict = {**SPACIAL_TOKENS}
+    no_ec_words = set()
+    ec_words = set()
+    for word in all_word:
+        if ec_split and word.startswith("[") and word[1] in ["v", "u", "t", "q"]:
+            ec_words.add(word)
+            continue
+        if not ec_split and word.startswith("[ec:"):
+            ec_words.add(word)
+            continue
+        no_ec_words.add(word)
+    for word in no_ec_words:
+        words_dict[word] = len(words_dict)
+    for word in ec_words:
+        words_dict[word] = len(words_dict)
+    return words_dict
 
 
 def create_word_tokenizer(file_paths, ec_split):
     texts = read_files(file_paths, ec_split)
-    vocab = build_vocab(texts)
+    vocab = build_vocab(texts, ec_split)
     tokenizer = Tokenizer(models.WordLevel(vocab=vocab, unk_token="[UNK]"))
     tokenizer.pre_tokenizer = pre_tokenizers.WhitespaceSplit()
     tokenizer.post_process = None
     fast_tokenizer = PreTrainedTokenizerFast(
         tokenizer_object=tokenizer,
+        bos_token="[BOS]",
+        eos_token="[EOS]",
         unk_token="[UNK]",
         pad_token="[PAD]",
-        cls_token="[CLS]",
-        sep_token="[SEP]",
-        mask_token="[MASK]",
     )
 
     return fast_tokenizer
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--ec_split", type=int, default=0)
-args = parser.parse_args()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ec_split", type=int, default=1)
+    args = parser.parse_args()
 
-file_paths = []
-for dataset in ['ecreact', 'uspto']:
-    for split in ['train', 'valid', 'test']:
-        for side in ['src', 'tgt']:
-            file_paths.append(f"datasets/{dataset}/{side}-{split}.txt")
+    file_paths = []
+    if args.ec_split:
+        datasets = ['ecreact/level3', 'uspto']
+    else:
+        datasets = ['ecreact/level4', 'uspto']
 
-word_tokenizer = create_word_tokenizer(file_paths, args.ec_split)
-print(word_tokenizer)
-print(word_tokenizer.get_vocab())
+    for dataset in datasets:
+        for split in ['train', 'valid', 'test']:
+            for side in ['src', 'tgt']:
+                file_paths.append(f"datasets/{dataset}/{side}-{split}.txt")
 
-test_text = "C N C 1 C c 2 c [nH] c 3 c c c c ( c 2 3 ) C 1 C = C ( C ) C = O . N C ( = O ) C 1 = C N ( [C@@H] 2 O [C@H] ( C O P ( = O ) ( O ) O P ( = O ) ( O ) O C [C@H] 3 O [C@@H] ( n 4 c n c 5 c ( N ) n c n c 5 4 ) [C@H] ( O ) [C@@H] 3 O ) [C@@H] ( O ) [C@H] 2 O ) C = C C 1 . [H+] | [v1] [u5] [t1]"
-print(f"OR: {test_text}")
-encoded = word_tokenizer.encode(test_text, add_special_tokens=False)
-print(f"EN: {encoded}")
+    word_tokenizer = create_word_tokenizer(file_paths, args.ec_split)
+    print(word_tokenizer)
+    print(len(word_tokenizer.get_vocab()))
 
-decoded = word_tokenizer.decode(encoded, clean_up_tokenization_spaces=False, skip_special_tokens=True)
-print(f"DE: {decoded}")
-assert decoded == test_text
-output_path = "./datasets/tokenizer"
-if not args.ec_split:
-    output_path += "_no_ec"
-word_tokenizer.save_pretrained(output_path)
+    test_text="O = S ( = O ) ( [O-] ) S | [v1] [u8] [t5]"
+    if not args.ec_split:
+
+        test_text = redo_ec_split(test_text+" [q2]")
+    print(f"OR: {test_text}")
+    encoded = word_tokenizer.encode(test_text, add_special_tokens=False)
+    print(f"EN: {encoded}")
+    decoded = word_tokenizer.decode(encoded, clean_up_tokenization_spaces=False, skip_special_tokens=True)
+    print(f"DE: {decoded}")
+    assert decoded == test_text
+    output_path = get_tokenizer_file_path(args.ec_split)
+    word_tokenizer.save_pretrained(output_path)

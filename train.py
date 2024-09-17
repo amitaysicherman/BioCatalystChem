@@ -11,6 +11,8 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 import numpy as np
 from rdkit import Chem
+from preprocessing.build_tokenizer import get_tokenizer_file_path, get_first_ec_token_index, get_ec_order, redo_ec_split
+from ec_prot_model import CustomT5Model
 
 
 def disable_rdkit_logging() -> None:
@@ -46,10 +48,12 @@ def remove_ec(text):
 
 
 class SeqToSeqDataset(Dataset):
-    def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, use_ec=True):
+    def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, use_ec=True,
+                 ec_split=True):
         self.use_ec = use_ec
         self.max_length = max_length
         self.tokenizer = tokenizer
+        self.ec_split = ec_split
         self.data = []
         if weights is None:
             weights = [1] * len(datasets)
@@ -67,6 +71,9 @@ class SeqToSeqDataset(Dataset):
         if not self.use_ec:
             src_lines = [remove_ec(text) for text in src_lines]
             tgt_lines = [remove_ec(text) for text in tgt_lines]
+        if not self.ec_split:
+            src_lines = [redo_ec_split(text) for text in src_lines]
+            tgt_lines = [redo_ec_split(text) for text in tgt_lines]
         if DEBUG:
             src_lines = src_lines[:1]
             tgt_lines = tgt_lines[:1]
@@ -115,11 +122,11 @@ def compute_metrics(eval_pred, tokenizer):
     return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
 
 
-def main(use_ec=True):
-    tokenizer = PreTrainedTokenizerFast.from_pretrained("datasets/tokenizer")
-    n_add = tokenizer.add_special_tokens({"bos_token": "<BOS>", "eos_token": "<EOS>", "pad_token": "<PAD>"})
+def main(use_ec=True, ec_split=False):
+    tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
+    # n_add = tokenizer.add_special_tokens(SPACIAL_TOKENS)
 
-    config = T5Config(vocab_size=n_add + len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
+    config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id, bos_token_id=tokenizer.bos_token_id,
                       decoder_start_token_id=tokenizer.bos_token_id)
     if DEBUG:
@@ -127,13 +134,21 @@ def main(use_ec=True):
         config.d_model = 128
         config.num_heads = 4
         config.d_ff = 256
-    model = T5ForConditionalGeneration(config)
-    model.forward
+    if ec_split:
+        model = T5ForConditionalGeneration(config)
+    else:
+        ec_order = get_ec_order(tokenizer, ec_split)
+        cutoff_index = get_first_ec_token_index(tokenizer, ec_split)
+        lookup_len = 5
+        model = CustomT5Model(config, lookup_len, cutoff_index, ec_order)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
-    train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer, use_ec=use_ec)
+    train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer, use_ec=use_ec,
+                                    ec_split=ec_split)
     eval_split = "valid" if not DEBUG else "train"
-    val_ecreact = SeqToSeqDataset(["ecreact"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec)
-    val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec)
+    val_ecreact = SeqToSeqDataset(["ecreact"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
+                                  ec_split=ec_split)
+    val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
+                                ec_split=ec_split)
     eval_datasets = {"ecreact": val_ecreact, "uspto": val_uspto}
     run_name = "ec" if use_ec else "no_ec"
     print(f"Run name: {run_name}")
@@ -175,6 +190,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--use_ec", default=1, type=int)
+    parser.add_argument("--ec_split", default=0, type=int)
     args = parser.parse_args()
     DEBUG = args.debug
-    main(args.use_ec)
+    main(args.use_ec, args.ec_split)

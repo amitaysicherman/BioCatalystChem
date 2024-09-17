@@ -48,13 +48,12 @@ def clip_to_max_len(x: torch.Tensor, max_len: int = 1023):
 
 
 class EC2Vec:
-    def __init__(self, name=ESM_2):
+    def __init__(self, name=ESM_2, load_model=True):
         super().__init__()
         self.cp_name = protein_name_to_cp[name]
         self.tokenizer = None
         self.model = None
         self.name = name
-        self.get_model_tokenizer()
         self.prot_dim = model_to_dim[name]
         self.random_if_fail = False
         self.uniprot = UniProt()
@@ -63,6 +62,8 @@ class EC2Vec:
         self.id_to_ec = dict()
         self.ec_to_vec_file = f"datasets/{name}_ec_to_vec.txt"
         self.load_ec_to_vec()
+        if load_model:
+            self.get_model_tokenizer()
 
     def load_ec_to_vec(self):
         if os.path.exists(self.ec_to_vec_file):
@@ -105,7 +106,7 @@ class EC2Vec:
     def fasta_to_vec(self, seq: str):
         if seq == "":
             if self.random_if_fail:
-                return np.random.rand(1, self.prot_dim)
+                return np.random.rand(1, self.prot_dim).flatten()
             return torch.zeros(1, self.prot_dim)
         if self.name in [ESM_1B, ESM_2]:
             inputs = self.tokenizer(seq, return_tensors='pt')["input_ids"].to(device)
@@ -143,8 +144,13 @@ class EC2Vec:
     def id_to_vec(self, id_: str):
         return self.ec_to_vec(self.id_to_ec[id_])
 
-    def ids_to_vecs(self, ids: torch.Tensor):
-        return torch.stack([self.id_to_vec(id_) for id_ in ids])
+    def get_vecs_numpy(self, ec_tokens_order):
+        vecs = []
+        for ec in ec_tokens_order:
+            vecs.append(self.ec_to_vec(ec))
+            print(vecs[-1].shape)
+
+        return np.array(vecs)
 
 
 if __name__ == "__main__":
