@@ -59,7 +59,7 @@ class EC2Vec:
         self.uniprot = UniProt()
         self.ec_to_vec_mem = {}
         self.ec_to_vec_file = f"datasets/{name}_ec_to_vec.txt"
-        self.ec_to_vec_mem = self.load_ec_to_vec()
+        self.load_ec_to_vec()
         self.ec_to_id = dict()
         self.id_to_ec = dict()
 
