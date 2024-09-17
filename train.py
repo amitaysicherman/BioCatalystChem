@@ -129,7 +129,7 @@ def main(use_ec=True):
         config.d_ff = 256
     model = T5ForConditionalGeneration(config)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
-    train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer,use_ec=use_ec)
+    train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer, use_ec=use_ec)
     eval_split = "valid" if not DEBUG else "train"
     val_ecreact = SeqToSeqDataset(["ecreact"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec)
     val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec)
@@ -147,7 +147,7 @@ def main(use_ec=True):
         per_device_train_batch_size=256,
         per_device_eval_batch_size=64,
         logging_steps=500 if not DEBUG else 10,
-        eval_steps=500 if not DEBUG else 10,
+        eval_steps=5000 if not DEBUG else 10,
         warmup_steps=8_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
