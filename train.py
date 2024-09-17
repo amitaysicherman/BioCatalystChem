@@ -169,7 +169,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--use_ec", action="store_true")
+    parser.add_argument("--use_ec", default=1, type=int)
     args = parser.parse_args()
     DEBUG = args.debug
     main(args.use_ec)
