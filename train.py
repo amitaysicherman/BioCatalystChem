@@ -121,8 +121,8 @@ def main():
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer)
     eval_split = "valid" if not DEBUG else "train"
-    val_ecreact = SeqToSeqDataset(["ecreact"], "valid", weights=[1], tokenizer=tokenizer)
-    val_uspto = SeqToSeqDataset(["uspto"], "valid", weights=[1], tokenizer=tokenizer)
+    val_ecreact = SeqToSeqDataset(["ecreact"], eval_split, weights=[1], tokenizer=tokenizer)
+    val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer)
     eval_datasets = {"ecreact": val_ecreact, "uspto": val_uspto}
 
     # Training arguments
