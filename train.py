@@ -108,7 +108,6 @@ def compute_metrics(eval_pred, tokenizer):
     return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
 
 
-
 def get_last_cp(base_dir):
     import os
     import re
@@ -138,6 +137,7 @@ def main(use_ec=True, ec_split=False):
         ec_order = get_ec_order(tokenizer, ec_split)
         cutoff_index = get_first_ec_token_index(tokenizer, ec_split)
         lookup_len = 5
+        config.vocab_size = cutoff_index
         model = CustomT5Model(config, lookup_len, cutoff_index, ec_order)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
@@ -151,15 +151,13 @@ def main(use_ec=True, ec_split=False):
     val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
                                 ec_split=ec_split)
     eval_datasets = {"ecreact": val_ecreact, "uspto": val_uspto}
-    run_name=""
     if use_ec:
-        run_name += "ec"
+        if ec_split:
+            run_name = "paper"
+        else:
+            run_name = "pretrained"
     else:
-        run_name += "no_ec"
-    if ec_split:
-        run_name += "_split"
-    else:
-        run_name += "_no_split"
+        run_name = "regular"
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -170,10 +168,10 @@ def main(use_ec=True, ec_split=False):
         save_total_limit=10,
         max_steps=500_000,
         auto_find_batch_size=True,
-        per_device_train_batch_size=256,
-        per_device_eval_batch_size=64,
+        per_device_train_batch_size=1024,
+        per_device_eval_batch_size=1024 // 8,
         logging_steps=500 if not DEBUG else 10,
-        eval_steps=5000 if not DEBUG else 10,
+        eval_steps=25_000 if not DEBUG else 10,
         warmup_steps=8_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
