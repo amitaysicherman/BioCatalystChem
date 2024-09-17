@@ -25,9 +25,6 @@ def disable_rdkit_logging() -> None:
 
 disable_rdkit_logging()
 
-DEBUG = True
-
-
 def encode_bos_eos_pad(tokenizer, text, max_length):
     tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
     if len(tokens) > max_length - 2:
@@ -157,4 +154,9 @@ def main():
 
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+    DEBUG = args.debug
     main()
