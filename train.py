@@ -77,7 +77,8 @@ def main():
     n_add = tokenizer.add_special_tokens({"bos_token": "<BOS>", "eos_token": "<EOS>", "pad_token": "<PAD>"})
 
     config = T5Config(vocab_size=n_add + len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
-                      eos_token_id=tokenizer.eos_token_id, bos_token_id=tokenizer.bos_token_id)
+                      eos_token_id=tokenizer.eos_token_id, bos_token_id=tokenizer.bos_token_id,
+                      decoder_start_token_id=tokenizer.bos_token_id)
 
     model = T5ForConditionalGeneration(config)
     train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer)
