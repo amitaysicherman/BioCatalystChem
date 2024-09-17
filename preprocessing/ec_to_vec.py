@@ -104,10 +104,7 @@ class EC2Vec:
             self.model.to(torch.float32)
 
     def fasta_to_vec(self, seq: str):
-        if seq == "":
-            if self.random_if_fail:
-                return np.random.rand(1, self.prot_dim).flatten()
-            return torch.zeros(1, self.prot_dim)
+        assert seq != ""
         if self.name in [ESM_1B, ESM_2]:
             inputs = self.tokenizer(seq, return_tensors='pt')["input_ids"].to(device)
             inputs = clip_to_max_len(inputs)
@@ -136,7 +133,12 @@ class EC2Vec:
 
     def ec_to_vec(self, ec: str):
         if ec not in self.ec_to_vec_mem:
-            fasta = self.ec_to_fasta(ec)
+            while True:
+                fasta = self.ec_to_fasta(ec)
+                if fasta == "":
+                    ec = ".".join(ec.split(".")[:-1])
+                else:
+                    break
             self.ec_to_vec_mem[ec] = self.fasta_to_vec(fasta)
             self.add_ec_to_vec(ec, self.ec_to_vec_mem[ec])
         return self.ec_to_vec_mem[ec]
@@ -149,7 +151,8 @@ class EC2Vec:
         for ec in ec_tokens_order:
             vecs.append(self.ec_to_vec(ec))
             print(vecs[-1].shape)
-
+            if len(vecs[-1]) == 0:
+                print(f"Failed to get vec for {ec}", vecs[-1])
         return np.array(vecs)
 
 
