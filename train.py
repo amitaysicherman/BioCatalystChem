@@ -101,6 +101,7 @@ def main():
         warmup_steps=8_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
+        predict_with_generate=True,
 
     )
 
