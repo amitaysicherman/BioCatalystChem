@@ -9,6 +9,21 @@ from transformers import PreTrainedTokenizerFast
 
 from torch.utils.data import Dataset
 from tqdm import tqdm
+import numpy as np
+from rdkit import Chem
+
+
+def disable_rdkit_logging() -> None:
+    """Disables RDKit whiny logging."""
+    import rdkit.rdBase as rkrb
+    import rdkit.RDLogger as rkl
+
+    logger = rkl.logger()
+    logger.setLevel(rkl.ERROR)
+    rkrb.DisableLog("rdApp.error")
+
+
+disable_rdkit_logging()
 
 DEBUG = True
 
@@ -72,6 +87,28 @@ class SeqToSeqDataset(Dataset):
         return self.data_to_dict(self.data[idx])
 
 
+def compute_metrics(eval_pred, tokenizer):
+    predictions_, labels_ = eval_pred
+    predictions_ = np.argmax(predictions_[0], axis=-1)
+    token_acc = []
+    accuracy = []
+    is_valid = []
+    for i in range(len(predictions_)):
+        mask = (labels_[i] != tokenizer.pad_token_id) & (labels_[i] != -100)
+        pred = predictions_[i][mask]
+        label = labels_[i][mask]
+        token_acc.append((pred == label).mean().item())
+        pred = tokenizer.decode(pred, skip_special_tokens=True)
+        is_valid.append(Chem.MolFromSmiles(pred.replace(" ", "")) is not None)
+        label = tokenizer.decode(label, skip_special_tokens=True)
+        accuracy.append(pred == label)
+
+    token_acc = np.mean(token_acc)
+    accuracy = np.mean(accuracy)
+    is_valid = np.mean(is_valid)
+    return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
+
+
 def main():
     tokenizer = PreTrainedTokenizerFast.from_pretrained("datasets/tokenizer")
     n_add = tokenizer.add_special_tokens({"bos_token": "<BOS>", "eos_token": "<EOS>", "pad_token": "<PAD>"})
@@ -101,8 +138,6 @@ def main():
         warmup_steps=8_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
-        predict_with_generate=True,
-
     )
 
     # Initialize Trainer
@@ -112,6 +147,7 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=eval_datasets,
         tokenizer=tokenizer,
+        compute_metrics=lambda x: compute_metrics(x, tokenizer)
     )
 
     # Train the model
