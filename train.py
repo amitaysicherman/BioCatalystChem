@@ -60,8 +60,8 @@ class SeqToSeqDataset(Dataset):
             tgt_lines = f.read().splitlines()
         assert len(src_lines) == len(tgt_lines)
         if self.debug:
-            src_lines = src_lines[:100]
-            tgt_lines = tgt_lines[:100]
+            src_lines = src_lines[:10]
+            tgt_lines = tgt_lines[:10]
         skip_count = 0
         data = []
         for i in tqdm(range(len(src_lines))):
@@ -114,7 +114,11 @@ def main():
     config = T5Config(vocab_size=n_add + len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id, bos_token_id=tokenizer.bos_token_id,
                       decoder_start_token_id=tokenizer.bos_token_id)
-
+    if DEBUG:
+        config.num_layers = 1
+        config.d_model = 128
+        config.num_heads = 4
+        config.d_ff = 256
     model = T5ForConditionalGeneration(config)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer)
