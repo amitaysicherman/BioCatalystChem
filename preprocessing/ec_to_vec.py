@@ -46,16 +46,6 @@ def clip_to_max_len(x: torch.Tensor, max_len: int = 1023):
     return result
 
 
-def load_ec_to_vec(ec_to_vec_file):
-    ec_to_vec_mem = {}
-    if os.path.exists(ec_to_vec_file):
-        with open(ec_to_vec_file) as f:
-            for line in f:
-                ec, vec = line.strip().split("\t")
-                ec_to_vec_mem[ec] = np.fromstring(vec, sep=" ")
-    return ec_to_vec_mem
-
-
 class EC2Vec:
     def __init__(self, name=ESM_2):
         super().__init__()
@@ -69,18 +59,29 @@ class EC2Vec:
         self.uniprot = UniProt()
         self.ec_to_vec_mem = {}
         self.ec_to_vec_file = f"datasets/{name}_ec_to_vec.txt"
-        self.ec_to_vec_mem = load_ec_to_vec(self.ec_to_vec_file)
+        self.ec_to_vec_mem = self.load_ec_to_vec()
+        self.ec_to_id = dict()
+        self.id_to_ec = dict()
+
+    def load_ec_to_vec(self):
+        if os.path.exists(self.ec_to_vec_file):
+            with open(self.ec_to_vec_file) as f:
+                for line in f:
+                    id_, ec, vec = line.strip().split("\t")
+                    self.ec_to_vec_mem[ec] = np.fromstring(vec, sep=" ")
+                    self.ec_to_id[ec] = id_
+                    self.id_to_ec[id_] = ec
 
     def save_ec_to_vec(self):
         with open(self.ec_to_vec_file, "w") as f:
             for ec, vec in self.ec_to_vec_mem.items():
                 vec_str = " ".join(map(str, vec))
-                f.write(f"{ec}\t{vec_str}\n")
+                f.write(f"{self.ec_to_id[ec]}\t{ec}\t{vec_str}\n")
 
     def add_ec_to_vec(self, ec, vec):
         with open(self.ec_to_vec_file, "a") as f:
             vec_str = " ".join(map(str, vec))
-            f.write(f"{ec}\t{vec_str}\n")
+            f.write(f"{len(self.ec_to_vec_mem)}\t{ec}\t{vec_str}\n")
 
     def post_process(self, vec):
         vec_flat = vec.detach().cpu().numpy().flatten()
@@ -139,6 +140,12 @@ class EC2Vec:
             self.ec_to_vec_mem[ec] = self.fasta_to_vec(fasta)
             self.add_ec_to_vec(ec, self.ec_to_vec_mem[ec])
         return self.ec_to_vec_mem[ec]
+
+    def id_to_vec(self, id_: str):
+        return self.ec_to_vec(self.id_to_ec[id_])
+
+    def ids_to_vecs(self, ids: torch.Tensor):
+        return torch.stack([self.id_to_vec(id_) for id_ in ids])
 
 
 if __name__ == "__main__":
