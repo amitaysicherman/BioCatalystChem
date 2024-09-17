@@ -1,3 +1,4 @@
+import torch
 from transformers import PreTrainedTokenizerFast
 from tokenizers import Tokenizer, models, pre_tokenizers
 import argparse
@@ -144,3 +145,18 @@ if __name__ == "__main__":
     assert decoded == test_text
     output_path = get_tokenizer_file_path(args.ec_split)
     word_tokenizer.save_pretrained(output_path)
+
+
+def encode_bos_eos_pad(tokenizer, text, max_length):
+    tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
+    if len(tokens) > max_length - 2:
+        return None, None
+    tokens = [tokenizer.bos_token_id] + tokens + [tokenizer.eos_token_id]
+    n_tokens = len(tokens)
+    padding_length = max_length - len(tokens)
+    if padding_length > 0:
+        tokens = tokens + [tokenizer.pad_token_id] * padding_length
+    mask = [1] * n_tokens + [0] * padding_length
+    tokens = torch.tensor(tokens)
+    mask = torch.tensor(mask)
+    return tokens, mask

@@ -1,4 +1,4 @@
-import torch
+# sbatch --gres=gpu:1 --mem=16G --time=1-00:00:00 --account=def-bengioy --cpus-per-task=4 train.sh
 from transformers import (
     T5Config,
     T5ForConditionalGeneration,
@@ -11,7 +11,8 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 import numpy as np
 from rdkit import Chem
-from preprocessing.build_tokenizer import get_tokenizer_file_path, get_first_ec_token_index, get_ec_order, redo_ec_split
+from preprocessing.build_tokenizer import get_tokenizer_file_path, get_first_ec_token_index, get_ec_order, \
+    redo_ec_split, encode_bos_eos_pad
 from ec_prot_model import CustomT5Model
 
 
@@ -26,21 +27,6 @@ def disable_rdkit_logging() -> None:
 
 
 disable_rdkit_logging()
-
-
-def encode_bos_eos_pad(tokenizer, text, max_length):
-    tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
-    if len(tokens) > max_length - 2:
-        return None, None
-    tokens = [tokenizer.bos_token_id] + tokens + [tokenizer.eos_token_id]
-    n_tokens = len(tokens)
-    padding_length = max_length - len(tokens)
-    if padding_length > 0:
-        tokens = tokens + [tokenizer.pad_token_id] * padding_length
-    mask = [1] * n_tokens + [0] * padding_length
-    tokens = torch.tensor(tokens)
-    mask = torch.tensor(mask)
-    return tokens, mask
 
 
 def remove_ec(text):
@@ -122,10 +108,22 @@ def compute_metrics(eval_pred, tokenizer):
     return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
 
 
+
+def get_last_cp(base_dir):
+    import os
+    import re
+    if not os.path.exists(base_dir):
+        return None
+    cp_dirs = os.listdir(base_dir)
+    cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
+    cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
+    if len(cp_dirs) == 0:
+        return None
+    return f"{base_dir}/{cp_dirs[-1]}"
+
+
 def main(use_ec=True, ec_split=False):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
-    # n_add = tokenizer.add_special_tokens(SPACIAL_TOKENS)
-
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id, bos_token_id=tokenizer.bos_token_id,
                       decoder_start_token_id=tokenizer.bos_token_id)
@@ -142,21 +140,33 @@ def main(use_ec=True, ec_split=False):
         lookup_len = 5
         model = CustomT5Model(config, lookup_len, cutoff_index, ec_order)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
-    train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer, use_ec=use_ec,
+    ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
+    train_dataset = SeqToSeqDataset(["uspto", ecreact_dataset], "train", weights=[1, 9], tokenizer=tokenizer,
+                                    use_ec=use_ec,
                                     ec_split=ec_split)
     eval_split = "valid" if not DEBUG else "train"
-    val_ecreact = SeqToSeqDataset(["ecreact"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
+
+    val_ecreact = SeqToSeqDataset([ecreact_dataset], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
                                   ec_split=ec_split)
     val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
                                 ec_split=ec_split)
     eval_datasets = {"ecreact": val_ecreact, "uspto": val_uspto}
-    run_name = "ec" if use_ec else "no_ec"
+    run_name=""
+    if use_ec:
+        run_name += "ec"
+    else:
+        run_name += "no_ec"
+    if ec_split:
+        run_name += "_split"
+    else:
+        run_name += "_no_split"
     print(f"Run name: {run_name}")
     # Training arguments
+    output_dir = f"results/{run_name}"
     training_args = Seq2SeqTrainingArguments(
-        output_dir="results/" + run_name,
+        output_dir=output_dir,
         evaluation_strategy="steps",
-        save_steps=5_000,
+        save_steps=5_000 if not DEBUG else 10,
         save_total_limit=10,
         max_steps=500_000,
         auto_find_batch_size=True,
@@ -167,7 +177,8 @@ def main(use_ec=True, ec_split=False):
         warmup_steps=8_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
-        run_name=run_name
+        run_name=run_name,
+        resume_from_checkpoint=get_last_cp(output_dir)
     )
 
     # Initialize Trainer
@@ -190,7 +201,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--use_ec", default=1, type=int)
-    parser.add_argument("--ec_split", default=0, type=int)
+    parser.add_argument("--ec_split", default=1, type=int)
     args = parser.parse_args()
     DEBUG = args.debug
     main(args.use_ec, args.ec_split)

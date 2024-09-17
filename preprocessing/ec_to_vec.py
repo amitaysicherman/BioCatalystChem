@@ -149,10 +149,11 @@ class EC2Vec:
     def get_vecs_numpy(self, ec_tokens_order):
         vecs = []
         for ec in ec_tokens_order:
-            vecs.append(self.ec_to_vec(ec))
-            print(vecs[-1].shape)
-            if len(vecs[-1]) == 0:
-                print(f"Failed to get vec for {ec}", vecs[-1])
+            while True:
+                if ec in self.ec_to_vec_mem:
+                    vecs.append(self.ec_to_vec_mem[ec])
+                    break
+                ec = ".".join(ec.split(".")[:-1])
         return np.array(vecs)
 
 
