@@ -85,9 +85,7 @@ class EC2Vec:
             f.write(f"{len(self.ec_to_vec_mem)}\t{ec}\t{vec_str}\n")
 
     def post_process(self, vec):
-        vec_flat = vec.detach().cpu().numpy().flatten()
-        del vec
-        return vec_flat.reshape(1, -1)
+        return vec.detach().cpu().numpy().flatten()
 
     def get_model_tokenizer(self):
         if self.name == P_BFD:

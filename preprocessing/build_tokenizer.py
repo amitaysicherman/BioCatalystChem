@@ -20,7 +20,7 @@ def read_files(file_paths, ec_split):
     for file_path in file_paths:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.read().splitlines()
-        if ec_split and "|" in lines[0]:
+        if not ec_split and "|" in lines[0]:
             lines_no_ec = [line.split("|")[0] for line in lines]
             ec = [line.split("|")[1] for line in lines]
             ec = [ec_tokens_to_seq(ec_tokens) for ec_tokens in ec]
@@ -56,7 +56,7 @@ def create_word_tokenizer(file_paths, ec_split):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--ec_split", type=int, default=1)
+parser.add_argument("--ec_split", type=int, default=0)
 args = parser.parse_args()
 
 file_paths = []
