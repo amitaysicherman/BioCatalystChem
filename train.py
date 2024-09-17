@@ -96,8 +96,8 @@ def main():
         auto_find_batch_size=True,
         per_device_train_batch_size=256,
         per_device_eval_batch_size=64,
-        logging_steps=500,
-        warmup_steps=8_000,
+        logging_steps=500 if not DEBUG else 10,
+        warmup_steps=8_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
 
