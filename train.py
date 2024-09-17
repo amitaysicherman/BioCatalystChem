@@ -58,6 +58,7 @@ class SeqToSeqDataset(Dataset):
             src_lines = f.read().splitlines()
         with open(f"{input_base}/tgt-{split}.txt") as f:
             tgt_lines = f.read().splitlines()
+        assert len(src_lines) == len(tgt_lines)
         if self.debug:
             src_lines = src_lines[:100]
             tgt_lines = tgt_lines[:100]
