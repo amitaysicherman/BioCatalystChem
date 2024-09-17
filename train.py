@@ -129,12 +129,13 @@ def main(use_ec=True):
         config.d_ff = 256
     model = T5ForConditionalGeneration(config)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
-    train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer)
+    train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer,use_ec=use_ec)
     eval_split = "valid" if not DEBUG else "train"
-    val_ecreact = SeqToSeqDataset(["ecreact"], eval_split, weights=[1], tokenizer=tokenizer)
-    val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer)
+    val_ecreact = SeqToSeqDataset(["ecreact"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec)
+    val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec)
     eval_datasets = {"ecreact": val_ecreact, "uspto": val_uspto}
     run_name = "ec" if use_ec else "no_ec"
+    print(f"Run name: {run_name}")
     # Training arguments
     training_args = Seq2SeqTrainingArguments(
         output_dir="results/" + run_name,
