@@ -41,10 +41,9 @@ def encode_bos_eos_pad(tokenizer, text, max_length):
 
 
 class SeqToSeqDataset(Dataset):
-    def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, debug=DEBUG):
+    def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200):
         self.max_length = max_length
         self.tokenizer = tokenizer
-        self.debug = debug
         self.data = []
         if weights is None:
             weights = [1] * len(datasets)
@@ -59,7 +58,7 @@ class SeqToSeqDataset(Dataset):
         with open(f"{input_base}/tgt-{split}.txt") as f:
             tgt_lines = f.read().splitlines()
         assert len(src_lines) == len(tgt_lines)
-        if self.debug:
+        if DEBUG:
             src_lines = src_lines[:10]
             tgt_lines = tgt_lines[:10]
         skip_count = 0
