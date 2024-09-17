@@ -128,6 +128,7 @@ def main(use_ec=True):
         config.num_heads = 4
         config.d_ff = 256
     model = T5ForConditionalGeneration(config)
+    model.forward
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     train_dataset = SeqToSeqDataset(["uspto", 'ecreact'], "train", weights=[1, 9], tokenizer=tokenizer, use_ec=use_ec)
     eval_split = "valid" if not DEBUG else "train"
