@@ -25,6 +25,7 @@ def disable_rdkit_logging() -> None:
 
 disable_rdkit_logging()
 
+
 def encode_bos_eos_pad(tokenizer, text, max_length):
     tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
     if len(tokens) > max_length - 2:
@@ -40,12 +41,12 @@ def encode_bos_eos_pad(tokenizer, text, max_length):
     return tokens, mask
 
 
-
 def remove_ec(text):
     return text.split("|")[0]
 
+
 class SeqToSeqDataset(Dataset):
-    def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200,use_ec=True):
+    def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, use_ec=True):
         self.use_ec = use_ec
         self.max_length = max_length
         self.tokenizer = tokenizer
@@ -114,7 +115,7 @@ def compute_metrics(eval_pred, tokenizer):
     return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
 
 
-def main(us_ec=True):
+def main(use_ec=True):
     tokenizer = PreTrainedTokenizerFast.from_pretrained("datasets/tokenizer")
     n_add = tokenizer.add_special_tokens({"bos_token": "<BOS>", "eos_token": "<EOS>", "pad_token": "<PAD>"})
 
@@ -133,10 +134,10 @@ def main(us_ec=True):
     val_ecreact = SeqToSeqDataset(["ecreact"], eval_split, weights=[1], tokenizer=tokenizer)
     val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer)
     eval_datasets = {"ecreact": val_ecreact, "uspto": val_uspto}
-
+    run_name = "ec" if use_ec else "no_ec"
     # Training arguments
     training_args = Seq2SeqTrainingArguments(
-        output_dir="results",
+        output_dir="results/" + run_name,
         evaluation_strategy="steps",
         save_steps=5_000,
         save_total_limit=10,
@@ -149,6 +150,7 @@ def main(us_ec=True):
         warmup_steps=8_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
+        run_name=run_name
     )
 
     # Initialize Trainer
@@ -167,6 +169,7 @@ def main(us_ec=True):
 
 if __name__ == '__main__':
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--use_ec", default=1, type=int)
