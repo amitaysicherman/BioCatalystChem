@@ -57,11 +57,12 @@ class EC2Vec:
         self.prot_dim = model_to_dim[name]
         self.random_if_fail = False
         self.uniprot = UniProt()
-        self.ec_to_vec_mem = {}
-        self.ec_to_vec_file = f"datasets/{name}_ec_to_vec.txt"
-        self.load_ec_to_vec()
+        self.ec_to_vec_mem = dict()
         self.ec_to_id = dict()
         self.id_to_ec = dict()
+        self.ec_to_vec_file = f"datasets/{name}_ec_to_vec.txt"
+        self.load_ec_to_vec()
+
 
     def load_ec_to_vec(self):
         if os.path.exists(self.ec_to_vec_file):
