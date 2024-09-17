@@ -121,7 +121,7 @@ def get_last_cp(base_dir):
     return f"{base_dir}/{cp_dirs[-1]}"
 
 
-def main(use_ec=True, ec_split=False):
+def main(use_ec=True, ec_split=False, lookup_len=5):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id, bos_token_id=tokenizer.bos_token_id,
@@ -136,7 +136,6 @@ def main(use_ec=True, ec_split=False):
     else:
         ec_order = get_ec_order(tokenizer, ec_split)
         cutoff_index = get_first_ec_token_index(tokenizer, ec_split)
-        lookup_len = 5
         config.vocab_size = cutoff_index
         model = CustomT5Model(config, lookup_len, cutoff_index, ec_order)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
@@ -155,7 +154,7 @@ def main(use_ec=True, ec_split=False):
         if ec_split:
             run_name = "paper"
         else:
-            run_name = "pretrained"
+            run_name = f"pretrained_{lookup_len}"
     else:
         run_name = "regular"
     print(f"Run name: {run_name}")
@@ -200,6 +199,7 @@ if __name__ == '__main__':
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--use_ec", default=1, type=int)
     parser.add_argument("--ec_split", default=0, type=int)
+    parser.add_argument("--lookup_len", default=5, type=int)
     args = parser.parse_args()
     DEBUG = args.debug
-    main(args.use_ec, args.ec_split)
+    main(args.use_ec, args.ec_split, args.lookup_len)
