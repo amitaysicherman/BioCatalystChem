@@ -67,8 +67,8 @@ class SeqToSeqDataset(Dataset):
             src_lines = [remove_ec(text) for text in src_lines]
             tgt_lines = [remove_ec(text) for text in tgt_lines]
         if DEBUG:
-            src_lines = src_lines[:10]
-            tgt_lines = tgt_lines[:10]
+            src_lines = src_lines[:1]
+            tgt_lines = tgt_lines[:1]
         skip_count = 0
         data = []
         for i in tqdm(range(len(src_lines))):
