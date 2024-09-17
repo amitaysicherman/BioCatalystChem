@@ -40,8 +40,13 @@ def encode_bos_eos_pad(tokenizer, text, max_length):
     return tokens, mask
 
 
+
+def remove_ec(text):
+    return text.split("|")[0]
+
 class SeqToSeqDataset(Dataset):
-    def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200):
+    def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200,use_ec=True):
+        self.use_ec = use_ec
         self.max_length = max_length
         self.tokenizer = tokenizer
         self.data = []
@@ -58,6 +63,9 @@ class SeqToSeqDataset(Dataset):
         with open(f"{input_base}/tgt-{split}.txt") as f:
             tgt_lines = f.read().splitlines()
         assert len(src_lines) == len(tgt_lines)
+        if not self.use_ec:
+            src_lines = [remove_ec(text) for text in src_lines]
+            tgt_lines = [remove_ec(text) for text in tgt_lines]
         if DEBUG:
             src_lines = src_lines[:10]
             tgt_lines = tgt_lines[:10]
@@ -106,7 +114,7 @@ def compute_metrics(eval_pred, tokenizer):
     return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
 
 
-def main():
+def main(us_ec=True):
     tokenizer = PreTrainedTokenizerFast.from_pretrained("datasets/tokenizer")
     n_add = tokenizer.add_special_tokens({"bos_token": "<BOS>", "eos_token": "<EOS>", "pad_token": "<PAD>"})
 
@@ -161,6 +169,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--use_ec", action="store_true")
     args = parser.parse_args()
     DEBUG = args.debug
-    main()
+    main(args.use_ec)
