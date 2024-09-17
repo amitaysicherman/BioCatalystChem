@@ -10,7 +10,6 @@ import pandas as pd
 from tqdm import trange
 
 from rdkit.Chem import AllChem as rdk
-
 from rxn_biocatalysis_tools import (
     EnzymaticReaction,
     tokenize_enzymatic_reaction_smiles,

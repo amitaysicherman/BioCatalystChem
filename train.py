@@ -2,9 +2,9 @@
 from transformers import (
     T5Config,
     T5ForConditionalGeneration,
-    Seq2SeqTrainingArguments,
-    Seq2SeqTrainer,
 )
+from transformers import Trainer, TrainingArguments
+
 from transformers import PreTrainedTokenizerFast
 
 from torch.utils.data import Dataset
@@ -72,7 +72,7 @@ class SeqToSeqDataset(Dataset):
                 skip_count += 1
                 continue
             label[label_mask == 0] = -100
-            data.append((input_id, attention_mask, label, label_mask))
+            data.append((input_id, attention_mask, label))
         for _ in range(w):
             self.data.extend(data)
 
@@ -80,7 +80,7 @@ class SeqToSeqDataset(Dataset):
         return len(self.data)
 
     def data_to_dict(self, data):
-        return {"input_ids": data[0], "attention_mask": data[1], "labels": data[2], "decoder_attention_mask": data[3]}
+        return {"input_ids": data[0], "attention_mask": data[1], "labels": data[2]}
 
     def __getitem__(self, idx):
         return self.data_to_dict(self.data[idx])
@@ -163,7 +163,7 @@ def main(use_ec=True, ec_split=False):
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
-    training_args = Seq2SeqTrainingArguments(
+    training_args = TrainingArguments(
         output_dir=output_dir,
         evaluation_strategy="steps",
         save_steps=5_000 if not DEBUG else 10,
@@ -182,7 +182,7 @@ def main(use_ec=True, ec_split=False):
     )
 
     # Initialize Trainer
-    trainer = Seq2SeqTrainer(
+    trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--use_ec", default=1, type=int)
-    parser.add_argument("--ec_split", default=1, type=int)
+    parser.add_argument("--ec_split", default=0, type=int)
     args = parser.parse_args()
     DEBUG = args.debug
     main(args.use_ec, args.ec_split)
