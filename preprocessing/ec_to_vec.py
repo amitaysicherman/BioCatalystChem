@@ -4,6 +4,7 @@ from transformers import T5Tokenizer, T5EncoderModel, AutoTokenizer, BertForMask
 import numpy as np
 from bioservices import UniProt
 import os
+from tqdm import tqdm
 
 MAX_LEN = 510
 PROTEIN_MAX_LEN = 1023
@@ -62,7 +63,6 @@ class EC2Vec:
         self.id_to_ec = dict()
         self.ec_to_vec_file = f"datasets/{name}_ec_to_vec.txt"
         self.load_ec_to_vec()
-
 
     def load_ec_to_vec(self):
         if os.path.exists(self.ec_to_vec_file):
@@ -154,6 +154,6 @@ if __name__ == "__main__":
     base_dataset = "datasets/ecreact/ecreact-1.0.txt"
     with open(base_dataset) as f:
         lines = f.readlines()
-    for line in lines:
+    for line in tqdm(lines):
         ec = line.split("|")[1].split(">>")[0]
-        print(ec2vec.ec_to_vec(ec))
+        ec2vec.ec_to_vec(ec)

@@ -1,10 +1,31 @@
 from transformers import PreTrainedTokenizerFast
 from tokenizers import Tokenizer, models, pre_tokenizers
-def read_files(file_paths):
+import argparse
+
+
+def ec_tokens_to_seq(ec_tokens_str):
+    ec_tokens = ec_tokens_str.split()
+    ec = []
+    for token in ec_tokens:
+        assert token[0] == "[" and token[-1] == "]"
+        token = token[1:-1]
+        assert token[0] in ["v", "u", "t", "q"]
+        token = token[1:]
+        ec.append(token)
+    return "[" + ".".join(ec) + "]"
+
+
+def read_files(file_paths, ec_split):
     contents = []
     for file_path in file_paths:
         with open(file_path, 'r', encoding='utf-8') as file:
-            contents.append(file.read())
+            lines = file.read().splitlines()
+        if ec_split and "|" in lines[0]:
+            lines_no_ec = [line.split("|")[0] for line in lines]
+            ec = [line.split("|")[1] for line in lines]
+            ec = [ec_tokens_to_seq(ec_tokens) for ec_tokens in ec]
+            lines = [f"{line} | {ec_}" for line, ec_ in zip(lines_no_ec, ec)]
+        contents.extend(lines)
     return contents
 
 
@@ -16,8 +37,8 @@ def build_vocab(texts):
     return {word: i for i, word in enumerate(all_word)}
 
 
-def create_word_tokenizer(file_paths):
-    texts = read_files(file_paths)
+def create_word_tokenizer(file_paths, ec_split):
+    texts = read_files(file_paths, ec_split)
     vocab = build_vocab(texts)
     tokenizer = Tokenizer(models.WordLevel(vocab=vocab, unk_token="[UNK]"))
     tokenizer.pre_tokenizer = pre_tokenizers.WhitespaceSplit()
@@ -34,13 +55,17 @@ def create_word_tokenizer(file_paths):
     return fast_tokenizer
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--ec_split", type=int, default=1)
+args = parser.parse_args()
+
 file_paths = []
-for dataset in ['ecreact','uspto']:
+for dataset in ['ecreact', 'uspto']:
     for split in ['train', 'valid', 'test']:
         for side in ['src', 'tgt']:
             file_paths.append(f"datasets/{dataset}/{side}-{split}.txt")
 
-word_tokenizer = create_word_tokenizer(file_paths)
+word_tokenizer = create_word_tokenizer(file_paths, args.ec_split)
 print(word_tokenizer)
 print(word_tokenizer.get_vocab())
 
@@ -52,4 +77,7 @@ print(f"EN: {encoded}")
 decoded = word_tokenizer.decode(encoded, clean_up_tokenization_spaces=False, skip_special_tokens=True)
 print(f"DE: {decoded}")
 assert decoded == test_text
-word_tokenizer.save_pretrained("./datasets/tokenizer")
+output_path = "./datasets/tokenizer"
+if not args.ec_split:
+    output_path += "_no_ec"
+word_tokenizer.save_pretrained(output_path)
