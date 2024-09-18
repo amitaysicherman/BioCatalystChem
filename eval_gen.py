@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     cp_dir_all = f"results/{args.run_name}"
     cp_dir = sorted([f for f in os.listdir(cp_dir_all) if re.match(r"checkpoint-\d+", f)],
-                    key=lambda x: int(x.split("-")[1]))[0]
+                    key=lambda x: int(x.split("-")[1]))[-1]
     cp_dir = f"{cp_dir_all}/{cp_dir}"
     run_args = name_to_args(args.run_name)
 

@@ -19,6 +19,7 @@ class SeqToSeqDataset(Dataset):
             assert len(weights) == len(datasets)
         for ds, w in zip(datasets, weights):
             self.load_dataset(f"datasets/{ds}", split, w)
+        self.DEBUG = DEBUG
 
     def load_dataset(self, input_base, split, w):
         with open(f"{input_base}/src-{split}.txt") as f:
@@ -32,7 +33,7 @@ class SeqToSeqDataset(Dataset):
         if not self.ec_split:
             src_lines = [redo_ec_split(text) for text in src_lines]
             tgt_lines = [redo_ec_split(text) for text in tgt_lines]
-        if DEBUG:
+        if self.DEBUG:
             src_lines = src_lines[:1]
             tgt_lines = tgt_lines[:1]
         skip_count = 0
