@@ -13,13 +13,14 @@ class SeqToSeqDataset(Dataset):
         self.tokenizer = tokenizer
         self.ec_split = ec_split
         self.data = []
+        self.DEBUG = DEBUG
+
         if weights is None:
             weights = [1] * len(datasets)
         else:
             assert len(weights) == len(datasets)
         for ds, w in zip(datasets, weights):
             self.load_dataset(f"datasets/{ds}", split, w)
-        self.DEBUG = DEBUG
 
     def load_dataset(self, input_base, split, w):
         with open(f"{input_base}/src-{split}.txt") as f:
