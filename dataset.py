@@ -1,14 +1,13 @@
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast
-
 from preprocessing.build_tokenizer import redo_ec_split, encode_bos_eos_pad
-from train import remove_ec, DEBUG
+from utils import remove_ec
 
 
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, use_ec=True,
-                 ec_split=True):
+                 ec_split=True, DEBUG=False):
         self.use_ec = use_ec
         self.max_length = max_length
         self.tokenizer = tokenizer

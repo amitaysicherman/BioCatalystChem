@@ -107,7 +107,7 @@ if __name__ == "__main__":
     else:
         sample_size = None
     gen_dataset = SeqToSeqDataset([args.dataset], "valid", tokenizer=tokenizer, use_ec=run_args["use_ec"],
-                                  ec_split=ec_split)
+                                  ec_split=ec_split, DEBUG=args.debug)
     gen_dataloader = DataLoader(gen_dataset, batch_size=8, num_workers=0)
     output_file = f"gen/{args.dataset}${args.run_name}.txt" if not args.debug else ""
     if output_file and os.path.exists(output_file):

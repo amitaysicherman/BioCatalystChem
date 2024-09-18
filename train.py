@@ -21,10 +21,6 @@ logger.setLevel(rkl.ERROR)
 rkrb.DisableLog("rdApp.error")
 
 
-def remove_ec(text):
-    return text.split("|")[0]
-
-
 def compute_metrics(eval_pred, tokenizer):
     predictions_, labels_ = eval_pred
     predictions_ = np.argmax(predictions_[0], axis=-1)
@@ -111,13 +107,13 @@ def main(use_ec=True, ec_split=False, lookup_len=5):
     ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
     train_dataset = SeqToSeqDataset(["uspto", ecreact_dataset], "train", weights=[1, 9], tokenizer=tokenizer,
                                     use_ec=use_ec,
-                                    ec_split=ec_split)
+                                    ec_split=ec_split, DEBUG=DEBUG)
     eval_split = "valid" if not DEBUG else "train"
 
     val_ecreact = SeqToSeqDataset([ecreact_dataset], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
-                                  ec_split=ec_split)
+                                  ec_split=ec_split, DEBUG=DEBUG)
     val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
-                                ec_split=ec_split)
+                                ec_split=ec_split, DEBUG=DEBUG)
     eval_datasets = {"ecreact": val_ecreact, "uspto": val_uspto}
 
     run_name = args_to_name(use_ec, ec_split, lookup_len)
