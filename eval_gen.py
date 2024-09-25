@@ -29,7 +29,7 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
     return Chem.MolToSmiles(mol, canonical=True)
 
 
-def eval_gen(model, tokenizer, dataloader, output_file, top_k=[1, 3, 5, 10]):
+def eval_gen(model:T5ForConditionalGeneration, tokenizer, dataloader, output_file, top_k=[1, 3, 5, 10]):
     gt_list = []
     preds_list = []
 
@@ -42,7 +42,6 @@ def eval_gen(model, tokenizer, dataloader, output_file, top_k=[1, 3, 5, 10]):
         outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
                                  max_length=tokenizer.model_max_length, do_sample=False, num_beams=max_k * 2,
                                  num_return_sequences=max_k)
-
         labels = [l[l != -100] for l in batch['labels'].cpu().numpy()]
 
         for i in range(len(labels)):
