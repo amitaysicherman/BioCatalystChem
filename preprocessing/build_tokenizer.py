@@ -3,7 +3,24 @@ from transformers import PreTrainedTokenizerFast
 from tokenizers import Tokenizer, models, pre_tokenizers
 import argparse
 
-SPACIAL_TOKENS = {"[PAD]": 0, "[UNK]": 1, "[BOS]": 2, "[EOS]": 3}
+PAD = "[PAD]"
+EOS = "[EOS]"
+UNK = "[UNK]"
+SPACIAL_TOKENS = {PAD: 0, EOS: 1, UNK: 2}
+
+def encode_eos_pad(tokenizer, text, max_length):
+    tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
+    tokens = tokens + [tokenizer.eos_token_id]
+    if len(tokens) > max_length:
+        return None, None
+    n_tokens = len(tokens)
+    padding_length = max_length - len(tokens)
+    if padding_length > 0:
+        tokens = tokens + [tokenizer.pad_token_id] * padding_length
+    mask = [1] * n_tokens + [0] * padding_length
+    tokens = torch.tensor(tokens)
+    mask = torch.tensor(mask)
+    return tokens, mask
 
 
 def get_first_ec_token_index(tokenizer: PreTrainedTokenizerFast, ec_split):
@@ -29,6 +46,7 @@ def get_tokenizer_file_path(ec_split):
     output_path = "./datasets/tokenizer"
     if not ec_split:
         output_path += "_no_ec"
+    print(f"Saving tokenizer to {output_path}")
     return output_path
 
 
@@ -64,7 +82,6 @@ def redo_ec_split(text):
 def read_files(file_paths, ec_split):
     contents = []
     for file_path in file_paths:
-        print(f"Reading {file_path}")
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.read().splitlines()
         if not ec_split and "|" in lines[0]:
@@ -104,10 +121,9 @@ def create_word_tokenizer(file_paths, ec_split):
     tokenizer.post_process = None
     fast_tokenizer = PreTrainedTokenizerFast(
         tokenizer_object=tokenizer,
-        bos_token="[BOS]",
-        eos_token="[EOS]",
-        unk_token="[UNK]",
-        pad_token="[PAD]",
+        eos_token=EOS,
+        unk_token=UNK,
+        pad_token=PAD,
     )
 
     return fast_tokenizer
@@ -115,15 +131,12 @@ def create_word_tokenizer(file_paths, ec_split):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ec_split", type=int, default=1)
+    parser.add_argument("--ec_split", type=int, default=0)
     args = parser.parse_args()
 
     file_paths = []
-    if args.ec_split:
-        datasets = ['ecreact/level3', 'uspto']
-    else:
-        datasets = ['ecreact/level4', 'uspto']
 
+    datasets = ['ecreact/level4', 'uspto']
     for dataset in datasets:
         for split in ['train', 'valid', 'test']:
             for side in ['src', 'tgt']:
@@ -131,12 +144,11 @@ if __name__ == "__main__":
 
     word_tokenizer = create_word_tokenizer(file_paths, args.ec_split)
     print(word_tokenizer)
-    print(len(word_tokenizer.get_vocab()))
 
-    test_text="O = S ( = O ) ( [O-] ) S | [v1] [u8] [t5]"
-    if not args.ec_split:
-
-        test_text = redo_ec_split(test_text+" [q2]")
+    if args.ec_split:
+        test_text = "O = S ( = O ) ( [O-] ) S | [v1] [u8] [t5] [q2]"
+    else:
+        test_text = "O = S ( = O ) ( [O-] ) S | [ec:1.8.5.2]"
     print(f"OR: {test_text}")
     encoded = word_tokenizer.encode(test_text, add_special_tokens=False)
     print(f"EN: {encoded}")
@@ -147,16 +159,3 @@ if __name__ == "__main__":
     word_tokenizer.save_pretrained(output_path)
 
 
-def encode_bos_eos_pad(tokenizer, text, max_length):
-    tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
-    if len(tokens) > max_length - 2:
-        return None, None
-    tokens = [tokenizer.bos_token_id] + tokens + [tokenizer.eos_token_id]
-    n_tokens = len(tokens)
-    padding_length = max_length - len(tokens)
-    if padding_length > 0:
-        tokens = tokens + [tokenizer.pad_token_id] * padding_length
-    mask = [1] * n_tokens + [0] * padding_length
-    tokens = torch.tensor(tokens)
-    mask = torch.tensor(mask)
-    return tokens, mask

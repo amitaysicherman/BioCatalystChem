@@ -1,7 +1,7 @@
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast
-from preprocessing.build_tokenizer import redo_ec_split, encode_bos_eos_pad
+from preprocessing.build_tokenizer import redo_ec_split, encode_eos_pad
 from utils import remove_ec
 
 
@@ -40,8 +40,8 @@ class SeqToSeqDataset(Dataset):
         skip_count = 0
         data = []
         for i in tqdm(range(len(src_lines))):
-            input_id, attention_mask = encode_bos_eos_pad(self.tokenizer, src_lines[i], self.max_length)
-            label, label_mask = encode_bos_eos_pad(self.tokenizer, tgt_lines[i], self.max_length)
+            input_id, attention_mask = encode_eos_pad(self.tokenizer, src_lines[i], self.max_length)
+            label, label_mask = encode_eos_pad(self.tokenizer, tgt_lines[i], self.max_length)
             if input_id is None or label is None:
                 skip_count += 1
                 continue

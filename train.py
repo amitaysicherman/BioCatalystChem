@@ -84,8 +84,8 @@ def name_to_args(run_name):
 def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
-                      eos_token_id=tokenizer.eos_token_id, bos_token_id=tokenizer.bos_token_id,
-                      decoder_start_token_id=tokenizer.bos_token_id)
+                      eos_token_id=tokenizer.eos_token_id,
+                      decoder_start_token_id=tokenizer.pad_token_id)
     if DEBUG:
         config.num_layers = 1
         config.d_model = 128
@@ -112,9 +112,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5):
 
     val_ecreact = SeqToSeqDataset([ecreact_dataset], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
                                   ec_split=ec_split, DEBUG=DEBUG)
-    val_uspto = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
-                                ec_split=ec_split, DEBUG=DEBUG)
-    eval_datasets = {"ecreact": val_ecreact, "uspto": val_uspto}
+    eval_datasets = {"ecreact": val_ecreact}
 
     run_name = args_to_name(use_ec, ec_split, lookup_len)
     print(f"Run name: {run_name}")
