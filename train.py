@@ -104,7 +104,9 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
 
 def main(use_ec=True, ec_split=False, lookup_len=5):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG)
-    ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
+    # ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
+    ecreact_dataset = "ecreact/level4"
+
     train_dataset = SeqToSeqDataset(["uspto", ecreact_dataset], "train", weights=[1, 9], tokenizer=tokenizer,
                                     use_ec=use_ec,
                                     ec_split=ec_split, DEBUG=DEBUG)
