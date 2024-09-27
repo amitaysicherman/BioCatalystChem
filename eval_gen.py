@@ -55,7 +55,7 @@ def eval_dataset(model:T5ForConditionalGeneration,gen_dataloader:DataLoader,k=10
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run_name", default="paper", type=str)
+    parser.add_argument("--run_name", default="pretrained_5", type=str)
     args = parser.parse_args()
     dataset = "ecreact/level4"
     run_name = args.run_name

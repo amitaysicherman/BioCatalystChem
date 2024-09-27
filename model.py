@@ -43,9 +43,12 @@ class CustomT5Model(T5ForConditionalGeneration):
         final_embeddings[lookup_token_mask] = transformed_lookup_embeddings
         return final_embeddings
 
-    def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, **kwargs):
+    def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None,encoder_outputs=None, **kwargs):
+        if encoder_outputs is not None:
+            return super().forward(input_ids=input_ids, attention_mask=attention_mask, labels=labels, encoder_outputs=encoder_outputs, **kwargs)
         if inputs_embeds is None:
             inputs_embeds = self.prep_input_embeddings(input_ids)
+
         return super().forward(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels, **kwargs)
 
     def _prepare_encoder_decoder_kwargs_for_generation(
@@ -55,5 +58,8 @@ class CustomT5Model(T5ForConditionalGeneration):
         model_input_name: Optional[str],
         generation_config: GenerationConfig,
     ) -> Dict[str, Any]:
-        input_embeddings = self.prep_input_embeddings(inputs_tensor)
-        return super()._prepare_encoder_decoder_kwargs_for_generation(inputs_tensor, model_kwargs, model_input_name, generation_config, inputs_embeds=input_embeddings)
+        inputs_embeds = self.prep_input_embeddings(inputs_tensor)
+        model_kwargs["inputs_embeds"] = inputs_embeds
+        return super()._prepare_encoder_decoder_kwargs_for_generation(
+            None, model_kwargs, model_input_name, generation_config
+        )
