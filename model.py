@@ -1,5 +1,7 @@
+from typing import Optional, Dict, Any
+
 import torch
-from transformers import T5ForConditionalGeneration, T5Config
+from transformers import T5ForConditionalGeneration, T5Config, GenerationConfig
 from preprocessing.ec_to_vec import EC2Vec
 
 
@@ -26,10 +28,9 @@ class CustomT5Model(T5ForConditionalGeneration):
         layers_dims = [lookup_dim] + [config.d_model] * lookup_len
         self.lookup_proj = get_layers(layers_dims, dropout=config.dropout_rate)
         self.cutoff_index = cutoff_index
+        self.encoder
 
-    def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, **kwargs):
-        if inputs_embeds is not None:
-            return super().forward(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels, **kwargs)
+    def prep_input_embeddings(self, input_ids):
         regular_token_mask = input_ids < self.cutoff_index
         lookup_token_mask = input_ids >= self.cutoff_index
         regular_embeddings = self.shared(input_ids.clamp(max=self.cutoff_index - 1))  # Clamp to avoid indexing errors
@@ -40,4 +41,19 @@ class CustomT5Model(T5ForConditionalGeneration):
         final_embeddings = torch.zeros_like(regular_embeddings).float()
         final_embeddings[regular_token_mask] = regular_embeddings[regular_token_mask]
         final_embeddings[lookup_token_mask] = transformed_lookup_embeddings
-        return super().forward(inputs_embeds=final_embeddings, attention_mask=attention_mask, labels=labels, **kwargs)
+        return final_embeddings
+
+    def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, **kwargs):
+        if inputs_embeds is None:
+            inputs_embeds = self.prep_input_embeddings(input_ids)
+        return super().forward(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels, **kwargs)
+
+    def _prepare_encoder_decoder_kwargs_for_generation(
+        self,
+        inputs_tensor: torch.Tensor,
+        model_kwargs,
+        model_input_name: Optional[str],
+        generation_config: GenerationConfig,
+    ) -> Dict[str, Any]:
+        input_embeddings = self.prep_input_embeddings(inputs_tensor)
+        return super()._prepare_encoder_decoder_kwargs_for_generation(inputs_tensor, model_kwargs, model_input_name, generation_config, inputs_embeds=input_embeddings)
