@@ -59,7 +59,7 @@ class CustomT5Model(T5ForConditionalGeneration):
         generation_config: GenerationConfig=None,
     ) -> Dict[str, Any]:
         if generation_config is None:
-            generation_config = GenerationConfig.from_model_config(super().config)
+            generation_config = GenerationConfig.from_model_config(self.config)
         inputs_embeds = self.prep_input_embeddings(inputs_tensor)
         model_kwargs["inputs_embeds"] = inputs_embeds
         return super()._prepare_encoder_decoder_kwargs_for_generation(
