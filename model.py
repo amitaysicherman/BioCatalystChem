@@ -56,7 +56,7 @@ class CustomT5Model(T5ForConditionalGeneration):
         inputs_tensor: torch.Tensor,
         model_kwargs,
         model_input_name: Optional[str],
-        generation_config: GenerationConfig=None,
+        generation_config: GenerationConfig,
     ) -> Dict[str, Any]:
         if generation_config is None:
             generation_config = GenerationConfig.from_model_config(self.config)
