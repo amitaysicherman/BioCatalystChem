@@ -1,9 +1,7 @@
 from transformers import PreTrainedTokenizerFast
-from transformers import T5ForConditionalGeneration, T5Config
-import numpy as np
+from transformers import T5ForConditionalGeneration
 import argparse
 from rdkit import Chem
-from collections import defaultdict
 from torch.utils.data import DataLoader
 from dataset import SeqToSeqDataset
 from preprocessing.build_tokenizer import get_tokenizer_file_path, get_first_ec_token_index, get_ec_order
@@ -13,7 +11,6 @@ import os
 import re
 from tqdm import tqdm
 from rdkit import RDLogger
-from train import name_to_args
 
 RDLogger.DisableLog('rdApp.*')
 
