@@ -56,8 +56,10 @@ class CustomT5Model(T5ForConditionalGeneration):
         inputs_tensor: torch.Tensor,
         model_kwargs,
         model_input_name: Optional[str],
-        generation_config: GenerationConfig,
+        generation_config: GenerationConfig=None,
     ) -> Dict[str, Any]:
+        if generation_config is None:
+            generation_config = super().generation_config
         inputs_embeds = self.prep_input_embeddings(inputs_tensor)
         model_kwargs["inputs_embeds"] = inputs_embeds
         return super()._prepare_encoder_decoder_kwargs_for_generation(
