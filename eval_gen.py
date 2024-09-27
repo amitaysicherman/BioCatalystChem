@@ -97,7 +97,7 @@ if __name__ == "__main__":
     print(f"Run: {run_name}")
     for k, acc in correct_count.items():
         print(f"{k}: {acc}")
-    output_file = f"{cp_dir_all}/eval_{run_name}.txt"
+    output_file = f"results/eval_gen.csv"
     with open(output_file, "w") as f:
-        for k, acc in correct_count.items():
-            f.write(f"{k}: {acc}\n")
+        f.write(run_name+","+cp_dir+","+",".join([str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
+
