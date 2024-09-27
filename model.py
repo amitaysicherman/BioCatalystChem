@@ -27,7 +27,9 @@ class CustomT5Model(T5ForConditionalGeneration):
         self.lookup_proj = get_layers(layers_dims, dropout=config.dropout_rate)
         self.cutoff_index = cutoff_index
 
-    def forward(self, input_ids, attention_mask, labels, **kwargs):
+    def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, **kwargs):
+        if inputs_embeds is not None:
+            return super().forward(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels, **kwargs)
         regular_token_mask = input_ids < self.cutoff_index
         lookup_token_mask = input_ids >= self.cutoff_index
         regular_embeddings = self.shared(input_ids.clamp(max=self.cutoff_index - 1))  # Clamp to avoid indexing errors
