@@ -46,7 +46,6 @@ def get_tokenizer_file_path(ec_split):
     output_path = "./datasets/tokenizer"
     if not ec_split:
         output_path += "_no_ec"
-    print(f"Saving tokenizer to {output_path}")
     return output_path
 
 

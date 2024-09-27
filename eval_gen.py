@@ -25,102 +25,82 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
     smiles = smiles.replace(" ", "")
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
-        return ""
+        return smiles
     return Chem.MolToSmiles(mol, canonical=True)
 
 
-def eval_gen(model:T5ForConditionalGeneration, tokenizer, dataloader, output_file, top_k=[1, 3, 5, 10]):
-    gt_list = []
-    preds_list = []
-
-    max_k = max(top_k)
-    pbar = tqdm(dataloader)
-    top_k_correct = defaultdict(int)
-    for batch in pbar:
+def eval_dataset(model:T5ForConditionalGeneration,gen_dataloader:DataLoader,k=10):
+    correct_count= {i:0 for i in range(1,k+1)}
+    pbar=tqdm(enumerate(gen_dataloader),total=len(gen_dataloader))
+    for i, batch in pbar:
         input_ids = batch['input_ids'].to(model.device)
-        attention_mask = batch['attention_mask'].to(model.device)
+        attention_mask = batch['attention_mask'].to(model.device).bool()
+        labels = batch['labels'].to(model.device)
+
         outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
-                                 max_length=tokenizer.model_max_length, do_sample=False, num_beams=max_k * 2,
-                                 num_return_sequences=max_k)
-        labels = [l[l != -100] for l in batch['labels'].cpu().numpy()]
+                                 max_length=200, do_sample=False, num_beams=k * 2,
+                                 num_return_sequences=k)
+        mask = (labels != tokenizer.pad_token_id) & (labels != -100)
+        labels = labels[mask]
 
-        for i in range(len(labels)):
-            gt_list.append(tokens_to_canonical_smiles(tokenizer, labels[i]))
-            preds_list.append([tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs[i]])
-            for k in top_k:
-                if gt_list[-1] in preds_list[-1][:k]:
-                    top_k_correct[k] += 1
-            text = "\n".join([f"GT: {gt_list[-1]}, PR: {pred}" for pred in preds_list[-1]]) + "\n"
-            if output_file != "":
-                with open(output_file, "a") as f:
-                    f.write(text)
-            else:
-                print(text)
-
-            top_k_acc = {k: top_k_correct[k] / len(gt_list) for k in top_k}
-            pbar.set_description(f"Top-k Acc: {top_k_acc}")
-
-    return {k: top_k_correct[k] / len(gt_list) for k in top_k}
+        labels=tokens_to_canonical_smiles(tokenizer, labels)
+        preds_list=[tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs]
+        for j in range(1,k+1):
+            if labels in preds_list[:j]:
+                correct_count[j] += 1
+        msg=" | ".join([f"{j}:{correct_count[j]/(i+1):.2f}" for j in range(1,k+1)])
+        msg=f'{i+1}/{len(gen_dataloader)} | {msg}'
+        pbar.set_description(msg)
+    return {i: correct_count[i] / len(gen_dataloader) for i in [1,3,5,10]}
 
 
-def prep_gen_dirs(summary_file):
-    if not os.path.exists("gen"):
-        os.makedirs("gen")
-    if not os.path.exists(summary_file):
-        with open(summary_file, "w") as f:
-            f.write("dataset,cp,acc,k\n")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", default="paper", type=str)
-    parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--dataset", default="uspto", type=str)
     args = parser.parse_args()
+    dataset = "ecreact/level4"
+    run_name = args.run_name
+    cp_dir_all = f"results/{run_name}"
 
-    cp_dir_all = f"results/{args.run_name}"
-    cp_dir = sorted([f for f in os.listdir(cp_dir_all) if re.match(r"checkpoint-\d+", f)],
-                    key=lambda x: int(x.split("-")[1]))[-1]
-    cp_dir = f"{cp_dir_all}/{cp_dir}"
-    run_args = name_to_args(args.run_name)
-
-    ec_split = run_args["ec_split"]
-    lookup_len = run_args["lookup_len"]
-
-    tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
-    config = T5Config.from_pretrained(cp_dir + "/config.json")
-
-    if ec_split:
-        model = T5ForConditionalGeneration(config)
+    if "pretrained" in run_name:
+        ec_split = False
+        use_ec = True
+        lookup_len = int(run_name.split("_")[1])
+        tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
+        model_type = CustomT5Model
+        models_args = {"lookup_len": lookup_len, "ec_tokens_order": get_ec_order(tokenizer, ec_split),
+                       "cutoff_index": get_first_ec_token_index(tokenizer, ec_split)}
     else:
-        ec_order = get_ec_order(tokenizer, ec_split)
-        cutoff_index = get_first_ec_token_index(tokenizer, ec_split)
-        config.vocab_size = cutoff_index
-        model = CustomT5Model(config, lookup_len, cutoff_index, ec_order)
-    model.load_state_dict(torch.load(f"{cp_dir}/pytorch_model.bin", map_location="cpu"))
+        if run_name == "regular":
+            ec_split = True
+            use_ec = False
+        elif run_name == "paper":
+            ec_split = True
+            use_ec = True
+        else:
+            raise ValueError(f"Unknown run_name: {run_name}")
+        tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
+        model_type = T5ForConditionalGeneration
+        models_args = {}
+
+    gen_dataset = SeqToSeqDataset([dataset], "valid", tokenizer=tokenizer, use_ec=use_ec,
+                                  ec_split=ec_split, DEBUG=False)
+    gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
+
+    cp_dir = sorted([f for f in os.listdir(cp_dir_all) if re.match(r"checkpoint-\d+", f)],
+                    key=lambda x: int(x.split("-")[1]))
+    cp_dir = cp_dir[-1]
+    cp_dir = f"{cp_dir_all}/{cp_dir}"
+    model = model_type.from_pretrained(cp_dir, **models_args)
     model.to(device)
     model.eval()
-
-    if args.debug:
-        sample_size = 100
-    else:
-        sample_size = None
-    gen_dataset = SeqToSeqDataset([args.dataset], "valid", tokenizer=tokenizer, use_ec=run_args["use_ec"],
-                                  ec_split=ec_split, DEBUG=args.debug)
-    gen_dataloader = DataLoader(gen_dataset, batch_size=8, num_workers=0)
-    output_file = f"gen/{args.dataset}${args.run_name}.txt" if not args.debug else ""
-    if output_file and os.path.exists(output_file):
-        os.remove(output_file)
-    summary_file = f"gen/summary.csv"
-    prep_gen_dirs(summary_file)
-    with torch.no_grad():
-        results_dict = eval_gen(model, tokenizer, gen_dataloader, output_file)
-    if args.debug_mode:
-        print("-----------------")
-        for k, acc in results_dict.items():
-            print(f"{k}: {acc}")
-        print("-----------------")
-    else:
-        with open(summary_file, "a") as f:
-            for k, acc in results_dict.items():
-                f.write(f"{args.dataset},{args.run_name},{acc},{k}\n")
+    correct_count = eval_dataset(model, gen_dataloader)
+    print(f"Run: {run_name}")
+    for k, acc in correct_count.items():
+        print(f"{k}: {acc}")
+    output_file = f"{cp_dir_all}/eval_{run_name}.txt"
+    with open(output_file, "w") as f:
+        for k, acc in correct_count.items():
+            f.write(f"{k}: {acc}\n")
