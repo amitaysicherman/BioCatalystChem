@@ -26,9 +26,9 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
     return Chem.MolToSmiles(mol, canonical=True)
 
 
-def eval_dataset(model:T5ForConditionalGeneration,gen_dataloader:DataLoader,k=10):
-    correct_count= {i:0 for i in range(1,k+1)}
-    pbar=tqdm(enumerate(gen_dataloader),total=len(gen_dataloader))
+def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10):
+    correct_count = {i: 0 for i in range(1, k + 1)}
+    pbar = tqdm(enumerate(gen_dataloader), total=len(gen_dataloader))
     for i, batch in pbar:
         input_ids = batch['input_ids'].to(model.device)
         attention_mask = batch['attention_mask'].to(model.device).bool()
@@ -40,17 +40,50 @@ def eval_dataset(model:T5ForConditionalGeneration,gen_dataloader:DataLoader,k=10
         mask = (labels != tokenizer.pad_token_id) & (labels != -100)
         labels = labels[mask]
 
-        labels=tokens_to_canonical_smiles(tokenizer, labels)
-        preds_list=[tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs]
-        for j in range(1,k+1):
+        labels = tokens_to_canonical_smiles(tokenizer, labels)
+        preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs]
+        for j in range(1, k + 1):
             if labels in preds_list[:j]:
                 correct_count[j] += 1
-        msg=" | ".join([f"{j}:{correct_count[j]/(i+1):.2f}" for j in range(1,k+1)])
-        msg=f'{i+1}/{len(gen_dataloader)} | {msg}'
+        msg = " | ".join([f"{j}:{correct_count[j]/(i+1):.2f}" for j in range(1, k + 1)])
+        msg = f'{i+1}/{len(gen_dataloader)} | {msg}'
         pbar.set_description(msg)
-    return {i: correct_count[i] / len(gen_dataloader) for i in [1,3,5,10]}
+    return {i: correct_count[i] / len(gen_dataloader) for i in [1, 3, 5, 10]}
 
 
+def average_checkpoints(cp_dirs, model_type, models_args):
+    """
+    Averages the state_dicts of all checkpoints provided in cp_dirs.
+    """
+    if not cp_dirs:
+        raise ValueError("No checkpoints found to average.")
+
+    # Initialize the averaged state_dict
+    avg_state_dict = None
+    num_checkpoints = len(cp_dirs)
+
+    for idx, cp_dir in enumerate(cp_dirs):
+        print(f"Loading checkpoint {idx + 1}/{num_checkpoints}: {cp_dir}")
+        model = model_type.from_pretrained(cp_dir, **models_args)
+        state_dict = model.state_dict()
+
+        if avg_state_dict is None:
+            # Initialize with the first checkpoint's state_dict
+            avg_state_dict = {k: v.clone().float() for k, v in state_dict.items()}
+        else:
+            # Accumulate the parameters
+            for k in avg_state_dict:
+                avg_state_dict[k] += state_dict[k].float()
+
+        # Free up memory
+        del model
+        torch.cuda.empty_cache()
+
+    # Compute the average
+    for k in avg_state_dict:
+        avg_state_dict[k] /= num_checkpoints
+
+    return avg_state_dict
 
 
 if __name__ == "__main__":
@@ -67,8 +100,11 @@ if __name__ == "__main__":
         lookup_len = int(run_name.split("_")[1])
         tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
         model_type = CustomT5Model
-        models_args = {"lookup_len": lookup_len, "ec_tokens_order": get_ec_order(tokenizer, ec_split),
-                       "cutoff_index": get_first_ec_token_index(tokenizer, ec_split)}
+        models_args = {
+            "lookup_len": lookup_len,
+            "ec_tokens_order": get_ec_order(tokenizer, ec_split),
+            "cutoff_index": get_first_ec_token_index(tokenizer, ec_split)
+        }
     else:
         if run_name == "regular":
             ec_split = True
@@ -86,18 +122,36 @@ if __name__ == "__main__":
                                   ec_split=ec_split, DEBUG=False)
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
-    cp_dir = sorted([f for f in os.listdir(cp_dir_all) if re.match(r"checkpoint-\d+", f)],
-                    key=lambda x: int(x.split("-")[1]))
-    cp_dir = cp_dir[-1]
-    cp_dir = f"{cp_dir_all}/{cp_dir}"
-    model = model_type.from_pretrained(cp_dir, **models_args)
-    model.to(device)
-    model.eval()
-    correct_count = eval_dataset(model, gen_dataloader)
-    print(f"Run: {run_name}")
+    # List and sort all checkpoint directories
+    cp_dirs = sorted(
+        [f for f in os.listdir(cp_dir_all) if re.match(r"checkpoint-\d+", f)],
+        key=lambda x: int(x.split("-")[1])
+    )
+    cp_dirs = [f"{cp_dir_all}/{cp_dir}" for cp_dir in cp_dirs]
+
+    if not cp_dirs:
+        raise ValueError(f"No checkpoints found in {cp_dir_all}")
+
+    # Average all checkpoints
+    averaged_state_dict = average_checkpoints(cp_dirs, model_type, models_args)
+
+    # Initialize the model and load the averaged state_dict
+    if "pretrained" in run_name:
+        averaged_model = model_type.from_pretrained(cp_dirs[0], **models_args)
+    else:
+        averaged_model = model_type.from_pretrained(cp_dirs[0], **models_args)
+
+    averaged_model.load_state_dict(averaged_state_dict)
+    averaged_model.to(device)
+    averaged_model.eval()
+
+    # Evaluate the averaged model
+    correct_count = eval_dataset(averaged_model, gen_dataloader)
+    print(f"Run: {run_name} (Averaged Checkpoints)")
     for k, acc in correct_count.items():
         print(f"{k}: {acc}")
-    output_file = f"results/eval_gen.csv"
-    with open(output_file, "w") as f:
-        f.write(run_name+","+cp_dir+","+",".join([str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
 
+    # Save the evaluation results
+    output_file = f"results/eval_gen.csv"
+    with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
+        f.write(run_name + ",averaged," + ",".join([str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
