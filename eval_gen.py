@@ -89,6 +89,7 @@ def average_checkpoints(cp_dirs, model_type, models_args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", default="pretrained_5", type=str)
+    parser.add_argument("--split", default="valid", type=str)
     args = parser.parse_args()
     dataset = "ecreact/level4"
     run_name = args.run_name
@@ -118,7 +119,7 @@ if __name__ == "__main__":
         model_type = T5ForConditionalGeneration
         models_args = {}
 
-    gen_dataset = SeqToSeqDataset([dataset], "valid", tokenizer=tokenizer, use_ec=use_ec,
+    gen_dataset = SeqToSeqDataset([dataset], args.split, tokenizer=tokenizer, use_ec=use_ec,
                                   ec_split=ec_split, DEBUG=False)
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
@@ -154,4 +155,4 @@ if __name__ == "__main__":
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
-        f.write(run_name + ",averaged," + ",".join([str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
+        f.write(run_name+args.split + ",averaged," + ",".join([str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
