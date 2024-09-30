@@ -68,7 +68,7 @@ class ESMFold:
                     torch.cuda.empty_cache()
                     self.chunk_size = self.chunk_size // 2
                     if self.chunk_size > 2:
-                        self.model.set_chunk_size(self.chunk_size)
+                        self.model.trunk.set_chunk_size(self.chunk_size)
                     else:
                         print("Not enough memory for ESMFold")
                         break
