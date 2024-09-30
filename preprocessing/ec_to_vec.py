@@ -73,13 +73,6 @@ class EC2Vec:
                     self.ec_to_vec_mem[ec] = np.fromstring(vec, sep=" ")
                     self.ec_to_id[ec] = id_
                     self.id_to_ec[id_] = ec
-
-    def save_ec_to_vec(self):
-        with open(self.ec_to_vec_file, "w") as f:
-            for ec, vec in self.ec_to_vec_mem.items():
-                vec_str = " ".join(map(str, vec))
-                f.write(f"{self.ec_to_id[ec]}\t{ec}\t{vec_str}\n")
-
     def add_ec_to_vec(self, ec, vec):
         with open(self.ec_to_vec_file, "a") as f:
             vec_str = " ".join(map(str, vec))
