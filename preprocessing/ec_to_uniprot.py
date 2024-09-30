@@ -48,6 +48,7 @@ class ESMFold:
 
     def fold(self, seq, output_file):
         tokenized_input = self.tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids']
+        tokenized_input = tokenized_input.to(device)
 
         with torch.no_grad():
             output = self.model(tokenized_input)
