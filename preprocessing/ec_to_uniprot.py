@@ -37,6 +37,8 @@ def convert_outputs_to_pdb(outputs):
     return pdbs
 
 
+
+
 class ESMFold:
     def __init__(self):
         self.tokenizer = AutoTokenizer.from_pretrained("facebook/esmfold_v1")
@@ -44,14 +46,36 @@ class ESMFold:
         self.model.to(device)
         self.model.esm = self.model.esm.half()
         torch.backends.cuda.matmul.allow_tf32 = True
-        self.model.trunk.set_chunk_size(64)
+        self.chunk_size = 256
+        self.model.trunk.set_chunk_size(self.chunk_size)
 
     def fold(self, seq, output_file):
         tokenized_input = self.tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids']
         tokenized_input = tokenized_input.to(device)
 
-        with torch.no_grad():
-            output = self.model(tokenized_input)
+        output = None
+
+        while output is None:
+            try:
+                with torch.no_grad():
+                    output = self.model(tokenized_input)
+            except RuntimeError as e:
+                if 'out of memory' in str(e):
+                    print('| WARNING: ran out of memory on chunk_size', self.chunk_size)
+                    for p in self.model.parameters():
+                        if p.grad is not None:
+                            del p.grad  # free some memory
+                    torch.cuda.empty_cache()
+                    self.chunk_size = self.chunk_size // 2
+                    if self.chunk_size > 2:
+                        self.model.set_chunk_size(self.chunk_size)
+                    else:
+                        print("Not enough memory for ESMFold")
+                        break
+                else:
+                    raise e
+        if output is None:
+            return
         pdb_file = convert_outputs_to_pdb(output)[0]
         with open(output_file, "w") as f:
             f.write(pdb_file)
