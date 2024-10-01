@@ -35,7 +35,7 @@ for line in tqdm(lines):
         s = Chem.MolToSmiles(mol)
         if s not in smiles_to_id:
             smiles_to_id[s] = len(smiles_to_id)
-        name = f"{uniprot_id}_{smiles_to_id[s]}"
+        name = f"{uniprot_id}/{smiles_to_id[s]}"
         if name in all_names:
             continue
         all_names.add(name)
@@ -44,12 +44,28 @@ for line in tqdm(lines):
             continue
         results.append((name, s, pdb_file, ""))
 results_df = pd.DataFrame(results, columns=["complex_name", "ligand_description", "protein_path", "protein_sequence"])
-output_pdb_dir = "datasets/docking"
+output_pdb_dir = "../BioCatalystChem/datasets/docking"
 if not os.path.exists(output_pdb_dir):
     os.makedirs(output_pdb_dir)
-n_splits = 20
-for i in range(n_splits):
-    results_df.iloc[i::n_splits].to_csv(f"{output_pdb_dir}/split_{i + 1}.csv", index=False)
 with open(f"{output_pdb_dir}/smiles_to_id.txt", 'w') as f:
     for k, v in smiles_to_id.items():
         f.write(f"{k} {v}\n")
+
+cmds = []
+base_cmd = "python -m inference --config default_inference_args.yaml"
+for i, row in results_df.iterrows():
+    name = row["complex_name"]
+    pdb_file = row["protein_path"]
+    ligand = row["ligand_description"]
+    output_dir = output_pdb_dir + name
+    cmds.append(
+        f"{base_cmd} --protein_path {pdb_file} --ligand {ligand} --output_dir {output_dir}")
+
+scripts_dir = "../DiffDock/scripts"
+os.makedirs(scripts_dir, exist_ok=True)
+
+n_splits = 20
+for i in range(n_splits):
+    with open(f"{scripts_dir}/run_{i}.sh", 'w') as f:
+        for cmd in cmds[i::n_splits]:
+            f.write(f"{cmd}\n")
