@@ -37,7 +37,7 @@ def ec_to_id_fasta(ec: str):
 def protein_to_dataframes(proteins: List[Protein]):
     data = []
     for protein in proteins:
-        data.append([protein.ec_full, protein.ec_use, protein.seq, protein.pdb_id, protein.pdb_file])
+        data.append([protein.ec_full, protein.ec_use,protein.uniprot_id, protein.seq, protein.pdb_id, protein.pdb_file])
     df = pd.DataFrame(data, columns=["EC_full", "EC_use", "Uniprot_id", "Sequence", "PDB_ID", "PDB_file"])
     return df
 
