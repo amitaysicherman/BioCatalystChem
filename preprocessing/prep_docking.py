@@ -2,7 +2,12 @@ import pandas as pd
 from collections import defaultdict
 from rdkit import Chem
 import os
+import rdkit.rdBase as rkrb
+import rdkit.RDLogger as rkl
 
+logger = rkl.logger()
+logger.setLevel(rkl.ERROR)
+rkrb.DisableLog("rdApp.error")
 ec_mapping = pd.read_csv("datasets/ec_map.csv")
 ec_to_uniport = defaultdict(str)
 for i, row in ec_mapping.iterrows():
