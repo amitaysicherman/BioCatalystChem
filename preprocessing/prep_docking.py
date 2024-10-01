@@ -35,7 +35,7 @@ for line in tqdm(lines):
         s = Chem.MolToSmiles(mol)
         if s not in smiles_to_id:
             smiles_to_id[s] = len(smiles_to_id)
-        name = f"{uniprot_id}/{smiles_to_id[s]}"
+        name = f"{uniprot_id}_{smiles_to_id[s]}"
         if name in all_names:
             continue
         all_names.add(name)
