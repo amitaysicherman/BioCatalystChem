@@ -40,13 +40,9 @@ for line in tqdm(lines):
             continue
         all_names.add(name)
         pdb_file = f"../BioCatalystChem/datasets/pdb_files/{uniprot_id}/{uniprot_id}_esmfold.pdb"
-        pdb_seq = ""
         if not os.path.exists(pdb_file):
-            pdb_file = ""
-            pdb_seq = ec_to_fasta[ec]
-        if pdb_seq == "" and pdb_file == "":
             continue
-        results.append((name, s, pdb_file, pdb_seq))
+        results.append((name, s, pdb_file, ""))
 results_df = pd.DataFrame(results, columns=["complex_name", "ligand_description", "protein_path", "protein_sequence"])
 output_pdb_dir = "datasets/docking"
 if not os.path.exists(output_pdb_dir):
