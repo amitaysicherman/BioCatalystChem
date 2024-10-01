@@ -47,7 +47,7 @@ results_df = pd.DataFrame(results, columns=["complex_name", "ligand_description"
 output_pdb_dir = "datasets/docking"
 if not os.path.exists(output_pdb_dir):
     os.makedirs(output_pdb_dir)
-n_splits = 1000
+n_splits = 20
 for i in range(n_splits):
     results_df.iloc[i::n_splits].to_csv(f"{output_pdb_dir}/split_{i + 1}.csv", index=False)
 with open(f"{output_pdb_dir}/smiles_to_id.txt", 'w') as f:
