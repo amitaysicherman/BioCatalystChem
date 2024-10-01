@@ -13,7 +13,6 @@ from transformers.models.esm.openfold_utils.feats import atom14_to_atom37
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
-
 # def convert_outputs_to_pdb(outputs):
 #     final_atom_positions = atom14_to_atom37(outputs["positions"][-1], outputs)
 #     outputs = {k: v.to("cpu").numpy() for k, v in outputs.items()}
@@ -166,9 +165,13 @@ if __name__ == "__main__":
         # if pdb_file == "":
         #     pdb_file = f"{output_dir}/{id_}.pdb"
         #     esm_fold.fold(fasta, pdb_file)
-        proteins.append(Protein(ec, ec_use,id_, fasta, "", ""))
+        proteins.append(Protein(ec, ec_use, id_, fasta, "", ""))
     df = protein_to_dataframes(proteins)
     df.to_csv(f"datasets/ec_map.csv", index=False)
-    protein_ligend_for_pdbs = [(p.uniprot_id,p.seq,"O") for p in proteins]
+    protein_ligend_for_pdbs = [(p.uniprot_id, p.seq, "O") for p in proteins]
     df = pd.DataFrame(protein_ligend_for_pdbs, columns=["complex_name", "protein_sequence", "ligand_description"])
-    df.to_csv("datasets/protein_ligand_to_pdb.csv", index=False)
+    output_pdb_dir = "datasets/pdb_files"
+    n_splits = 8
+    for i in range(n_splits):
+        df_split = df.iloc[i::n_splits]
+        df_split.to_csv(f"datasets/protein_ligand_{i}.csv", index=False)
