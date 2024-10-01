@@ -11,7 +11,8 @@ for i, row in ec_mapping.iterrows():
 base_dataset = "datasets/ecreact/ecreact-1.0.txt"
 with open(base_dataset) as f:
     lines = f.readlines()
-
+smiles_to_id = dict()
+all_names = set()
 results = []
 for line in lines:
     ec = line.split("|")[1].split(">>")[0]
@@ -19,13 +20,18 @@ for line in lines:
     input_smiles = line.split("|")[0]
     input_smiles = [x for x in input_smiles.split(".") if len(x) > 3]
     for s in input_smiles:
-        # remove stereochemistry
         mol = Chem.MolFromSmiles(s)
         if mol is None:
             continue
         Chem.RemoveStereochemistry(mol)
         s = Chem.MolToSmiles(mol)
-        results.append((uniprot_id, s, f'../BioCatalystChem/datasets/pdb_files/{uniprot_id}/{uniprot_id}_esmfold.pdb'))
+        if s not in smiles_to_id:
+            smiles_to_id[s] = len(smiles_to_id)
+        name = f"{uniprot_id}_{smiles_to_id[s]}"
+        if name in all_names:
+            continue
+        all_names.add(name)
+        results.append((name, s, f'../BioCatalystChem/datasets/pdb_files/{uniprot_id}/{uniprot_id}_esmfold.pdb'))
 results_df = pd.DataFrame(results, columns=["complex_name", "ligand_description", "protein_path"])
 output_pdb_dir = "datasets/docking"
 if not os.path.exists(output_pdb_dir):
