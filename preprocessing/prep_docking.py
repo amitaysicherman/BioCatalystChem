@@ -4,7 +4,7 @@ from rdkit import Chem
 import os
 import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
-
+from tqdm import tqdm
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
 rkrb.DisableLog("rdApp.error")
@@ -19,7 +19,7 @@ with open(base_dataset) as f:
 smiles_to_id = dict()
 all_names = set()
 results = []
-for line in lines:
+for line in tqdm(lines):
     ec = line.split("|")[1].split(">>")[0]
     uniprot_id = ec_to_uniport[ec]
     input_smiles = line.split("|")[0]
