@@ -174,4 +174,4 @@ if __name__ == "__main__":
     n_splits = 8
     for i in range(n_splits):
         df_split = df.iloc[i::n_splits]
-        df_split.to_csv(f"datasets/protein_ligand_{i}.csv", index=False)
+        df_split.to_csv(f"{output_pdb_dir}/protein_ligand_{i}.csv", index=False)
