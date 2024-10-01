@@ -44,7 +44,7 @@ for line in tqdm(lines):
             continue
         results.append((name, s, pdb_file, ""))
 results_df = pd.DataFrame(results, columns=["complex_name", "ligand_description", "protein_path", "protein_sequence"])
-output_pdb_dir = "../BioCatalystChem/datasets/docking"
+output_pdb_dir = "../BioCatalystChem/datasets/docking/"
 if not os.path.exists(output_pdb_dir):
     os.makedirs(output_pdb_dir)
 with open(f"{output_pdb_dir}/smiles_to_id.txt", 'w') as f:
