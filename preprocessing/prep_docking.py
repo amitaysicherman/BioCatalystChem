@@ -44,6 +44,7 @@ for line in tqdm(lines):
         if not os.path.exists(pdb_file):
             pdb_file = ""
             pdb_seq = ec_to_fasta[ec]
+            print(f"Missing pdb file for {uniprot_id}", ec,len(pdb_seq))
 
         results.append((name, s, pdb_file, pdb_seq))
 results_df = pd.DataFrame(results, columns=["complex_name", "ligand_description", "protein_path", "protein_sequence"])
