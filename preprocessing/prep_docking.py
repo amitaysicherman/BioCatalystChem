@@ -59,7 +59,7 @@ for i, row in results_df.iterrows():
     ligand = row["ligand_description"]
     output_dir = output_pdb_dir + name
     cmds.append(
-        f"{base_cmd} --protein_path '{pdb_file}' --ligand '{ligand}' --output_dir '{output_dir}'")
+        f"{base_cmd} --protein_path '{pdb_file}' --ligand '{ligand}' --out_dir '{output_dir}'")
 
 scripts_dir = "../DiffDock/scripts"
 os.makedirs(scripts_dir, exist_ok=True)
