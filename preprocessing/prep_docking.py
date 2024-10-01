@@ -44,6 +44,6 @@ if not os.path.exists(output_pdb_dir):
 n_splits = 8
 for i in range(n_splits):
     results_df.iloc[i::n_splits].to_csv(f"{output_pdb_dir}/split_{i + 1}.csv", index=False)
-with open(f"{output_pdb_dir}/smiles_to_id.txt") as f:
+with open(f"{output_pdb_dir}/smiles_to_id.txt",'w') as f:
     for k, v in smiles_to_id.items():
         f.write(f"{k} {v}\n")
