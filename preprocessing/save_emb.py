@@ -1,3 +1,4 @@
+#sbatch --mem=64G --time=7-00 --gres=gpu:A40:1 ----requeue --wrap "python preprocessing/save_emb.py"
 import torch
 from transformers import AutoTokenizer, EsmModel
 import numpy as np
