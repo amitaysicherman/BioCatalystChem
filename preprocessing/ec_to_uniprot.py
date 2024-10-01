@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+
 @dataclass
 class Protein:
     ec_full: str
@@ -37,7 +38,8 @@ def ec_to_id_fasta(ec: str):
 def protein_to_dataframes(proteins: List[Protein]):
     data = []
     for protein in proteins:
-        data.append([protein.ec_full, protein.ec_use,protein.uniprot_id, protein.seq, protein.pdb_id, protein.pdb_file])
+        data.append(
+            [protein.ec_full, protein.ec_use, protein.uniprot_id, protein.seq, protein.pdb_id, protein.pdb_file])
     df = pd.DataFrame(data, columns=["EC_full", "EC_use", "Uniprot_id", "Sequence", "PDB_ID", "PDB_file"])
     return df
 
@@ -75,8 +77,8 @@ if __name__ == "__main__":
     df = protein_to_dataframes(proteins)
     df.to_csv(f"datasets/ec_map.csv", index=False)
 
-    protein_ligend_for_pdbs = [(p.uniprot_id, p.seq, "O") for p in proteins]
-    df = pd.DataFrame(protein_ligend_for_pdbs, columns=["complex_name", "protein_sequence", "ligand_description"])
+    protein_ligend_for_pdbs = [(p.uniprot_id, p.seq, "O","") for p in proteins]
+    df = pd.DataFrame(protein_ligend_for_pdbs, columns=["complex_name", "protein_sequence", "ligand_description","protein_path"])
 
     output_pdb_dir = "datasets/pdb_files"
     n_splits = 8
