@@ -59,6 +59,7 @@ if __name__ == "__main__":
         uniprot_to_fasta[row["Uniprot_id"]] = row["Sequence"]
     base_dir = "datasets/docking"
     all_dirs = os.listdir(base_dir)
+    all_dirs = [x for x in all_dirs if os.path.isdir(f"{base_dir}/{x}")]
     for uniprot_id in tqdm(all_dirs):
         fasta = uniprot_to_fasta[uniprot_id]
         vec = ec2vec.fasta_to_vec(fasta)
