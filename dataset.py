@@ -79,7 +79,7 @@ class SeqToSeqDataset(Dataset):
             tgt_lines = [tgt_lines[i] for i in range(len(tgt_lines)) if not_none_mask[i]]
             emb_lines = [emb_lines[i] for i in range(len(emb_lines)) if not_none_mask[i]]
             len_after = len(src_lines)
-            print(f"Removed {len_before - len_after} samples")
+            print(f"Removed {len_before - len_after} samples, total: {len_after}, {len_before}")
 
         if self.DEBUG:
             src_lines = src_lines[:1]
