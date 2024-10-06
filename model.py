@@ -19,6 +19,7 @@ def get_layers(dims, dropout=0.0):
 
 class CustomT5Model(T5ForConditionalGeneration):
     def __init__(self, config: T5Config, lookup_len, cutoff_index, ec_tokens_order):
+
         super(CustomT5Model, self).__init__(config)
 
         self.ec_to_vec = EC2Vec(load_model=False)
@@ -29,12 +30,12 @@ class CustomT5Model(T5ForConditionalGeneration):
         layers_dims = [lookup_dim] + [config.d_model] * lookup_len
         self.lookup_proj = get_layers(layers_dims, dropout=config.dropout_rate)
         self.cutoff_index = cutoff_index
-        self.encoder
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)
 
         batch_size, seq_length, emb_dim = input_embeddings.shape
+        seq_length += 1
 
         # Find the length of each sequence (number of non-padding tokens)
         seq_lengths = attention_mask.sum(dim=1).tolist()  # List of lengths for each sequence in the batch
@@ -43,15 +44,15 @@ class CustomT5Model(T5ForConditionalGeneration):
         for i, seq_len in enumerate(seq_lengths):
 
             if (emb[i] == 0).all():
-                new_embeddings.append(input_embeddings[i])
-                continue
-            current_embeddings = input_embeddings[i, :seq_len - 1]  # Shape: (seq_len-1, embedding_dim)
-            combined_embeddings = torch.cat([current_embeddings, self.lookup_proj(emb[i].unsqueeze(0))], dim=0)
-            eos_embedding = input_embeddings[i, seq_len - 1].unsqueeze(0)  # Shape: (1, embedding_dim)
-            combined_embeddings = torch.cat([combined_embeddings, eos_embedding], dim=0)
+                combined_embeddings = input_embeddings[i]
+            else:
+                current_embeddings = input_embeddings[i, :seq_len - 1]  # Shape: (seq_len-1, embedding_dim)
+                combined_embeddings = torch.cat([current_embeddings, self.lookup_proj(emb[i].unsqueeze(0))], dim=0)
+                eos_embedding = input_embeddings[i, seq_len - 1].unsqueeze(0)  # Shape: (1, embedding_dim)
+                combined_embeddings = torch.cat([combined_embeddings, eos_embedding], dim=0)
             padding_length = seq_length - combined_embeddings.size(0)
             if padding_length > 0:
-                padding = torch.zeros(padding_length, emb_dim, device=input_embeddings.device)
+                padding = torch.ones(padding_length, emb_dim, device=input_embeddings.device)*self.config.pad_token_id
                 combined_embeddings = torch.cat([combined_embeddings, padding], dim=0)
             new_embeddings.append(combined_embeddings)
 
