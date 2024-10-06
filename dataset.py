@@ -61,7 +61,7 @@ class SeqToSeqDataset(Dataset):
             tgt_lines = f.read().splitlines()
         assert len(src_lines) == len(tgt_lines)
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
-        if not self.ec_type == ECType.NO_EC:
+        if self.ec_type == ECType.NO_EC:
             src_lines = [remove_ec(text) for text in src_lines]
             tgt_lines = [remove_ec(text) for text in tgt_lines]
         elif self.ec_type == ECType.PRETRAINED or self.ec_type == ECType.DAE:
