@@ -109,6 +109,8 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG)
     if load_cp:
         loaded_state_dict = load_file(load_cp+"/model.safetensors")
+        model.shared.weight=loaded_state_dict["shared.weight"]
+        
         missing_keys, unexpected_keys = model.load_state_dict(loaded_state_dict, strict=False)
 
         # Print the missing and unexpected keys
