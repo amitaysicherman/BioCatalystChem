@@ -113,5 +113,4 @@ class SeqToSeqDataset(Dataset):
         return {"input_ids": data[0], "attention_mask": data[1], "labels": data[2], "emb": data[3]}
 
     def __getitem__(self, idx):
-        print(self.data_to_dict(self.data[idx]))
         return self.data_to_dict(self.data[idx])
