@@ -63,6 +63,7 @@ def get_protein_mol_att(protein_id, molecule_id):
     ligand_file = f'datasets/docking/{protein_id}/{molecule_id}/complex_0/rank1.sdf'
     lig_coords = get_mol_cords(ligand_file)
     ligand_locs = np.array(lig_coords)
+    print(protein_id, molecule_id,protein_cords.shape, ligand_locs.shape)
     dist = euclidean_distances(protein_cords, ligand_locs)
     weights = np.exp(-dist)
     weights = weights / weights.sum(axis=0)
