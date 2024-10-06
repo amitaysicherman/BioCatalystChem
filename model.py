@@ -44,7 +44,7 @@ class CustomT5Model(T5ForConditionalGeneration):
                 new_embeddings.append(input_embeddings[i])
                 continue
             current_embeddings = input_embeddings[i, :seq_len - 1]  # Shape: (seq_len-1, embedding_dim)
-            combined_embeddings = torch.cat([current_embeddings, emb[i].unsqueeze(0)], dim=0)
+            combined_embeddings = torch.cat([current_embeddings, self.lookup_proj(emb[i].unsqueeze(0))], dim=0)
             eos_embedding = input_embeddings[i, seq_len - 1].unsqueeze(0)  # Shape: (1, embedding_dim)
             combined_embeddings = torch.cat([combined_embeddings, eos_embedding], dim=0)
             padding_length = seq_length - combined_embeddings.size(0)
