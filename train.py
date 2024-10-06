@@ -94,7 +94,7 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False,costum_t5=False):
         config.d_model = 128
         config.num_heads = 4
         config.d_ff = 256
-    if ec_split or costum_t5:
+    if ec_split and not costum_t5:
         model = T5ForConditionalGeneration(config)
     else:
         # ec_order = get_ec_order(tokenizer, ec_split)
