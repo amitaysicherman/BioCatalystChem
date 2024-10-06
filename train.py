@@ -15,7 +15,7 @@ from preprocessing.build_tokenizer import get_tokenizer_file_path, get_first_ec_
 from model import CustomT5Model
 import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
-
+import torch
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
 rkrb.DisableLog("rdApp.error")
@@ -106,6 +106,8 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
 
 def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG)
+    if load_cp:
+        model.load_state_dict(torch.load(f"{load_cp}/pytorch_model.bin"), strict=False)
     # ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
     ecreact_dataset = "ecreact/level4"
     ec_type = get_ec_type(use_ec, ec_split, dae)
