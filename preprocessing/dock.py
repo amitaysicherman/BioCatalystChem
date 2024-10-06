@@ -75,10 +75,7 @@ def get_protein_mol_att(protein_id, molecule_id):
     return docking_attention_emd
 
 
-def get_reaction_attention_emd(reaction_src_smiles, ec_to_uniprot, smiles_to_id):
-    non_can_smiles, ec = reaction_src_smiles.split("|")
-    ec=ec_tokens_to_seq(ec)
-    ec=ec[4:-1]
+def get_reaction_attention_emd(non_can_smiles,ec, ec_to_uniprot, smiles_to_id):
     protein_id = ec_to_uniprot[ec]
     if not check_protein_exists(protein_id):
         return None
@@ -111,8 +108,13 @@ if __name__ == "__main__":
 
     with open("datasets/ecreact/level4/src-train.txt") as f:
         lines = f.read().splitlines()
-    for line in lines:
-        reaction_attention_emd = get_reaction_attention_emd(line, ec_to_uniprot, smiles_to_id)
+    for reaction_src_smiles in lines:
+        non_can_smiles, ec = reaction_src_smiles.split("|")
+        ec = ec_tokens_to_seq(ec)
+        ec = ec[4:-1]
+
+        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles,ec, ec_to_uniprot, smiles_to_id)
         if reaction_attention_emd is not None:
+
             print(reaction_attention_emd)
             print(reaction_attention_emd.shape)

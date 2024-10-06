@@ -2,6 +2,7 @@ from typing import Optional, Dict, Any
 
 import torch
 from transformers import T5ForConditionalGeneration, T5Config, GenerationConfig
+
 from preprocessing.ec_to_vec import EC2Vec
 
 
@@ -40,7 +41,8 @@ class CustomT5Model(T5ForConditionalGeneration):
 
         new_embeddings = []
         for i, seq_len in enumerate(seq_lengths):
-            if emb[i] == 0:
+
+            if len(emb[i]) == 1 and emb[i][0] == 0:
                 new_embeddings.append(input_embeddings[i])
                 continue
             current_embeddings = input_embeddings[i, :seq_len - 1]  # Shape: (seq_len-1, embedding_dim)
