@@ -109,7 +109,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
     # ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
     ecreact_dataset = "ecreact/level4"
     ec_type = get_ec_type(use_ec, ec_split, dae)
-    train_dataset = SeqToSeqDataset(["uspto", ecreact_dataset], "train", weights=[1, 9], tokenizer=tokenizer,
+    train_dataset = SeqToSeqDataset([ecreact_dataset,"uspto"], "train", weights=[1, 9], tokenizer=tokenizer,
                                     ec_type=ec_type, DEBUG=DEBUG)
     eval_split = "valid" if not DEBUG else "train"
 
