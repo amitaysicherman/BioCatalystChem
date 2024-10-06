@@ -42,7 +42,7 @@ class CustomT5Model(T5ForConditionalGeneration):
         new_embeddings = []
         for i, seq_len in enumerate(seq_lengths):
 
-            if len(emb[i]) == 1 and emb[i][0] == 0:
+            if (emb[i] == 0).all():
                 new_embeddings.append(input_embeddings[i])
                 continue
             current_embeddings = input_embeddings[i, :seq_len - 1]  # Shape: (seq_len-1, embedding_dim)

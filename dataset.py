@@ -17,7 +17,7 @@ class ECType(Enum):
     PRETRAINED = 2
     DAE = 3
 
-DEFAULT_EMB_VALUE = torch.tensor([0])
+DEFAULT_EMB_VALUE = torch.tensor([0]*2560)
 
 def get_ec_type(use_ec, ec_split, dae):
     if dae:
@@ -113,4 +113,5 @@ class SeqToSeqDataset(Dataset):
         return {"input_ids": data[0], "attention_mask": data[1], "labels": data[2], "emb": data[3]}
 
     def __getitem__(self, idx):
+        print(self.data_to_dict(self.data[idx]))
         return self.data_to_dict(self.data[idx])
