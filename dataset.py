@@ -52,34 +52,35 @@ class SeqToSeqDataset(Dataset):
         else:
             assert len(weights) == len(datasets)
         for ds, w in zip(datasets, weights):
-            self.load_dataset(f"datasets/{ds}", split, w)
+            self.load_dataset(f"datasets/{ds}", split, w,have_ec="ec" in ds)
 
-    def load_dataset(self, input_base, split, w):
+    def load_dataset(self, input_base, split, w,have_ec=True):
         with open(f"{input_base}/src-{split}.txt") as f:
             src_lines = f.read().splitlines()
         with open(f"{input_base}/tgt-{split}.txt") as f:
             tgt_lines = f.read().splitlines()
         assert len(src_lines) == len(tgt_lines)
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
-        if self.ec_type == ECType.NO_EC:
-            src_lines = [remove_ec(text) for text in src_lines]
-            tgt_lines = [remove_ec(text) for text in tgt_lines]
-        elif self.ec_type == ECType.PRETRAINED or self.ec_type == ECType.DAE:
-            src_ec = [redo_ec_split(text, True) for text in src_lines]
-            src_lines = [x[0] for x in src_ec]
-            ec_lines = [x[1] for x in src_ec]
-            if self.ec_type == ECType.PRETRAINED:
-                emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in ec_lines]
-            else:
-                emb_lines = [get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id) for text, ec in zip(src_lines, ec_lines)]
+        if have_ec:
+            if self.ec_type == ECType.NO_EC:
+                src_lines = [remove_ec(text) for text in src_lines]
+                tgt_lines = [remove_ec(text) for text in tgt_lines]
+            elif self.ec_type == ECType.PRETRAINED or self.ec_type == ECType.DAE:
+                src_ec = [redo_ec_split(text, True) for text in src_lines]
+                src_lines = [x[0] for x in src_ec]
+                ec_lines = [x[1] for x in src_ec]
+                if self.ec_type == ECType.PRETRAINED:
+                    emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in ec_lines]
+                else:
+                    emb_lines = [get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id) for text, ec in zip(src_lines, ec_lines)]
 
-            not_none_mask = [x is not None for x in emb_lines]
-            len_before = len(src_lines)
-            src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
-            tgt_lines = [tgt_lines[i] for i in range(len(tgt_lines)) if not_none_mask[i]]
-            emb_lines = [emb_lines[i] for i in range(len(emb_lines)) if not_none_mask[i]]
-            len_after = len(src_lines)
-            print(f"Removed {len_before - len_after} samples, total: {len_after}, {len_before}")
+                not_none_mask = [x is not None for x in emb_lines]
+                len_before = len(src_lines)
+                src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
+                tgt_lines = [tgt_lines[i] for i in range(len(tgt_lines)) if not_none_mask[i]]
+                emb_lines = [emb_lines[i] for i in range(len(emb_lines)) if not_none_mask[i]]
+                len_after = len(src_lines)
+                print(f"Removed {len_before - len_after} samples, total: {len_after}, {len_before}")
 
         if self.DEBUG:
             src_lines = src_lines[:1]
