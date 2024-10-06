@@ -126,7 +126,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
                                   DEBUG=DEBUG)
     eval_datasets = {"ecreact": val_ecreact}
 
-    run_name = args_to_name(use_ec, ec_split, dae, lookup_len)
+    run_name = args_to_name(use_ec, ec_split,lookup_len, dae)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
