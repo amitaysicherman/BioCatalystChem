@@ -104,7 +104,7 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
     return tokenizer, model
 
 
-def main(use_ec=True, ec_split=False, lookup_len=5, dae=False):
+def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG)
     # ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
     ecreact_dataset = "ecreact/level4"
@@ -121,6 +121,9 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False):
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
+    if not load_cp:
+        load_cp = get_last_cp(output_dir)
+
     training_args = TrainingArguments(
         output_dir=output_dir,
         evaluation_strategy="steps",
@@ -136,7 +139,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False):
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
         run_name=run_name,
-        resume_from_checkpoint=get_last_cp(output_dir)
+        resume_from_checkpoint=load_cp
     )
 
     # Initialize Trainer
@@ -162,6 +165,7 @@ if __name__ == '__main__':
     parser.add_argument("--ec_split", default=0, type=int)
     parser.add_argument("--dae", default=0, type=int)
     parser.add_argument("--lookup_len", default=5, type=int)
+    parser.add_argument("--load_cp", default="", type=str)
     args = parser.parse_args()
     DEBUG = args.debug
-    main(args.use_ec, args.ec_split, args.lookup_len, args.dae)
+    main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp)
