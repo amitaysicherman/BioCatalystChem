@@ -84,7 +84,7 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False):
 #     raise ValueError(f"Unknown run name: {run_name}")
 
 
-def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
+def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False,costum_t5=False):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
@@ -94,7 +94,7 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
         config.d_model = 128
         config.num_heads = 4
         config.d_ff = 256
-    if ec_split:
+    if ec_split or costum_t5:
         model = T5ForConditionalGeneration(config)
     else:
         # ec_order = get_ec_order(tokenizer, ec_split)
@@ -106,15 +106,10 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
 
 
 def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
-    tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG)
+    tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae)
     if load_cp:
-        tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(True))
         loaded_state_dict = load_file(load_cp+"/model.safetensors")
-        model.shared.weight.data = loaded_state_dict["shared.weight"]
-
         missing_keys, unexpected_keys = model.load_state_dict(loaded_state_dict, strict=False)
-
-        # Print the missing and unexpected keys
         print("Missing keys in the model (not loaded):", missing_keys)
         print("Unexpected keys in the checkpoint (not used by the model):", unexpected_keys)
 
