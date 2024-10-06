@@ -97,10 +97,10 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
     if ec_split:
         model = T5ForConditionalGeneration(config)
     else:
-        ec_order = get_ec_order(tokenizer, ec_split)
-        cutoff_index = get_first_ec_token_index(tokenizer, ec_split)
-        config.vocab_size = cutoff_index
-        model = CustomT5Model(config, lookup_len, cutoff_index, ec_order)
+        # ec_order = get_ec_order(tokenizer, ec_split)
+        # cutoff_index = get_first_ec_token_index(tokenizer, ec_split)
+        # config.vocab_size = cutoff_index
+        model = CustomT5Model(config, lookup_len)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     return tokenizer, model
 
