@@ -69,12 +69,15 @@ def ec_tokens_to_seq(ec_tokens_str):
     return wrap_ec(".".join(ec))
 
 
-def redo_ec_split(text):
+def redo_ec_split(text,return_smiles_num=False):
     if "|" not in text:
         return text
     text_no_ec = text.split("|")[0].strip()
     ec = text.split("|")[1].strip()
     ec = ec_tokens_to_seq(ec)
+    if return_smiles_num:
+        ec=ec.replace("[","").replace("]","").replace("ec:","")
+        return text_no_ec, ec
     return f"{text_no_ec} | {ec}"
 
 

@@ -10,7 +10,7 @@ from transformers import PreTrainedTokenizerFast
 import numpy as np
 from rdkit import Chem
 
-from dataset import SeqToSeqDataset
+from dataset import SeqToSeqDataset, get_ec_type
 from preprocessing.build_tokenizer import get_tokenizer_file_path, get_first_ec_token_index, get_ec_order
 from model import CustomT5Model
 import rdkit.rdBase as rkrb
@@ -56,8 +56,10 @@ def get_last_cp(base_dir):
     return f"{base_dir}/{cp_dirs[-1]}"
 
 
-def args_to_name(use_ec, ec_split, lookup_len=5):
-    if use_ec:
+def args_to_name(use_ec, ec_split, lookup_len=5, dae=False):
+    if dae:
+        run_name = f"dae_{lookup_len}"
+    elif use_ec:
         if ec_split:
             run_name = "paper"
         else:
@@ -67,18 +69,18 @@ def args_to_name(use_ec, ec_split, lookup_len=5):
     return run_name
 
 
-def name_to_args(run_name):
-    if run_name == "paper":
-        return {"use_ec": True, "ec_split": True, "lookup_len": 5}
-    if run_name.startswith("pretrained"):
-        if "_" in run_name:
-            lookup_len = int(run_name.split("_")[1])
-        else:
-            lookup_len = 5
-        return {"use_ec": True, "ec_split": False, "lookup_len": lookup_len}
-    if run_name == "regular":
-        return {"use_ec": False, "ec_split": False, "lookup_len": 5}
-    raise ValueError(f"Unknown run name: {run_name}")
+# def name_to_args(run_name):
+#     if run_name == "paper":
+#         return {"use_ec": True, "ec_split": True, "lookup_len": 5}
+#     if run_name.startswith("pretrained"):
+#         if "_" in run_name:
+#             lookup_len = int(run_name.split("_")[1])
+#         else:
+#             lookup_len = 5
+#         return {"use_ec": True, "ec_split": False, "lookup_len": lookup_len}
+#     if run_name == "regular":
+#         return {"use_ec": False, "ec_split": False, "lookup_len": 5}
+#     raise ValueError(f"Unknown run name: {run_name}")
 
 
 def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
@@ -102,21 +104,20 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
     return tokenizer, model
 
 
-def main(use_ec=True, ec_split=False, lookup_len=5):
+def main(use_ec=True, ec_split=False, lookup_len=5, dae=False):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG)
     # ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
     ecreact_dataset = "ecreact/level4"
-
+    ec_type = get_ec_type(use_ec, ec_split, dae)
     train_dataset = SeqToSeqDataset(["uspto", ecreact_dataset], "train", weights=[1, 9], tokenizer=tokenizer,
-                                    use_ec=use_ec,
-                                    ec_split=ec_split, DEBUG=DEBUG)
+                                    ec_type=ec_type, DEBUG=DEBUG)
     eval_split = "valid" if not DEBUG else "train"
 
-    val_ecreact = SeqToSeqDataset([ecreact_dataset], eval_split, weights=[1], tokenizer=tokenizer, use_ec=use_ec,
-                                  ec_split=ec_split, DEBUG=DEBUG)
+    val_ecreact = SeqToSeqDataset([ecreact_dataset], eval_split, weights=[1], tokenizer=tokenizer, ec_type=ec_type,
+                                  DEBUG=DEBUG)
     eval_datasets = {"ecreact": val_ecreact}
 
-    run_name = args_to_name(use_ec, ec_split, lookup_len)
+    run_name = args_to_name(use_ec, ec_split, dae, lookup_len)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -159,7 +160,8 @@ if __name__ == '__main__':
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--use_ec", default=1, type=int)
     parser.add_argument("--ec_split", default=0, type=int)
+    parser.add_argument("--dae", default=0, type=int)
     parser.add_argument("--lookup_len", default=5, type=int)
     args = parser.parse_args()
     DEBUG = args.debug
-    main(args.use_ec, args.ec_split, args.lookup_len)
+    main(args.use_ec, args.ec_split, args.lookup_len, args.dae)
