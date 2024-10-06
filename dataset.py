@@ -1,3 +1,4 @@
+import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast
@@ -16,7 +17,7 @@ class ECType(Enum):
     PRETRAINED = 2
     DAE = 3
 
-DEFAULT_EMB_VALUE = 0.0
+DEFAULT_EMB_VALUE = torch.tensor([0])
 
 def get_ec_type(use_ec, ec_split, dae):
     if dae:
