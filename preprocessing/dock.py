@@ -98,7 +98,10 @@ def get_reaction_attention_emd(non_can_smiles,ec, ec_to_uniprot, smiles_to_id):
             if not os.path.exists(ligand_file):
                 continue
             molecule_id = smiles_to_id[s]
-            docking_attention_emd = get_protein_mol_att(protein_id, molecule_id)
+            try:
+                docking_attention_emd = get_protein_mol_att(protein_id, molecule_id)
+            except:
+                continue
             if docking_attention_emd is not None:
                 embds.append(docking_attention_emd)
     if len(embds) == 0:

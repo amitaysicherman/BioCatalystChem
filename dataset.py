@@ -70,9 +70,13 @@ class SeqToSeqDataset(Dataset):
                 src_lines = [x[0] for x in src_ec]
                 ec_lines = [x[1] for x in src_ec]
                 if self.ec_type == ECType.PRETRAINED:
-                    emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in ec_lines]
+                    emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
+
                 else:
-                    emb_lines = [get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id) for text, ec in zip(src_lines, ec_lines)]
+                    emb_lines = [
+                        get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id)
+                        for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
+                    ]
 
                 not_none_mask = [x is not None for x in emb_lines]
                 len_before = len(src_lines)
