@@ -63,7 +63,8 @@ def get_protein_mol_att(protein_id, molecule_id):
     ligand_file = f'datasets/docking/{protein_id}/{molecule_id}/complex_0/rank1.sdf'
     lig_coords = get_mol_cords(ligand_file)
     ligand_locs = np.array(lig_coords)
-    print(protein_id, molecule_id,protein_cords.shape, ligand_locs.shape)
+    if len(ligand_locs) == 0:
+        return None
     dist = euclidean_distances(protein_cords, ligand_locs)
     weights = np.exp(-dist)
     weights = weights / weights.sum(axis=0)
@@ -96,7 +97,8 @@ def get_reaction_attention_emd(non_can_smiles,ec, ec_to_uniprot, smiles_to_id):
                 continue
             molecule_id = smiles_to_id[s]
             docking_attention_emd = get_protein_mol_att(protein_id, molecule_id)
-            embds.append(docking_attention_emd)
+            if docking_attention_emd is not None:
+                embds.append(docking_attention_emd)
     if len(embds) == 0:
         return None
     return np.array(embds).mean(axis=0)
