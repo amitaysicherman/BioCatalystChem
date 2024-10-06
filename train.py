@@ -6,6 +6,7 @@ from transformers import (
 from transformers import Trainer, TrainingArguments
 
 from transformers import PreTrainedTokenizerFast
+from safetensors.torch import load_file
 
 import numpy as np
 from rdkit import Chem
@@ -107,7 +108,13 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False):
 def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG)
     if load_cp:
-        model.load_state_dict(torch.load(f"{load_cp}/pytorch_model.bin"), strict=False)
+        loaded_state_dict = load_file(load_cp+"/model.safetensors")
+        missing_keys, unexpected_keys = model.load_state_dict(loaded_state_dict, strict=False)
+
+        # Print the missing and unexpected keys
+        print("Missing keys in the model (not loaded):", missing_keys)
+        print("Unexpected keys in the checkpoint (not used by the model):", unexpected_keys)
+
     # ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
     ecreact_dataset = "ecreact/level4"
     ec_type = get_ec_type(use_ec, ec_split, dae)
@@ -123,8 +130,6 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
-    if not load_cp:
-        load_cp = get_last_cp(output_dir)
 
     training_args = TrainingArguments(
         output_dir=output_dir,
@@ -142,7 +147,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
         run_name=run_name,
-        resume_from_checkpoint=load_cp
+        # resume_from_checkpoint=get_last_cp(output_dir)
     )
 
     # Initialize Trainer
