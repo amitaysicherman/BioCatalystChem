@@ -110,7 +110,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp=""):
     if load_cp:
         tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(True))
         loaded_state_dict = load_file(load_cp+"/model.safetensors")
-        model.shared.weight=loaded_state_dict["shared.weight"]
+        model.shared.weight.data = loaded_state_dict["shared.weight"]
 
         missing_keys, unexpected_keys = model.load_state_dict(loaded_state_dict, strict=False)
 
