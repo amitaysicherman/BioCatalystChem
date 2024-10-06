@@ -36,7 +36,8 @@ class CustomT5Model(T5ForConditionalGeneration):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)
 
         batch_size, seq_length, emb_dim = input_embeddings.shape
-        seq_length += 1
+        if self.seq_or_add==0:
+            seq_length += 1
 
         # Find the length of each sequence (number of non-padding tokens)
         seq_lengths = attention_mask.sum(dim=1).tolist()  # List of lengths for each sequence in the batch
