@@ -88,8 +88,9 @@ def get_reaction_attention_emd(non_can_smiles,ec, ec_to_uniprot, smiles_to_id):
             continue
         Chem.RemoveStereochemistry(mol)
         s = Chem.MolToSmiles(mol)
+        ligand_file = f'datasets/docking/{protein_id}/{smiles_to_id[s]}/complex_0/rank1.sdf'
 
-        if s in smiles_to_id:
+        if s in smiles_to_id and os.path.exists(ligand_file):
             molecule_id = smiles_to_id[s]
             docking_attention_emd = get_protein_mol_att(protein_id, molecule_id)
             embds.append(docking_attention_emd)
