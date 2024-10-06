@@ -18,7 +18,7 @@ def get_layers(dims, dropout=0.0):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, lookup_len):
+    def __init__(self, config: T5Config, lookup_len, seq_or_add=0):
 
         super(CustomT5Model, self).__init__(config)
 
@@ -29,6 +29,7 @@ class CustomT5Model(T5ForConditionalGeneration):
         lookup_dim = self.ec_to_vec.prot_dim
         layers_dims = [lookup_dim] + [config.d_model] * lookup_len
         self.lookup_proj = get_layers(layers_dims, dropout=config.dropout_rate)
+        self.seq_or_add = seq_or_add
         # self.cutoff_index = cutoff_index
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb):
@@ -45,23 +46,28 @@ class CustomT5Model(T5ForConditionalGeneration):
             if (emb[i] == 0).all():
                 combined_embeddings = input_embeddings[i]
             else:
+
                 current_embeddings = input_embeddings[i, :seq_len - 1]  # Shape: (seq_len-1, embedding_dim)
-                combined_embeddings = torch.cat([current_embeddings, self.lookup_proj(emb[i].unsqueeze(0))], dim=0)
+                if self.seq_or_add == 0:
+                    combined_embeddings = torch.cat([current_embeddings, self.lookup_proj(emb[i].unsqueeze(0))], dim=0)
+                else:
+                    combined_embeddings = current_embeddings + self.lookup_proj(emb[i].unsqueeze(0))
                 eos_embedding = input_embeddings[i, seq_len - 1].unsqueeze(0)  # Shape: (1, embedding_dim)
                 combined_embeddings = torch.cat([combined_embeddings, eos_embedding], dim=0)
             padding_length = seq_length - combined_embeddings.size(0)
             if padding_length > 0:
-                padding = torch.ones(padding_length, emb_dim, device=input_embeddings.device)*self.config.pad_token_id
+                padding = torch.ones(padding_length, emb_dim, device=input_embeddings.device) * self.config.pad_token_id
                 combined_embeddings = torch.cat([combined_embeddings, padding], dim=0)
             new_embeddings.append(combined_embeddings)
-        # add last attention mask to new embeddings
-        new_attention_mask = torch.ones(batch_size, seq_length, device=input_embeddings.device)
-        for i, seq_len in enumerate(seq_lengths):
-            new_attention_mask[i, seq_len:] = 0
+        if self.seq_or_add == 0:
+            # add last attention mask to new embeddings
+            attention_mask = torch.ones(batch_size, seq_length, device=input_embeddings.device)
+            for i, seq_len in enumerate(seq_lengths):
+                attention_mask[i, seq_len:] = 0
 
         # Stack the new embeddings to form a batch
         new_input_embeddings = torch.stack(new_embeddings)
-        return new_input_embeddings,new_attention_mask  # Shape: (batch_size, sequence_length, embedding_dim)
+        return new_input_embeddings, attention_mask  # Shape: (batch_size, sequence_length, embedding_dim)
         #
         # regular_token_mask = input_ids < self.cutoff_index
         # lookup_token_mask = input_ids >= self.cutoff_index
@@ -81,7 +87,7 @@ class CustomT5Model(T5ForConditionalGeneration):
             return super().forward(input_ids=input_ids, attention_mask=attention_mask, labels=labels,
                                    encoder_outputs=encoder_outputs, **kwargs)
         if inputs_embeds is None:
-            inputs_embeds,attention_mask = self.prep_input_embeddings(input_ids, attention_mask, emb)
+            inputs_embeds, attention_mask = self.prep_input_embeddings(input_ids, attention_mask, emb)
 
         return super().forward(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels, **kwargs)
 
@@ -94,7 +100,9 @@ class CustomT5Model(T5ForConditionalGeneration):
     ) -> Dict[str, Any]:
         if generation_config is None:
             generation_config = GenerationConfig.from_model_config(self.config)
-        inputs_embeds,model_kwargs["attention_mask"] = self.prep_input_embeddings(inputs_tensor, model_kwargs["attention_mask"], model_kwargs["emb"])
+        inputs_embeds, model_kwargs["attention_mask"] = self.prep_input_embeddings(inputs_tensor,
+                                                                                   model_kwargs["attention_mask"],
+                                                                                   model_kwargs["emb"])
         model_kwargs["inputs_embeds"] = inputs_embeds
         return super()._prepare_encoder_decoder_kwargs_for_generation(
             None, model_kwargs, model_input_name, generation_config
