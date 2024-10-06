@@ -58,7 +58,7 @@ def get_last_cp(base_dir):
     return f"{base_dir}/{cp_dirs[-1]}"
 
 
-def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, seq_add=0):
+def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, seq_add=0, ecreact_only=0):
     if dae:
         suf = 'seq' if seq_add == 0 else 'add'
         run_name = f"dae_{lookup_len}_{suf}"
@@ -69,6 +69,8 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, seq_add=0):
             run_name = f"pretrained_{lookup_len}"
     else:
         run_name = "regular"
+    if ecreact_only:
+        run_name += "_ecreact"
     return run_name
 
 
@@ -107,7 +109,7 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
     return tokenizer, model
 
 
-def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", seq_add=0):
+def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", seq_add=0, ecreact_only=0):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, seq_add)
     if load_cp:
         loaded_state_dict = load_file(load_cp + "/model.safetensors")
@@ -118,7 +120,8 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", seq_a
     # ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
     ecreact_dataset = "ecreact/level4"
     ec_type = get_ec_type(use_ec, ec_split, dae)
-    train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[1, 9], tokenizer=tokenizer,
+    train_datasets_names = [ecreact_dataset] if ecreact_only else [ecreact_dataset, "uspto"]
+    train_dataset = SeqToSeqDataset(train_datasets_names, "train", weights=[1, 9], tokenizer=tokenizer,
                                     ec_type=ec_type, DEBUG=DEBUG)
     eval_split = "valid" if not DEBUG else "train"
 
@@ -126,7 +129,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", seq_a
                                   DEBUG=DEBUG)
     eval_datasets = {"ecreact": val_ecreact}
 
-    run_name = args_to_name(use_ec, ec_split, lookup_len, dae, seq_add)
+    run_name = args_to_name(use_ec, ec_split, lookup_len, dae, seq_add, ecreact_only)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -175,7 +178,8 @@ if __name__ == '__main__':
     parser.add_argument("--lookup_len", default=5, type=int)
     parser.add_argument("--load_cp", default="", type=str)
     parser.add_argument("--seq_add", default=0, type=int)
+    parser.add_argument("--ecreact_only", default=0, type=int)
 
     args = parser.parse_args()
     DEBUG = args.debug
-    main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp, args.seq_add)
+    main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp, args.seq_add, args.ecreact_only)
