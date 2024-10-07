@@ -34,10 +34,13 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
         attention_mask = batch['attention_mask'].to(model.device).bool()
         labels = batch['labels'].to(model.device)
         emb = batch['emb'].to(model.device).float()
-
-        outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,emb=emb,
+        if (emb == 0).all():
+            emb_args={}
+        else:
+            emb_args={"emb":emb}
+        outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
                                  max_length=200, do_sample=False, num_beams=k * 2,
-                                 num_return_sequences=k)
+                                 num_return_sequences=k, **emb_args)
         mask = (labels != tokenizer.pad_token_id) & (labels != -100)
         labels = labels[mask]
 
