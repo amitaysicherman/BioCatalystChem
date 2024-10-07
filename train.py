@@ -66,7 +66,8 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, seq_add=0, ecreact_o
         if ec_split:
             run_name = "paper"
         else:
-            run_name = f"pretrained_{lookup_len}"
+            suf = 'seq' if seq_add == 0 else 'add'
+            run_name = f"pretrained_{lookup_len}_{suf}"
     else:
         run_name = "regular"
     if ecreact_only:
