@@ -151,4 +151,4 @@ if __name__ == "__main__":
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
-        f.write(run_name+args.split + ",averaged," + ",".join([str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
+        f.write(run_name+args.split + ","+cp_dirs[0]+"," + ",".join([str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
