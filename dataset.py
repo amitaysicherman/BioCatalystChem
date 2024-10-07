@@ -9,7 +9,7 @@ from preprocessing.dock import get_reaction_attention_emd
 from enum import Enum
 from collections import defaultdict
 import pandas as pd
-
+import random
 
 class ECType(Enum):
     NO_EC = 0
@@ -54,6 +54,7 @@ class SeqToSeqDataset(Dataset):
             assert len(weights) == len(datasets)
         for ds, w in zip(datasets, weights):
             self.load_dataset(f"datasets/{ds}", split, w,have_ec="ec" in ds)
+        random.shuffle(self.data)
 
     def load_dataset(self, input_base, split, w,have_ec=True):
         with open(f"{input_base}/src-{split}.txt") as f:
