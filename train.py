@@ -158,6 +158,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", seq_a
         run_name=run_name,
         resume_from_checkpoint=True,
         load_best_model_at_end=True,
+        learning_rate=5e-4,
 
     )
 
