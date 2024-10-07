@@ -156,7 +156,9 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", seq_a
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
         run_name=run_name,
-        # resume_from_checkpoint=get_last_cp(output_dir)
+        resume_from_checkpoint=True,
+        load_best_model_at_end=True,
+
     )
 
     # Initialize Trainer
