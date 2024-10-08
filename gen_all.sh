@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --time=1-00
-#SBATCH --array=1-8
+#SBATCH --array=1-10
 #SBATCH --mem=64G
 #SBATCH --requeue
 #SBATCH --gres=gpu:A4000:1
@@ -23,12 +23,18 @@
     python eval_gen.py --run_name paper
     ;;
   6)
-    python eval_gen.py --run_name pretrained_1
+    python eval_gen.py --run_name pretrained_1_add
     ;;
   7)
-    python eval_gen.py --run_name pretrained_5
+    python eval_gen.py --run_name pretrained_5_add
     ;;
   8)
+    python eval_gen.py --run_name pretrained_1_seq
+    ;;
+  9)
+    python eval_gen.py --run_name pretrained_5_seq
+    ;;
+  10)
     python eval_gen.py --run_name regular
     ;;
   *)
