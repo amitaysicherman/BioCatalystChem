@@ -3,7 +3,7 @@
 #SBATCH --array=1-10
 #SBATCH --mem=64G
 #SBATCH --requeue
-#SBATCH --gres=gpu:A4000:1
+#SBATCH --gres=gpu:1
 
 # dae_1_add  dae_1_seq  dae_5_add  dae_5_seq  paper  pretrained_1  pretrained_5  regular
  case $SLURM_ARRAY_TASK_ID in
