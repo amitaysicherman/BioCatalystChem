@@ -3,7 +3,7 @@ from transformers import T5ForConditionalGeneration
 import argparse
 from rdkit import Chem
 from torch.utils.data import DataLoader
-from dataset import SeqToSeqDataset,get_ec_type
+from dataset import SeqToSeqDataset, get_ec_type
 from preprocessing.build_tokenizer import get_tokenizer_file_path, get_first_ec_token_index, get_ec_order
 from model import CustomT5Model
 import torch
@@ -11,6 +11,7 @@ import os
 import re
 from tqdm import tqdm
 from rdkit import RDLogger
+import json
 
 RDLogger.DisableLog('rdApp.*')
 
@@ -35,9 +36,9 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
         labels = batch['labels'].to(model.device)
         emb = batch['emb'].to(model.device).float()
         if (emb == 0).all():
-            emb_args={}
+            emb_args = {}
         else:
-            emb_args={"emb":emb}
+            emb_args = {"emb": emb}
         outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
                                  max_length=200, do_sample=False, num_beams=k * 2,
                                  num_return_sequences=k, **emb_args)
@@ -49,61 +50,35 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
         for j in range(1, k + 1):
             if labels in preds_list[:j]:
                 correct_count[j] += 1
-        msg = " | ".join([f"{j}:{correct_count[j]/(i+1):.2f}" for j in range(1, k + 1)])
-        msg = f'{i+1}/{len(gen_dataloader)} | {msg}'
+        msg = " | ".join([f"{j}:{correct_count[j] / (i + 1):.2f}" for j in range(1, k + 1)])
+        msg = f'{i + 1}/{len(gen_dataloader)} | {msg}'
         pbar.set_description(msg)
     return {i: correct_count[i] / len(gen_dataloader) for i in [1, 3, 5, 10]}
 
 
-# def average_checkpoints(cp_dirs, model_type, models_args):
-#     """
-#     Averages the state_dicts of all checkpoints provided in cp_dirs.
-#     """
-#     if not cp_dirs:
-#         raise ValueError("No checkpoints found to average.")
-#
-#     # Initialize the averaged state_dict
-#     avg_state_dict = None
-#     num_checkpoints = len(cp_dirs)
-#
-#     for idx, cp_dir in enumerate(cp_dirs):
-#         print(f"Loading checkpoint {idx + 1}/{num_checkpoints}: {cp_dir}")
-#         model = model_type.from_pretrained(cp_dir, **models_args)
-#         state_dict = model.state_dict()
-#
-#         if avg_state_dict is None:
-#             # Initialize with the first checkpoint's state_dict
-#             avg_state_dict = {k: v.clone().float() for k, v in state_dict.items()}
-#         else:
-#             # Accumulate the parameters
-#             for k in avg_state_dict:
-#                 avg_state_dict[k] += state_dict[k].float()
-#
-#         # Free up memory
-#         del model
-#         torch.cuda.empty_cache()
-#
-#     # Compute the average
-#     for k in avg_state_dict:
-#         avg_state_dict[k] /= num_checkpoints
-#
-#     return avg_state_dict
+def get_best_val_cp(run_name):
+    base_dir = f"results/{run_name}"
+    trainer_state_file = f"{base_dir}/trainer_state.json"
+    if not os.path.exists(trainer_state_file):
+        raise ValueError(f"trainer_state.json not found in {base_dir}")
+    with open(trainer_state_file) as f:
+        trainer_state = json.load(f)
+    return trainer_state["best_model_checkpoint"]
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", default="pretrained_5", type=str)
-    parser.add_argument("--split", default="valid", type=str)
+    parser.add_argument("--split", default="test", type=str)
     args = parser.parse_args()
     dataset = "ecreact/level4"
     run_name = args.run_name
-    cp_dir_all = f"results/{run_name}"
-
+    best_val_cp = get_best_val_cp(run_name)
     if "pretrained" in run_name or "dae" in run_name:
         if "pretrained" in run_name:
             ec_split = False
             use_ec = True
-        else:#dae
+        else:  # dae
             ec_split = True
             use_ec = True
 
@@ -128,20 +103,12 @@ if __name__ == "__main__":
         model_type = T5ForConditionalGeneration
         models_args = {}
 
-    ec_type=get_ec_type(use_ec, ec_split, 'dae' in run_name)
+    ec_type = get_ec_type(use_ec, ec_split, 'dae' in run_name)
     gen_dataset = SeqToSeqDataset([dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False)
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
     # List and sort all checkpoint directories
-    cp_dirs = sorted(
-        [f for f in os.listdir(cp_dir_all) if re.match(r"checkpoint-\d+", f)],
-        key=lambda x: int(x.split("-")[1]),reverse=True
-    )
-    cp_dirs = [f"{cp_dir_all}/{cp_dir}" for cp_dir in cp_dirs]
-
-    if not cp_dirs:
-        raise ValueError(f"No checkpoints found in {cp_dir_all}")
-    model = model_type.from_pretrained(cp_dirs[0], **models_args)
+    model = model_type.from_pretrained(best_val_cp, **models_args)
     model.to(device)
     model.eval()
 
@@ -154,4 +121,5 @@ if __name__ == "__main__":
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
-        f.write(run_name+args.split + ","+cp_dirs[0]+"," + ",".join([str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
+        f.write(run_name + args.split + "," + best_val_cp + "," + ",".join(
+            [str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
