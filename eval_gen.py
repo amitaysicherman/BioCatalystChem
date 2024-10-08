@@ -56,9 +56,23 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
     return {i: correct_count[i] / len(gen_dataloader) for i in [1, 3, 5, 10]}
 
 
+def get_last_cp(base_dir):
+    import os
+    import re
+    if not os.path.exists(base_dir):
+        return None
+    cp_dirs = os.listdir(base_dir)
+    cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
+    cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
+    if len(cp_dirs) == 0:
+        return None
+    return f"{base_dir}/{cp_dirs[-1]}"
+
+
 def get_best_val_cp(run_name):
     base_dir = f"results/{run_name}"
-    trainer_state_file = f"{base_dir}/trainer_state.json"
+    last_cp = get_last_cp(base_dir)
+    trainer_state_file = f"{last_cp}/trainer_state.json"
     if not os.path.exists(trainer_state_file):
         raise ValueError(f"trainer_state.json not found in {base_dir}")
     with open(trainer_state_file) as f:
