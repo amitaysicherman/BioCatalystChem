@@ -42,11 +42,11 @@ def get_ec_order(tokenizer: PreTrainedTokenizerFast, ec_split=0):
     return ec_order
 
 
-def get_tokenizer_file_path(ec_split):
+def get_tokenizer_file_path():
     output_path = "./datasets/tokenizer"
-    if not ec_split:
-        output_path += "_no_ec"
-    print(f"Tokenizer file path: {output_path}")
+    # if not ec_split:
+    #     output_path += "_no_ec"
+    # print(f"Tokenizer file path: {output_path}")
     return output_path
 
 

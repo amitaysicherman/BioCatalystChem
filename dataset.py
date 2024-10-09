@@ -11,13 +11,16 @@ from collections import defaultdict
 import pandas as pd
 import random
 
+
 class ECType(Enum):
     NO_EC = 0
     PAPER = 1
     PRETRAINED = 2
     DAE = 3
 
-DEFAULT_EMB_VALUE = torch.tensor([0]*2560)
+
+DEFAULT_EMB_VALUE = torch.tensor([0] * 2560)
+
 
 def get_ec_type(use_ec, ec_split, dae):
     if dae:
@@ -31,7 +34,7 @@ def get_ec_type(use_ec, ec_split, dae):
 
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
-                 ec_type=ECType.NO_EC):
+                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True):
         self.max_length = max_length
         self.tokenizer = tokenizer
         self.data = []
@@ -53,10 +56,13 @@ class SeqToSeqDataset(Dataset):
         else:
             assert len(weights) == len(datasets)
         for ds, w in zip(datasets, weights):
-            self.load_dataset(f"datasets/{ds}", split, w,have_ec="ec" in ds)
-        random.shuffle(self.data)
+            self.load_dataset(f"datasets/{ds}", split, w, have_ec="ec" in ds)
+        if sample_size is not None:
+            self.data = random.sample(self.data, sample_size)
+        if shuffle:
+            random.shuffle(self.data)
 
-    def load_dataset(self, input_base, split, w,have_ec=True):
+    def load_dataset(self, input_base, split, w, have_ec=True):
         with open(f"{input_base}/src-{split}.txt") as f:
             src_lines = f.read().splitlines()
         with open(f"{input_base}/tgt-{split}.txt") as f:

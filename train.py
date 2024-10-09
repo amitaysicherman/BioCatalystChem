@@ -58,16 +58,14 @@ def get_last_cp(base_dir):
     return f"{base_dir}/{cp_dirs[-1]}"
 
 
-def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, seq_add=0, ecreact_only=0):
+def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0):
     if dae:
-        suf = 'seq' if seq_add == 0 else 'add'
-        run_name = f"dae_{lookup_len}_{suf}"
+        run_name = f"dae_{lookup_len}"
     elif use_ec:
         if ec_split:
             run_name = "paper"
         else:
-            suf = 'seq' if seq_add == 0 else 'add'
-            run_name = f"pretrained_{lookup_len}_{suf}"
+            run_name = f"pretrained_{lookup_len}"
     else:
         run_name = "regular"
     if ecreact_only:
@@ -75,22 +73,8 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, seq_add=0, ecreact_o
     return run_name
 
 
-# def name_to_args(run_name):
-#     if run_name == "paper":
-#         return {"use_ec": True, "ec_split": True, "lookup_len": 5}
-#     if run_name.startswith("pretrained"):
-#         if "_" in run_name:
-#             lookup_len = int(run_name.split("_")[1])
-#         else:
-#             lookup_len = 5
-#         return {"use_ec": True, "ec_split": False, "lookup_len": lookup_len}
-#     if run_name == "regular":
-#         return {"use_ec": False, "ec_split": False, "lookup_len": 5}
-#     raise ValueError(f"Unknown run name: {run_name}")
-
-
-def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, seq_add=0):
-    tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
+def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False):
+    tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
                       decoder_start_token_id=tokenizer.pad_token_id)
@@ -105,13 +89,13 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
         # ec_order = get_ec_order(tokenizer, ec_split)
         # cutoff_index = get_first_ec_token_index(tokenizer, ec_split)
         # config.vocab_size = cutoff_index
-        model = CustomT5Model(config, lookup_len, seq_add)
+        model = CustomT5Model(config, lookup_len)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     return tokenizer, model
 
 
-def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", seq_add=0, ecreact_only=0):
-    tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, seq_add)
+def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecreact_only=0):
+    tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae)
     if load_cp:
         loaded_state_dict = load_file(load_cp + "/model.safetensors")
         missing_keys, unexpected_keys = model.load_state_dict(loaded_state_dict, strict=False)
@@ -132,11 +116,13 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", seq_a
                                     ec_type=ec_type, DEBUG=DEBUG)
     eval_split = "valid" if not DEBUG else "train"
 
+    train_ecreact_small = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
+                                    DEBUG=DEBUG, sample_size=3000)
     val_ecreact = SeqToSeqDataset([ecreact_dataset], eval_split, weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                   DEBUG=DEBUG)
-    eval_datasets = {"ecreact": val_ecreact}
+    eval_datasets = {"ecreact": val_ecreact, "ecreact_train": train_ecreact_small}
 
-    run_name = args_to_name(use_ec, ec_split, lookup_len, dae, seq_add, ecreact_only)
+    run_name = args_to_name(use_ec, ec_split, lookup_len, dae, ecreact_only)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -187,9 +173,8 @@ if __name__ == '__main__':
     parser.add_argument("--dae", default=0, type=int)
     parser.add_argument("--lookup_len", default=5, type=int)
     parser.add_argument("--load_cp", default="", type=str)
-    parser.add_argument("--seq_add", default=0, type=int)
     parser.add_argument("--ecreact_only", default=0, type=int)
 
     args = parser.parse_args()
     DEBUG = args.debug
-    main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp, args.seq_add, args.ecreact_only)
+    main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp, args.ecreact_only)

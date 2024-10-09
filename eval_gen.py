@@ -101,7 +101,6 @@ if __name__ == "__main__":
         model_type = CustomT5Model
         models_args = {
             "lookup_len": lookup_len,
-            "seq_or_add": 1 if "add" in run_name else 0
         }
 
     else:

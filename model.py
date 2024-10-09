@@ -18,69 +18,30 @@ def get_layers(dims, dropout=0.0):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, lookup_len, seq_or_add=0):
+    def __init__(self, config: T5Config, lookup_len):
 
         super(CustomT5Model, self).__init__(config)
 
         self.ec_to_vec = EC2Vec(load_model=False)
-        # self.lookup_embeddings = self.ec_to_vec.get_vecs_numpy(ec_tokens_order)
-        # self.lookup_embeddings = torch.nn.Embedding.from_pretrained(torch.tensor(self.lookup_embeddings), freeze=True)
-        # self.lookup_embeddings = self.lookup_embeddings.to(torch.float32)
         lookup_dim = self.ec_to_vec.prot_dim
         layers_dims = [lookup_dim] + [config.d_model] * lookup_len
         self.lookup_proj = get_layers(layers_dims, dropout=config.dropout_rate)
-        self.seq_or_add = seq_or_add
-        # self.cutoff_index = cutoff_index
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)
-
         batch_size, seq_length, emb_dim = input_embeddings.shape
-        if self.seq_or_add==0:
-            seq_length += 1
 
-        # Find the length of each sequence (number of non-padding tokens)
-        seq_lengths = attention_mask.sum(dim=1).tolist()  # List of lengths for each sequence in the batch
+        # Project the embedding
+        emb_projection = self.lookup_proj(emb)  # Shape: (batch_size, 1, embedding_dim)
 
-        new_embeddings = []
-        for i, seq_len in enumerate(seq_lengths):
-            if (emb[i] == 0).all():
-                combined_embeddings = input_embeddings[i]
-            else:
+        # Concatenate the projected embedding with the input embeddings
+        new_input_embeddings = torch.cat([emb_projection, input_embeddings], dim=1)
 
-                current_embeddings = input_embeddings[i, :seq_len - 1]  # Shape: (seq_len-1, embedding_dim)
-                if self.seq_or_add == 0:
-                    combined_embeddings = torch.cat([current_embeddings, self.lookup_proj(emb[i].unsqueeze(0))], dim=0)
-                else:
-                    combined_embeddings = current_embeddings + self.lookup_proj(emb[i].unsqueeze(0))
-                eos_embedding = input_embeddings[i, seq_len - 1].unsqueeze(0)  # Shape: (1, embedding_dim)
-                combined_embeddings = torch.cat([combined_embeddings, eos_embedding], dim=0)
-            padding_length = seq_length - combined_embeddings.size(0)
-            if padding_length > 0:
-                padding = torch.ones(padding_length, emb_dim, device=input_embeddings.device) * self.config.pad_token_id
-                combined_embeddings = torch.cat([combined_embeddings, padding], dim=0)
-            new_embeddings.append(combined_embeddings)
-        if self.seq_or_add == 0:
-            # add last attention mask to new embeddings
-            attention_mask = torch.ones(batch_size, seq_length, device=input_embeddings.device)
-            for i, seq_len in enumerate(seq_lengths):
-                attention_mask[i, seq_len:] = 0
+        # Update attention mask
+        emb_attention = torch.ones(batch_size, 1, device=attention_mask.device)
+        new_attention_mask = torch.cat([emb_attention, attention_mask], dim=1)
 
-        # Stack the new embeddings to form a batch
-        new_input_embeddings = torch.stack(new_embeddings)
-        return new_input_embeddings, attention_mask  # Shape: (batch_size, sequence_length, embedding_dim)
-        #
-        # regular_token_mask = input_ids < self.cutoff_index
-        # lookup_token_mask = input_ids >= self.cutoff_index
-        # regular_embeddings = self.shared(input_ids.clamp(max=self.cutoff_index - 1))  # Clamp to avoid indexing errors
-        # lookup_indices = input_ids[lookup_token_mask] - self.cutoff_index
-        # lookup_embeddings = self.lookup_embeddings(lookup_indices)
-        # transformed_lookup_embeddings = self.lookup_proj(lookup_embeddings)
-        #
-        # final_embeddings = torch.zeros_like(regular_embeddings).float()
-        # final_embeddings[regular_token_mask] = regular_embeddings[regular_token_mask]
-        # final_embeddings[lookup_token_mask] = transformed_lookup_embeddings
-        # return final_embeddings
+        return new_input_embeddings, new_attention_mask
 
     def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, encoder_outputs=None,
                 emb=None, **kwargs):
