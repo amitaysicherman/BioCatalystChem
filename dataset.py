@@ -61,6 +61,7 @@ class SeqToSeqDataset(Dataset):
             if sample_size is not None:
                 self.data = random.sample(self.data, sample_size)
             if shuffle:
+                random.seed(42)
                 random.shuffle(self.data)
 
     def load_dataset(self, input_base, split, w, have_ec=True):
