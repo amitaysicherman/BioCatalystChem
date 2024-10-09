@@ -33,6 +33,8 @@ class CustomT5Model(T5ForConditionalGeneration):
 
         # Project the embedding
         emb_projection = self.lookup_proj(emb)  # Shape: (batch_size, 1, embedding_dim)
+        if emb_projection.ndim == 2:
+            emb_projection = emb_projection.unsqueeze(1)
 
         # Concatenate the projected embedding with the input embeddings
         new_input_embeddings = torch.cat([emb_projection, input_embeddings], dim=1)

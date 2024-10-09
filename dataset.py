@@ -57,10 +57,11 @@ class SeqToSeqDataset(Dataset):
             assert len(weights) == len(datasets)
         for ds, w in zip(datasets, weights):
             self.load_dataset(f"datasets/{ds}", split, w, have_ec="ec" in ds)
-        if sample_size is not None:
-            self.data = random.sample(self.data, sample_size)
-        if shuffle:
-            random.shuffle(self.data)
+        if not DEBUG:
+            if sample_size is not None:
+                self.data = random.sample(self.data, sample_size)
+            if shuffle:
+                random.shuffle(self.data)
 
     def load_dataset(self, input_base, split, w, have_ec=True):
         with open(f"{input_base}/src-{split}.txt") as f:
