@@ -98,7 +98,7 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
             model = EnzymaticT5Model(config, lookup_len)
             encoder = model.t5_model.get_encoder()
     if freeze_encoder:
-        for param in encoder.get_encoder.parameters():
+        for param in encoder.parameters():
             param.requires_grad = False
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     return tokenizer, model
