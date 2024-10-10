@@ -146,7 +146,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
         evaluation_strategy="steps",
         save_steps=1_000 if not DEBUG else 10,
         save_total_limit=10,
-        max_steps=100_000,
+        max_steps=150_000,
         # auto_find_batch_size=True,
         per_device_train_batch_size=64,
         per_device_eval_batch_size=64 // 8,
