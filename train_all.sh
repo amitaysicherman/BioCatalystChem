@@ -8,7 +8,7 @@ configs="--use_ec 1 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280
   --use_ec 1 --ec_split 0 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --freeze_encoder 1 --post_encoder 1|\
   --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --freeze_encoder 1 --post_encoder 1|\
   --use_ec 0 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --freeze_encoder 1 --post_encoder 1|\
-    --use_ec 1 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000  --freeze_encoder 1 --post_encoder 1|\
+  --use_ec 1 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000  --freeze_encoder 1 --post_encoder 1|\
   --use_ec 1 --ec_split 0 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --freeze_encoder 1 --post_encoder 1|\
   --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --freeze_encoder 1 --post_encoder 1|\
   --use_ec 0 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000 --freeze_encoder 1 --post_encoder 1|\
@@ -16,7 +16,7 @@ configs="--use_ec 1 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280
   --use_ec 1 --ec_split 0 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000|\
   --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000|\
   --use_ec 0 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000|\
-    --use_ec 1 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1|\
+  --use_ec 1 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1|\
   --use_ec 1 --ec_split 0 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1|\
   --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1|\
   --use_ec 0 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1"
@@ -25,9 +25,8 @@ configs="--use_ec 1 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280
 num_configs=$(echo "$configs" | tr -cd '|' | wc -c)
 num_configs=$((num_configs + 1))
 
-# Create a temporary SLURM submission script
 cat <<EOF > slurm_submit.sh
-#!/bin/sh
+#!/bin/bash
 #SBATCH --time=7-00
 #SBATCH --array=1-$num_configs
 #SBATCH --mem=64G
@@ -38,15 +37,17 @@ cat <<EOF > slurm_submit.sh
 index=\$((SLURM_ARRAY_TASK_ID - 1))
 
 # Split the long config string into an array using | as a delimiter
-IFS='|' read -r -a configs <<< "$configs"
+configs="$configs"
+IFS='|' read -ra config_array <<< "\$configs"
 
 # Check if the index is valid and run the python script with the selected configuration
-if [ "\$index" -ge 0 ] && [ "\$index" -lt "\${#configs[@]}" ]; then
-  python train.py \${configs[\$index]}
+if [ "\$index" -ge 0 ] && [ "\$index" -lt "\${#config_array[@]}" ]; then
+  python train.py \${config_array[\$index]}
 else
   echo "Invalid SLURM_ARRAY_TASK_ID: \$SLURM_ARRAY_TASK_ID"
 fi
 EOF
+
 
 # Submit the dynamically generated SLURM script
 sbatch slurm_submit.sh
