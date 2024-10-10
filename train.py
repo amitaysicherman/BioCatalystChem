@@ -13,7 +13,7 @@ from rdkit import Chem
 
 from dataset import SeqToSeqDataset, get_ec_type
 from preprocessing.build_tokenizer import get_tokenizer_file_path, get_first_ec_token_index, get_ec_order
-from model import CustomT5Model
+from model import CustomT5Model, EnzymaticT5Model
 import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
 import torch
@@ -58,7 +58,7 @@ def get_last_cp(base_dir):
     return f"{base_dir}/{cp_dirs[-1]}"
 
 
-def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0):
+def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, freeze_encoder=0, post_encoder=0):
     if dae:
         run_name = f"dae_{lookup_len}"
     elif use_ec:
@@ -70,10 +70,14 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0):
         run_name = "regular"
     if ecreact_only:
         run_name += "_ecreact"
+    if freeze_encoder:
+        run_name += "_freeze-enc"
+    if post_encoder:
+        run_name += "_post-enc"
     return run_name
 
 
-def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False):
+def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, freeze_encoder=0, post_encoder=0):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
@@ -85,20 +89,30 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False):
         config.d_ff = 256
     if ec_split and not costum_t5:
         model = T5ForConditionalGeneration(config)
+        encoder = model.get_encoder()
     else:
-        # ec_order = get_ec_order(tokenizer, ec_split)
-        # cutoff_index = get_first_ec_token_index(tokenizer, ec_split)
-        # config.vocab_size = cutoff_index
-        model = CustomT5Model(config, lookup_len)
+        if not post_encoder:
+            model = CustomT5Model(config, lookup_len)
+            encoder = model.get_encoder()
+        else:
+            model = EnzymaticT5Model(config, lookup_len)
+            encoder = model.t5_model.get_encoder()
+    if freeze_encoder:
+        for param in encoder.get_encoder.parameters():
+            param.requires_grad = False
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     return tokenizer, model
 
 
-def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecreact_only=0):
-    tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae)
+def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecreact_only=0, freeze_encoder=0,
+         post_encoder=0):
+    tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, freeze_encoder, post_encoder)
     if load_cp:
         loaded_state_dict = load_file(load_cp + "/model.safetensors")
-        missing_keys, unexpected_keys = model.load_state_dict(loaded_state_dict, strict=False)
+        if isinstance(model, EnzymaticT5Model):
+            missing_keys, unexpected_keys = model.t5_model.load_state_dict(loaded_state_dict, strict=False)
+        else:
+            missing_keys, unexpected_keys = model.load_state_dict(loaded_state_dict, strict=False)
         print("Missing keys in the model (not loaded):", missing_keys)
         print("Unexpected keys in the checkpoint (not used by the model):", unexpected_keys)
 
@@ -117,12 +131,12 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     eval_split = "valid" if not DEBUG else "train"
 
     train_ecreact_small = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                    DEBUG=DEBUG, sample_size=3000)
+                                          DEBUG=DEBUG, sample_size=3000)
     val_ecreact = SeqToSeqDataset([ecreact_dataset], eval_split, weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                   DEBUG=DEBUG)
     eval_datasets = {"ecreact": val_ecreact, "ecreact_train": train_ecreact_small}
 
-    run_name = args_to_name(use_ec, ec_split, lookup_len, dae, ecreact_only)
+    run_name = args_to_name(use_ec, ec_split, lookup_len, dae, ecreact_only, freeze_encoder, post_encoder)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -146,7 +160,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
         resume_from_checkpoint=True,
         load_best_model_at_end=True,
         learning_rate=1e-4,
-
+        save_safetensors=False
     )
 
     # Initialize Trainer
@@ -174,7 +188,10 @@ if __name__ == '__main__':
     parser.add_argument("--lookup_len", default=5, type=int)
     parser.add_argument("--load_cp", default="", type=str)
     parser.add_argument("--ecreact_only", default=0, type=int)
+    parser.add_argument("--freeze_encoder", default=0, type=int)
+    parser.add_argument("--post_encoder", default=0, type=int)
 
     args = parser.parse_args()
     DEBUG = args.debug
-    main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp, args.ecreact_only)
+    main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp, args.ecreact_only,
+         freeze_encoder=args.freeze_encoder, post_encoder=args.post_encoder)

@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 
 import torch
 from transformers import T5ForConditionalGeneration, T5Config, GenerationConfig
-
+from torch import nn
 from preprocessing.ec_to_vec import EC2Vec
 
 
@@ -16,6 +16,49 @@ def get_layers(dims, dropout=0.0):
             layers.add_module(f"dropout_{i}", torch.nn.Dropout(dropout))
     return layers
 
+
+class EnzymaticT5Model(nn.Module):
+    def __init__(self, config, lookup_len, protein_embedding_dim=2560):
+        super().__init__()
+        self.t5_model = T5ForConditionalGeneration(config)
+        layers_dims = [protein_embedding_dim] + [config.d_model] * lookup_len
+        self.protein_proj = get_layers(layers_dims, dropout=config.dropout_rate)
+
+    def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, encoder_outputs=None,
+                emb=None, **kwargs):
+        # Encode SMILES input
+        encoder_outputs = self.t5_model.encoder(input_ids=input_ids, attention_mask=attention_mask)
+
+        # Encode protein vector
+        protein_proj = self.protein_proj(emb)
+        if protein_proj.ndim == 2:
+            protein_proj = protein_proj.unsqueeze(1)
+
+        # Combine SMILES encoding and protein encoding
+        combined_encoded = torch.cat([protein_proj, encoder_outputs.last_hidden_state], dim=1)
+        attention_mask = torch.cat([torch.ones(protein_proj.shape[0], 1, device=attention_mask.device),
+                                    attention_mask], dim=1)
+
+        return self.t5_model(encoder_outputs=[combined_encoded],attention_mask=attention_mask, labels=labels)
+
+
+    # def _prepare_encoder_decoder_kwargs_for_generation(
+    #         self,
+    #         inputs_tensor: torch.Tensor,
+    #         model_kwargs,
+    #         model_input_name: Optional[str],
+    #         generation_config: GenerationConfig,
+    # ) -> Dict[str, Any]:
+    #     if generation_config is None:
+    #         generation_config = GenerationConfig.from_model_config(self.config)
+    #     inputs_embeds, model_kwargs["attention_mask"] = self.prep_input_embeddings(inputs_tensor,
+    #                                                                                model_kwargs["attention_mask"],
+    #                                                                                model_kwargs["emb"])
+    #     model_kwargs["inputs_embeds"] = inputs_embeds
+    #     return super()._prepare_encoder_decoder_kwargs_for_generation(
+    #         None, model_kwargs, model_input_name, generation_config
+    #     )
+    #
 
 class CustomT5Model(T5ForConditionalGeneration):
     def __init__(self, config: T5Config, lookup_len):
