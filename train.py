@@ -58,7 +58,8 @@ def get_last_cp(base_dir):
     return f"{base_dir}/{cp_dirs[-1]}"
 
 
-def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, freeze_encoder=0, post_encoder=0,quantization=0):
+def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, freeze_encoder=0, post_encoder=0,quantization=0
+                 ,q_groups=5,q_codevectors=512):
     if dae:
         run_name = f"dae_{lookup_len}"
     elif use_ec:
@@ -75,11 +76,12 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, free
     if post_encoder:
         run_name += "_post-enc"
     if quantization:
-        run_name += "_quant"
+        run_name += "_quant_"+str(q_groups)+"_"+str(q_codevectors)
     return run_name
 
 
-def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, freeze_encoder=0, post_encoder=0,quantization=0):
+def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, freeze_encoder=0, post_encoder=0,quantization=0,
+                            q_groups=5,q_codevectors=512):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
@@ -94,10 +96,10 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
         encoder = model.get_encoder()
     else:
         if not post_encoder:
-            model = CustomT5Model(config, lookup_len)
+            model = CustomT5Model(config, lookup_len,quantization=quantization,q_groups=q_groups,q_codevectors=q_codevectors)
             encoder = model.get_encoder()
         else:
-            model = EnzymaticT5Model(config, lookup_len, quantization=quantization)
+            model = EnzymaticT5Model(config, lookup_len, quantization=quantization,q_groups=q_groups,q_codevectors=q_codevectors)
             encoder = model.t5_model.get_encoder()
     if freeze_encoder:
         for param in encoder.parameters():
@@ -107,8 +109,9 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
 
 
 def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecreact_only=0, freeze_encoder=0,
-         post_encoder=0, quantization=0):
-    tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, freeze_encoder, post_encoder,quantization)
+         post_encoder=0, quantization=0,q_groups=5,q_codevectors=512):
+    tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, freeze_encoder, post_encoder,quantization,
+                                               q_groups=q_groups,q_codevectors=q_codevectors)
     if load_cp:
         loaded_state_dict = load_file(load_cp + "/model.safetensors")
         if isinstance(model, EnzymaticT5Model):
@@ -138,7 +141,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
                                   DEBUG=DEBUG)
     eval_datasets = {"ecreact": val_ecreact, "ecreact_train": train_ecreact_small}
 
-    run_name = args_to_name(use_ec, ec_split, lookup_len, dae, ecreact_only, freeze_encoder, post_encoder,quantization)
+    run_name = args_to_name(use_ec, ec_split, lookup_len, dae, ecreact_only, freeze_encoder, post_encoder,quantization,q_groups,q_codevectors)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -193,8 +196,10 @@ if __name__ == '__main__':
     parser.add_argument("--freeze_encoder", default=0, type=int)
     parser.add_argument("--post_encoder", default=0, type=int)
     parser.add_argument("--quantization", default=0, type=int)
+    parser.add_argument("--q_groups", default=5, type=int)
+    parser.add_argument("--q_codevectors", default=512, type=int)
 
     args = parser.parse_args()
     DEBUG = args.debug
     main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp, args.ecreact_only,
-         freeze_encoder=args.freeze_encoder, post_encoder=args.post_encoder, quantization=args.quantization)
+         freeze_encoder=args.freeze_encoder, post_encoder=args.post_encoder, quantization=args.quantization,q_groups=args.q_groups,q_codevectors=args.q_codevectors)

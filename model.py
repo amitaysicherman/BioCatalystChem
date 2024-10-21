@@ -18,7 +18,7 @@ def get_layers(dims, dropout=0.0):
 
 
 class EnzymaticT5Model(nn.Module):
-    def __init__(self, config, lookup_len, protein_embedding_dim=2560, quantization=False):
+    def __init__(self, config, lookup_len, protein_embedding_dim=2560, quantization=False,q_groups=5,q_codevectors=512):
         super().__init__()
         self.t5_model = T5ForConditionalGeneration(config)
         layers_dims = [protein_embedding_dim] + [config.d_model] * lookup_len
@@ -28,8 +28,8 @@ class EnzymaticT5Model(nn.Module):
             from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2GumbelVectorQuantizer
             from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
             self.q_config = Wav2Vec2Config()
-            self.q_config.num_codevector_groups = 2
-            self.q_config.num_codevectors_per_group = 256
+            self.q_config.num_codevector_groups = 5
+            self.q_config.num_codevectors_per_group = 512
             self.q_config.codevector_dim = config.d_model
             self.q_config.conv_dim = (config.d_model,)
             self.q_config.diversity_loss_weight = 0.1
@@ -85,7 +85,7 @@ class EnzymaticT5Model(nn.Module):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, lookup_len, quantization=False):
+    def __init__(self, config: T5Config, lookup_len, quantization=False,q_groups=5,q_codevectors=512):
 
         super(CustomT5Model, self).__init__(config)
 
@@ -98,8 +98,8 @@ class CustomT5Model(T5ForConditionalGeneration):
             from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2GumbelVectorQuantizer
             from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
             self.q_config = Wav2Vec2Config()
-            self.q_config.num_codevector_groups = 2
-            self.q_config.num_codevectors_per_group = 256
+            self.q_config.num_codevector_groups = q_groups
+            self.q_config.num_codevectors_per_group = q_codevectors
             self.q_config.codevector_dim = config.d_model
             self.q_config.conv_dim = (config.d_model,)
             self.q_config.diversity_loss_weight = 0.1

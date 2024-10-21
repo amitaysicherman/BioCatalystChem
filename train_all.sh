@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # Define the configurations as a long string with a delimiter (| in this case)
-configs="--use_ec 1 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1|\
-  --use_ec 1 --ec_split 0 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1|\
-  --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1|\
-  --use_ec 0 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1  --quantization 1|\
-  --use_ec 1 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000  --quantization 1|\
-  --use_ec 1 --ec_split 0 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --quantization 1|\
-  --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --quantization 1|\
-  --use_ec 0 --ec_split 1 --load_cp results_old/v4/regular/checkpoint-280000  --quantization 1|"
+configs="--dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1 --q_groups 1 --q_codevectors 128|\
+         --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1 --q_groups 2 --q_codevectors 128|\
+          --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1 --q_groups 4 --q_codevectors 128|\
+          --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1 --q_groups 8 --q_codevectors 128|\
+          --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1 --q_groups 1 --q_codevectors 1024|\
+          --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1 --q_groups 2 --q_codevectors 1024|\
+          --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1 --q_groups 4 --q_codevectors 1024|\
+          --dae 1 --ec_split 1 --lookup_len 5 --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --quantization 1 --q_groups 8 --q_codevectors 1024"
+
 # Count the number of configurations by counting the number of delimiters (|) + 1
 num_configs=$(echo "$configs" | tr -cd '|' | wc -c)
 num_configs=$((num_configs + 1))
