@@ -85,7 +85,7 @@ class EnzymaticT5Model(nn.Module):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, lookup_len):
+    def __init__(self, config: T5Config, lookup_len, quantization=False):
 
         super(CustomT5Model, self).__init__(config)
 
@@ -93,6 +93,17 @@ class CustomT5Model(T5ForConditionalGeneration):
         lookup_dim = self.ec_to_vec.prot_dim
         layers_dims = [lookup_dim] + [config.d_model] * lookup_len
         self.lookup_proj = get_layers(layers_dims, dropout=config.dropout_rate)
+        self.quantizer = None
+        if quantization:
+            from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2GumbelVectorQuantizer
+            from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
+            self.q_config = Wav2Vec2Config()
+            self.q_config.num_codevector_groups = 2
+            self.q_config.num_codevectors_per_group = 256
+            self.q_config.codevector_dim = config.d_model
+            self.q_config.conv_dim = (config.d_model,)
+            self.q_config.diversity_loss_weight = 0.1
+            self.quantizer = Wav2Vec2GumbelVectorQuantizer(self.q_config)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)
@@ -102,6 +113,17 @@ class CustomT5Model(T5ForConditionalGeneration):
         emb_projection = self.lookup_proj(emb)  # Shape: (batch_size, 1, embedding_dim)
         if emb_projection.ndim == 2:
             emb_projection = emb_projection.unsqueeze(1)
+        if self.quantizer is not None:
+            emb_projection, perplexity = self.quantizer(emb_projection)
+            num_codevectors = self.q_config.num_codevectors_per_group * self.q_config.num_codevector_groups
+            if attention_mask is None:
+                s = torch.ones(input_ids.shape[0], 1)
+            else:
+                s = attention_mask.sum()
+
+            diversity_loss = ((num_codevectors - perplexity) / num_codevectors) * s
+        else:
+            diversity_loss = 0
 
         # Concatenate the projected embedding with the input embeddings
         new_input_embeddings = torch.cat([emb_projection, input_embeddings], dim=1)
@@ -110,17 +132,20 @@ class CustomT5Model(T5ForConditionalGeneration):
         emb_attention = torch.ones(batch_size, 1, device=attention_mask.device)
         new_attention_mask = torch.cat([emb_attention, attention_mask], dim=1)
 
-        return new_input_embeddings, new_attention_mask
+        return new_input_embeddings, new_attention_mask, diversity_loss
 
     def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, encoder_outputs=None,
-                emb=None, **kwargs):
+                emb=None, diversity_loss=0, **kwargs):
         if encoder_outputs is not None:
             return super().forward(input_ids=input_ids, attention_mask=attention_mask, labels=labels,
                                    encoder_outputs=encoder_outputs, **kwargs)
-        if inputs_embeds is None:
-            inputs_embeds, attention_mask = self.prep_input_embeddings(input_ids, attention_mask, emb)
 
-        return super().forward(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels, **kwargs)
+        if inputs_embeds is None:
+            inputs_embeds, attention_mask, diversity_loss = self.prep_input_embeddings(input_ids, attention_mask, emb)
+        output = super().forward(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels, **kwargs)
+        if self.quantizer is not None:
+            output.loss = output.loss + self.q_config.diversity_loss_weight * diversity_loss
+        return output
 
     def _prepare_encoder_decoder_kwargs_for_generation(
             self,
