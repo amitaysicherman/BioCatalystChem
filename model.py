@@ -18,11 +18,22 @@ def get_layers(dims, dropout=0.0):
 
 
 class EnzymaticT5Model(nn.Module):
-    def __init__(self, config, lookup_len, protein_embedding_dim=2560):
+    def __init__(self, config, lookup_len, protein_embedding_dim=2560, quantization=False):
         super().__init__()
         self.t5_model = T5ForConditionalGeneration(config)
         layers_dims = [protein_embedding_dim] + [config.d_model] * lookup_len
         self.protein_proj = get_layers(layers_dims, dropout=config.dropout_rate)
+        self.quantizer = None
+        if quantization:
+            from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2GumbelVectorQuantizer
+            from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
+            self.q_config = Wav2Vec2Config()
+            self.q_config.num_codevector_groups = 2
+            self.q_config.num_codevectors_per_group = 256
+            self.q_config.codevector_dim = config.d_model
+            self.q_config.conv_dim = (config.d_model,)
+            self.q_config.diversity_loss_weight = 0.1
+            self.quantizer = Wav2Vec2GumbelVectorQuantizer(self.q_config)
 
     def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, encoder_outputs=None,
                 emb=None, **kwargs):
@@ -34,13 +45,25 @@ class EnzymaticT5Model(nn.Module):
         if protein_proj.ndim == 2:
             protein_proj = protein_proj.unsqueeze(1)
 
+        if self.quantizer is not None:
+            protein_proj, perplexity = self.quantizer(protein_proj)
+            num_codevectors = self.q_config.num_codevectors_per_group * self.q_config.num_codevector_groups
+            if attention_mask is None:
+                s = torch.ones(input_ids.shape[0], 1)
+            else:
+                s = attention_mask.sum()
+
+            diversity_loss = ((num_codevectors - perplexity) / num_codevectors) * s
+        else:
+            diversity_loss = 0
         # Combine SMILES encoding and protein encoding
         combined_encoded = torch.cat([protein_proj, encoder_outputs.last_hidden_state], dim=1)
         attention_mask = torch.cat([torch.ones(protein_proj.shape[0], 1, device=attention_mask.device),
                                     attention_mask], dim=1)
-
-        return self.t5_model(encoder_outputs=[combined_encoded],attention_mask=attention_mask, labels=labels)
-
+        output = self.t5_model(encoder_outputs=[combined_encoded], attention_mask=attention_mask, labels=labels)
+        if self.quantizer is not None:
+            output.loss = output.loss + self.q_config.diversity_loss_weight * diversity_loss
+        return output
 
     # def _prepare_encoder_decoder_kwargs_for_generation(
     #         self,
@@ -59,6 +82,7 @@ class EnzymaticT5Model(nn.Module):
     #         None, model_kwargs, model_input_name, generation_config
     #     )
     #
+
 
 class CustomT5Model(T5ForConditionalGeneration):
     def __init__(self, config: T5Config, lookup_len):
