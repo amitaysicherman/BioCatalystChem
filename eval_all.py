@@ -33,9 +33,16 @@ def name_to_args(run_name):
         'q_groups': 4,
         'q_codevectors': 512,
         'q_index': 0,
-        'costum_t5': False
+        'costum_t5': False,
+        'prequantization':0
     }
-
+    if run_name.startswith("prequantization"):
+        args['prequantization'] = 1
+        if "dae" in run_name:
+            args['dae'] = 1
+        else:
+            args['dae'] = 0
+        return args
     # Parse base run type
     if run_name.startswith("dae_"):
         args['dae'] = True
