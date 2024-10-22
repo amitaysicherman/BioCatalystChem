@@ -132,7 +132,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     if load_cp:
         loaded_state_dict = load_file(load_cp + "/model.safetensors")
         if prequantization:
-            new_tokens_count = tokenizer.get_vocab_size() - last_original_token
+            new_tokens_count = tokenizer.vocab_size - last_original_token
             random_init_new_tokens_param = torch.randn(new_tokens_count, model.t5_model.config.d_model)
             new_shared = torch.cat([loaded_state_dict["shared"], random_init_new_tokens_param], dim=0)
             loaded_state_dict["shared"] = new_shared
