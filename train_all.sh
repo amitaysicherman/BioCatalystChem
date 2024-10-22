@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the configurations as a long string with a delimiter (| in this case)
-configs="--dae 1  --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --prequantization 1 --ec_split 1\
+configs="--dae 1  --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --prequantization 1 --ec_split 1|\
          --dae 0  --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --prequantization 1 --ec_split 1"
 
 # Count the number of configurations by counting the number of delimiters (|) + 1
