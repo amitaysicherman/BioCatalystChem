@@ -202,7 +202,7 @@ if __name__ == '__main__':
     parser.add_argument("--freeze_encoder", default=0, type=int)
     parser.add_argument("--post_encoder", default=0, type=int)
     parser.add_argument("--quantization", default=0, type=int)
-    parser.add_argument("--q_groups", default=5, type=int)
+    parser.add_argument("--q_groups", default=4, type=int)
     parser.add_argument("--q_codevectors", default=512, type=int)
     parser.add_argument("--q_index", default=0, type=int)
 
