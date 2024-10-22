@@ -92,6 +92,11 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
                             quantization=0,
                             q_groups=5, q_codevectors=512, q_index=0, prequantization=0):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
+    if prequantization:
+        from offline_quantizer import HierarchicalPCATokenizer
+        new_tokens = HierarchicalPCATokenizer().get_all_tokens()
+        tokenizer.add_tokens(new_tokens)
+
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
                       decoder_start_token_id=tokenizer.pad_token_id)
@@ -124,17 +129,14 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, freeze_encoder, post_encoder,
                                                quantization, q_groups=q_groups, q_codevectors=q_codevectors,
                                                q_index=q_index, prequantization=prequantization)
-    last_original_token = tokenizer.vocab_size
-    if prequantization:
-        from offline_quantizer import HierarchicalPCATokenizer
-        new_tokens = HierarchicalPCATokenizer().get_all_tokens()
-        tokenizer.add_tokens(new_tokens)
     if load_cp:
         loaded_state_dict = load_file(load_cp + "/model.safetensors")
         if prequantization:
-            new_tokens_count = tokenizer.vocab_size - last_original_token
-            d_model = model.t5_model.config.d_model if isinstance(model, EnzymaticT5Model) else model.config.d_model
-            random_init_new_tokens_param = torch.randn(new_tokens_count, d_model)
+            m = model.t5_model if isinstance(model, EnzymaticT5Model) else model
+            model_v_size = len(m.shared.weight)
+            cp_v_size = len(loaded_state_dict["shared.weight"])
+            d_model = m.config.d_model
+            random_init_new_tokens_param = torch.randn(model_v_size - cp_v_size, d_model)
             new_shared = torch.cat([loaded_state_dict["shared.weight"], random_init_new_tokens_param], dim=0)
             loaded_state_dict["shared.weight"] = new_shared.float()
         if isinstance(model, EnzymaticT5Model):
