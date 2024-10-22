@@ -76,6 +76,16 @@ class HierarchicalPCATokenizer:
             tokens.append(f"P{dim}-{cluster}")
         return tokens
 
+    def get_all_tokens(self):
+        tokens = []
+        for level, k in enumerate(self.n_hierarchical_clusters):
+            for cluster in range(k):
+                tokens.append(f"H{level}-{cluster}")
+        for dim in range(self.n_pca_components):
+            for cluster in range(self.n_clusters_pca):
+                tokens.append(f"P{dim}-{cluster}")
+        return tokens
+
 
 def ec_to_filename(ec_type: ECType):
     return f"datasets/ecreact/vec_quant_{ec_type.value}.pkl"

@@ -60,7 +60,13 @@ def get_last_cp(base_dir):
 
 def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, freeze_encoder=0, post_encoder=0,
                  quantization=0
-                 , q_groups=4, q_codevectors=512,q_index=0):
+                 , q_groups=4, q_codevectors=512, q_index=0,prequantization=0):
+    if prequantization:
+        if dae:
+            run_name = f"prequantization_dae"
+        else:
+            run_name = f"prequantization_pretrained"
+        return run_name
     if dae:
         run_name = f"dae_{lookup_len}"
     elif use_ec:
@@ -78,13 +84,13 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, free
         run_name += "_post-enc"
     if quantization:
         index_suffix = "_inx" if q_index else ""
-        run_name += "_quant_" + str(q_groups) + "_" + str(q_codevectors)+index_suffix
+        run_name += "_quant_" + str(q_groups) + "_" + str(q_codevectors) + index_suffix
     return run_name
 
 
 def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, freeze_encoder=0, post_encoder=0,
                             quantization=0,
-                            q_groups=5, q_codevectors=512,q_index=0):
+                            q_groups=5, q_codevectors=512, q_index=0):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
@@ -100,11 +106,11 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
     else:
         if not post_encoder:
             model = CustomT5Model(config, lookup_len, quantization=quantization, q_groups=q_groups,
-                                  q_codevectors=q_codevectors,q_index=q_index)
+                                  q_codevectors=q_codevectors, q_index=q_index)
             encoder = model.get_encoder()
         else:
             model = EnzymaticT5Model(config, lookup_len, quantization=quantization, q_groups=q_groups,
-                                     q_codevectors=q_codevectors,q_index=q_index)
+                                     q_codevectors=q_codevectors, q_index=q_index)
             encoder = model.t5_model.get_encoder()
     if freeze_encoder:
         for param in encoder.parameters():
@@ -114,11 +120,22 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
 
 
 def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecreact_only=0, freeze_encoder=0,
-         post_encoder=0, quantization=0, q_groups=5, q_codevectors=512,q_index=0):
+         post_encoder=0, quantization=0, q_groups=5, q_codevectors=512, q_index=0, prequantization=0):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, freeze_encoder, post_encoder,
-                                               quantization, q_groups=q_groups, q_codevectors=q_codevectors,q_index=q_index)
+                                               quantization, q_groups=q_groups, q_codevectors=q_codevectors,
+                                               q_index=q_index)
+    last_original_token = tokenizer.get_vocab_size()
+    if prequantization:
+        from offline_quantizer import HierarchicalPCATokenizer
+        new_tokens = HierarchicalPCATokenizer().get_all_tokens()
+        tokenizer.add_tokens(new_tokens)
     if load_cp:
         loaded_state_dict = load_file(load_cp + "/model.safetensors")
+        if prequantization:
+            new_tokens_count = tokenizer.get_vocab_size() - last_original_token
+            random_init_new_tokens_param = torch.randn(new_tokens_count, model.t5_model.config.d_model)
+            new_shared = torch.cat([loaded_state_dict["shared"], random_init_new_tokens_param], dim=0)
+            loaded_state_dict["shared"] = new_shared
         if isinstance(model, EnzymaticT5Model):
             missing_keys, unexpected_keys = model.t5_model.load_state_dict(loaded_state_dict, strict=False)
         else:
@@ -127,8 +144,12 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
         print("Unexpected keys in the checkpoint (not used by the model):", unexpected_keys)
 
     # ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
-    ecreact_dataset = "ecreact/level4"
+
     ec_type = get_ec_type(use_ec, ec_split, dae)
+    if prequantization:
+        ecreact_dataset = f"ecreact/quant_{ec_type.value}"
+    else:
+        ecreact_dataset = "ecreact/level4"
     if ecreact_only:
         train_datasets_names = [ecreact_dataset]
         w = [1]
@@ -147,7 +168,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     eval_datasets = {"ecreact": val_ecreact, "ecreact_train": train_ecreact_small}
 
     run_name = args_to_name(use_ec, ec_split, lookup_len, dae, ecreact_only, freeze_encoder, post_encoder, quantization,
-                            q_groups, q_codevectors,q_index)
+                            q_groups, q_codevectors, q_index, prequantization)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -204,9 +225,11 @@ if __name__ == '__main__':
     parser.add_argument("--q_groups", default=4, type=int)
     parser.add_argument("--q_codevectors", default=512, type=int)
     parser.add_argument("--q_index", default=0, type=int)
+    parser.add_argument("--prequantization", default=0, type=int)
 
     args = parser.parse_args()
     DEBUG = args.debug
     main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp, args.ecreact_only,
          freeze_encoder=args.freeze_encoder, post_encoder=args.post_encoder, quantization=args.quantization,
-         q_groups=args.q_groups, q_codevectors=args.q_codevectors,q_index=args.q_index)
+         q_groups=args.q_groups, q_codevectors=args.q_codevectors, q_index=args.q_index,
+         prequantization=args.prequantization)
