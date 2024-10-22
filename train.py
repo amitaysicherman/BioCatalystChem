@@ -136,7 +136,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
             d_model= model.t5_model.config.d_model if isinstance(model, EnzymaticT5Model) else model.config.d_model
             random_init_new_tokens_param = torch.randn(new_tokens_count, d_model)
             new_shared = torch.cat([loaded_state_dict["shared.weight"], random_init_new_tokens_param], dim=0)
-            loaded_state_dict["shared.weight"] = new_shared
+            loaded_state_dict["shared.weight"] = new_shared.float()
         if isinstance(model, EnzymaticT5Model):
             missing_keys, unexpected_keys = model.t5_model.load_state_dict(loaded_state_dict, strict=False)
         else:

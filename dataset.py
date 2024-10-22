@@ -59,7 +59,7 @@ class SeqToSeqDataset(Dataset):
             have_ec = "ec" in ds
             if "quant" in ds:
                 have_ec = False # TODO : there is EC , but like paper, not like pretrained
-            self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec )
+            self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec)
         if not DEBUG:
             if sample_size is not None:
                 self.data = random.sample(self.data, sample_size)
