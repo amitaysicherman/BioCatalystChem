@@ -124,7 +124,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, freeze_encoder, post_encoder,
                                                quantization, q_groups=q_groups, q_codevectors=q_codevectors,
                                                q_index=q_index)
-    last_original_token = tokenizer.get_vocab_size()
+    last_original_token = tokenizer.vocab_size
     if prequantization:
         from offline_quantizer import HierarchicalPCATokenizer
         new_tokens = HierarchicalPCATokenizer().get_all_tokens()
