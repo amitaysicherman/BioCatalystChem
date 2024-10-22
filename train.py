@@ -150,7 +150,9 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
 
     ec_type = get_ec_type(use_ec, ec_split, dae)
     if prequantization:
-        ecreact_dataset = f"ecreact/quant_{ec_type.value}"
+        from dataset import ECType
+        q_num = ECType.DAE.value if dae else ECType.PRETRAINED.value
+        ecreact_dataset = f"ecreact/quant_{q_num}"
     else:
         ecreact_dataset = "ecreact/level4"
     if ecreact_only:
