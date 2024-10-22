@@ -60,7 +60,7 @@ def get_last_cp(base_dir):
 
 def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, freeze_encoder=0, post_encoder=0,
                  quantization=0
-                 , q_groups=4, q_codevectors=512, q_index=0,prequantization=0):
+                 , q_groups=4, q_codevectors=512, q_index=0, prequantization=0):
     if prequantization:
         if dae:
             run_name = f"prequantization_dae"
@@ -123,7 +123,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
          post_encoder=0, quantization=0, q_groups=5, q_codevectors=512, q_index=0, prequantization=0):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, freeze_encoder, post_encoder,
                                                quantization, q_groups=q_groups, q_codevectors=q_codevectors,
-                                               q_index=q_index,prequantization=prequantization)
+                                               q_index=q_index, prequantization=prequantization)
     last_original_token = tokenizer.vocab_size
     if prequantization:
         from offline_quantizer import HierarchicalPCATokenizer
@@ -133,7 +133,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
         loaded_state_dict = load_file(load_cp + "/model.safetensors")
         if prequantization:
             new_tokens_count = tokenizer.vocab_size - last_original_token
-            d_model= model.t5_model.config.d_model if isinstance(model, EnzymaticT5Model) else model.config.d_model
+            d_model = model.t5_model.config.d_model if isinstance(model, EnzymaticT5Model) else model.config.d_model
             random_init_new_tokens_param = torch.randn(new_tokens_count, d_model)
             new_shared = torch.cat([loaded_state_dict["shared.weight"], random_init_new_tokens_param], dim=0)
             loaded_state_dict["shared.weight"] = new_shared.float()
