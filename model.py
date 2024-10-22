@@ -125,7 +125,7 @@ class CustomT5Model(T5ForConditionalGeneration):
             emb_projection, perplexity = self.quantizer(emb_projection)
         if self.quantizer.temperature > 2 and not (
                 torch.isnan(emb_projection).any() or torch.isinf(emb_projection).any()):
-            self.quantizer.temperature = self.quantizer.temperature - 0.05
+            self.quantizer.temperature = self.quantizer.temperature - 0.005
 
         new_input_embeddings = torch.cat([emb_projection, input_embeddings], dim=1)
 
