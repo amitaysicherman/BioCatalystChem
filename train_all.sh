@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define the configurations as a long string with a delimiter (| in this case)
-configs="python train.py  --dae 1  --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --prequantization 1 --ec_split 1\
-         python train.py  --dae 0  --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --prequantization 1 --ec_split 1"
+configs="--dae 1  --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --prequantization 1 --ec_split 1\
+         --dae 0  --load_cp results_old/v4/regular/checkpoint-280000 --ecreact_only 1 --prequantization 1 --ec_split 1"
 
 # Count the number of configurations by counting the number of delimiters (|) + 1
 num_configs=$(echo "$configs" | tr -cd '|' | wc -c)
