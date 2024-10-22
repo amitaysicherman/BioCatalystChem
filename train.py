@@ -17,6 +17,7 @@ from model import CustomT5Model, EnzymaticT5Model
 import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
 import torch
+from dataset import ECType
 
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
@@ -148,9 +149,8 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
 
     # ecreact_dataset = "ecreact/level3" if ec_split else "ecreact/level4"
 
-    ec_type = get_ec_type(use_ec, ec_split, dae)
+    ec_type = get_ec_type(use_ec, ec_split, dae) if not prequantization else ECType.PAPER
     if prequantization:
-        from dataset import ECType
         q_num = ECType.DAE.value if dae else ECType.PRETRAINED.value
         ecreact_dataset = f"ecreact/quant_{q_num}"
     else:
