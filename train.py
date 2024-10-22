@@ -90,7 +90,7 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, free
 
 def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, freeze_encoder=0, post_encoder=0,
                             quantization=0,
-                            q_groups=5, q_codevectors=512, q_index=0):
+                            q_groups=5, q_codevectors=512, q_index=0, prequantization=0):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
@@ -100,7 +100,7 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
         config.d_model = 128
         config.num_heads = 4
         config.d_ff = 256
-    if ec_split and not costum_t5:
+    if prequantization or (ec_split and not costum_t5):
         model = T5ForConditionalGeneration(config)
         encoder = model.get_encoder()
     else:
@@ -123,7 +123,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
          post_encoder=0, quantization=0, q_groups=5, q_codevectors=512, q_index=0, prequantization=0):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, freeze_encoder, post_encoder,
                                                quantization, q_groups=q_groups, q_codevectors=q_codevectors,
-                                               q_index=q_index)
+                                               q_index=q_index,prequantization=prequantization)
     last_original_token = tokenizer.vocab_size
     if prequantization:
         from offline_quantizer import HierarchicalPCATokenizer
