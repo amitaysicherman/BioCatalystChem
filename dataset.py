@@ -67,9 +67,12 @@ class SeqToSeqDataset(Dataset):
     def load_dataset(self, input_base, split, w, have_ec=True):
         with open(f"{input_base}/src-{split}.txt") as f:
             src_lines = f.read().splitlines()
+
         with open(f"{input_base}/tgt-{split}.txt") as f:
             tgt_lines = f.read().splitlines()
+
         assert len(src_lines) == len(tgt_lines)
+
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
         if have_ec:
             if self.ec_type == ECType.NO_EC:
