@@ -93,10 +93,10 @@ def read_dataset_split(ec_type: ECType, split: str):
         for i, row in ec_mapping.iterrows():
             ec_to_uniprot[row["EC_full"]] = row["Uniprot_id"]
     with open(f"{input_base}/src-{split}.txt") as f:
-        src_lines = f.read().splitlines()[:150]
+        src_lines = f.read().splitlines()
 
     with open(f"{input_base}/tgt-{split}.txt") as f:
-        tgt_lines = f.read().splitlines()[:150]
+        tgt_lines = f.read().splitlines()
 
     assert len(src_lines) == len(tgt_lines)
 
