@@ -60,7 +60,7 @@ def get_last_cp(base_dir):
 
 def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, freeze_encoder=0, post_encoder=0,
                  quantization=0
-                 , q_groups=5, q_codevectors=512,q_index=0):
+                 , q_groups=4, q_codevectors=512,q_index=0):
     if dae:
         run_name = f"dae_{lookup_len}"
     elif use_ec:
@@ -183,7 +183,6 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
         tokenizer=tokenizer,
         compute_metrics=lambda x: compute_metrics(x, tokenizer)
     )
-
     # Train the model
     trainer.train()
 
