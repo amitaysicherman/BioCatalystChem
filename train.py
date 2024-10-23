@@ -61,12 +61,14 @@ def get_last_cp(base_dir):
 
 def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, freeze_encoder=0, post_encoder=0,
                  quantization=0
-                 , q_groups=4, q_codevectors=512, q_index=0, prequantization=0):
+                 , q_groups=4, q_codevectors=512, q_index=0, prequantization=0,
+                 n_hierarchical_clusters=5, n_pca_components=6, n_clusters_pca=10):
     if prequantization:
+        suff = f"_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}"
         if dae:
-            run_name = f"prequantization_dae"
+            run_name = f"prequantization_dae" + suff
         else:
-            run_name = f"prequantization_pretrained"
+            run_name = f"prequantization_pretrained" + suff
         return run_name
     if dae:
         run_name = f"dae_{lookup_len}"
@@ -91,11 +93,15 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, free
 
 def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, freeze_encoder=0, post_encoder=0,
                             quantization=0,
-                            q_groups=5, q_codevectors=512, q_index=0, prequantization=0):
+                            q_groups=5, q_codevectors=512, q_index=0, prequantization=0,
+                            n_hierarchical_clusters=5, n_pca_components=6, n_clusters_pca=10):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if prequantization:
         from offline_quantizer import HierarchicalPCATokenizer
-        new_tokens = HierarchicalPCATokenizer().get_all_tokens()
+        new_tokens = HierarchicalPCATokenizer(n_hierarchical_clusters=n_hierarchical_clusters,
+                                              n_pca_components=n_pca_components,
+                                              n_clusters_pca=n_clusters_pca,
+                                              ).get_all_tokens()
         tokenizer.add_tokens(new_tokens)
 
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
@@ -126,10 +132,13 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
 
 
 def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecreact_only=0, freeze_encoder=0,
-         post_encoder=0, quantization=0, q_groups=5, q_codevectors=512, q_index=0, prequantization=0):
+         post_encoder=0, quantization=0, q_groups=5, q_codevectors=512, q_index=0, prequantization=0,
+         n_hierarchical_clusters=5, n_pca_components=6, n_clusters_pca=10):
     tokenizer, model = get_tokenizer_and_model(ec_split, lookup_len, DEBUG, dae, freeze_encoder, post_encoder,
                                                quantization, q_groups=q_groups, q_codevectors=q_codevectors,
-                                               q_index=q_index, prequantization=prequantization)
+                                               q_index=q_index, prequantization=prequantization,
+                                               n_hierarchical_clusters=n_hierarchical_clusters,
+                                               n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca)
     if load_cp:
         loaded_state_dict = load_file(load_cp + "/model.safetensors")
         if prequantization:
@@ -151,8 +160,10 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
 
     ec_type = get_ec_type(use_ec, ec_split, dae) if not prequantization else ECType.PAPER
     if prequantization:
-        q_num = ECType.DAE.value if dae else ECType.PRETRAINED.value
-        ecreact_dataset = f"ecreact/quant_{q_num}"
+        from offline_quantizer import args_to_quant_dataset
+        ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
+        ecreact_dataset = ecreact_dataset.replace("datasets/", "")
+
     else:
         ecreact_dataset = "ecreact/level4"
     if ecreact_only:
@@ -173,7 +184,9 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     eval_datasets = {"ecreact": val_ecreact, "ecreact_train": train_ecreact_small}
 
     run_name = args_to_name(use_ec, ec_split, lookup_len, dae, ecreact_only, freeze_encoder, post_encoder, quantization,
-                            q_groups, q_codevectors, q_index, prequantization)
+                            q_groups, q_codevectors, q_index, prequantization, n_hierarchical_clusters,
+                            n_pca_components,
+                            n_clusters_pca)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -231,10 +244,14 @@ if __name__ == '__main__':
     parser.add_argument("--q_codevectors", default=512, type=int)
     parser.add_argument("--q_index", default=0, type=int)
     parser.add_argument("--prequantization", default=0, type=int)
+    parser.add_argument("--n_hierarchical_clusters", type=int, default=5)
+    parser.add_argument("--n_pca_components", type=int, default=6)
+    parser.add_argument("--n_clusters_pca", type=int, default=10)
 
     args = parser.parse_args()
     DEBUG = args.debug
     main(args.use_ec, args.ec_split, args.lookup_len, args.dae, args.load_cp, args.ecreact_only,
          freeze_encoder=args.freeze_encoder, post_encoder=args.post_encoder, quantization=args.quantization,
          q_groups=args.q_groups, q_codevectors=args.q_codevectors, q_index=args.q_index,
-         prequantization=args.prequantization)
+         prequantization=args.prequantization, n_hierarchical_clusters=args.n_hierarchical_clusters,
+         n_pca_components=args.n_pca_components, n_clusters_pca=args.n_clusters_pca)

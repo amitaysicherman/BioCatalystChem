@@ -27,6 +27,7 @@ class HierarchicalPCATokenizer:
             n_clusters_pca: Number of clusters for each PCA dimension
         """
         n_to_val_hierarchy = {
+            0: [],
             1: [10],
             2: [10, 50],
             3: [10, 50, 100],
