@@ -179,9 +179,9 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n_hierarchical_clusters", type=int, default=5)
-    parser.add_argument("-n_pca_components", type=int, default=6)
-    parser.add_argument("-n_clusters_pca", type=int, default=10)
+    parser.add_argument("--n_hierarchical_clusters", type=int, default=5)
+    parser.add_argument("--n_pca_components", type=int, default=6)
+    parser.add_argument("--n_clusters_pca", type=int, default=10)
     args = parser.parse_args()
     for ec_type in [ECType.PRETRAINED, ECType.DAE]:
         train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca)
