@@ -15,7 +15,7 @@ import pickle
 
 
 class HierarchicalPCATokenizer:
-    def __init__(self, n_hierarchical_clusters: Sequence[int] = (10, 50, 100, 500, 1000),
+    def __init__(self, n_hierarchical_clusters: int = 5,
                  n_pca_components: int = 6, n_clusters_pca: int = 10):
         """
         Initialize tokenizer with hierarchical K-means and PCA-based clustering
@@ -26,7 +26,16 @@ class HierarchicalPCATokenizer:
             n_pca_components: Number of PCA components to use
             n_clusters_pca: Number of clusters for each PCA dimension
         """
-        self.n_hierarchical_clusters = n_hierarchical_clusters
+        n_to_val_hierarchy = {
+            1: [10],
+            2: [10, 50],
+            3: [10, 50, 100],
+            4: [10, 50, 100, 250],
+            5: [10, 50, 100, 250, 500],
+            6: [10, 50, 100, 250, 500, 1000],
+            7: [10, 50, 100, 250, 500, 1000, 1500],
+        }
+        self.vals_hierarchical_clusters = n_to_val_hierarchy[n_hierarchical_clusters]
         self.n_pca_components = n_pca_components
         self.n_clusters_pca = n_clusters_pca
 
@@ -55,7 +64,7 @@ class HierarchicalPCATokenizer:
         current_data = vectors
         self.hierarchical_models = []
 
-        for k in self.n_hierarchical_clusters:
+        for k in self.vals_hierarchical_clusters:
             kmeans = KMeans(n_clusters=k, random_state=42)
             kmeans.fit(current_data)
             self.hierarchical_models.append(kmeans)
@@ -78,7 +87,7 @@ class HierarchicalPCATokenizer:
 
     def get_all_tokens(self):
         tokens = []
-        for level, k in enumerate(self.n_hierarchical_clusters):
+        for level, k in enumerate(self.vals_hierarchical_clusters):
             for cluster in range(k):
                 tokens.append(f"H{level}-{cluster}")
         for dim in range(self.n_pca_components):
@@ -87,8 +96,12 @@ class HierarchicalPCATokenizer:
         return tokens
 
 
-def ec_to_filename(ec_type: ECType):
-    return f"datasets/ecreact/vec_quant_{ec_type.value}.pkl"
+def args_to_quant_model_file(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
+    return f"datasets/ecreact/vec_quant_{ec_type.value}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}.pkl"
+
+
+def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
+    return f"datasets/ecreact/quant_{ec_type.value}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}/"
 
 
 def read_dataset_split(ec_type: ECType, split: str):
@@ -129,26 +142,28 @@ def read_dataset_split(ec_type: ECType, split: str):
     return src_lines, tgt_lines, emb_lines
 
 
-def train_model(ec_type: ECType):
+def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
     split = "train"
     _, _, emb_lines = read_dataset_split(ec_type, split)
     vecs = np.array(emb_lines)
     print(vecs.shape)
-    tokenizer = HierarchicalPCATokenizer()
+    tokenizer = HierarchicalPCATokenizer(n_hierarchical_clusters, n_pca_components, n_clusters_pca)
     tokenizer.fit(vecs)
-    with open(ec_to_filename(ec_type), "wb") as f:
+    with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca), "wb") as f:
         pickle.dump(tokenizer, f)
 
 
-def tokenize_dataset_split(ec_type: ECType, split):
-    with open(ec_to_filename(ec_type), "rb") as f:
-        tokenizer = pickle.load(f)
+def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
+    with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca), "rb") as f:
+        tokenizer: HierarchicalPCATokenizer = pickle.load(f)
     src_lines, tgt_lines, emb_lines = read_dataset_split(ec_type, split)
     tokenized_lines = []
     for emb in tqdm(emb_lines):
         tokenized_lines.append(tokenizer.tokenize_vector(emb))
     assert len(src_lines) == len(tgt_lines) == len(tokenized_lines)
-    output_base = f"datasets/ecreact/quant_{ec_type.value}"
+
+    output_base = args_to_quant_dataset(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
+
     os.makedirs(output_base, exist_ok=True)
     src_out = open(f"{output_base}/src-{split}.txt", "w")
     tgt_out = open(f"{output_base}/tgt-{split}.txt", "w")
@@ -161,7 +176,15 @@ def tokenize_dataset_split(ec_type: ECType, split):
 
 
 if __name__ == "__main__":
-    for ec_type in [ECType.DAE,ECType.PRETRAINED]:
-        train_model(ec_type)
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n_hierarchical_clusters", type=int, default=5)
+    parser.add_argument("-n_pca_components", type=int, default=6)
+    parser.add_argument("-n_clusters_pca", type=int, default=10)
+    args = parser.parse_args()
+    for ec_type in [ECType.PRETRAINED, ECType.DAE]:
+        train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca)
         for split in ["train", "valid", "test"]:
-            tokenize_dataset_split(ec_type, split)
+            tokenize_dataset_split(ec_type, split, args.n_hierarchical_clusters, args.n_pca_components,
+                                   args.n_clusters_pca)
