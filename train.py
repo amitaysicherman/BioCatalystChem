@@ -161,7 +161,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     ec_type = get_ec_type(use_ec, ec_split, dae) if not prequantization else ECType.PAPER
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
-        ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
+        ecreact_dataset = args_to_quant_dataset(ECType.DAE if dae else ECType.PRETRAINED, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
         ecreact_dataset = ecreact_dataset.replace("datasets/", "")
 
     else:
