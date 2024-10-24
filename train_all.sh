@@ -10,7 +10,13 @@ configs=" --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 
   --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 0 |\
   --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 0 |\
   --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 10 --n_clusters_pca 20 |\
-  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 10 --n_clusters_pca 20"
+  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 10 --n_clusters_pca 20 |\
+  --use_ec 1 --ec_split 1 |\
+  --use_ec 1 --ec_split 0 --lookup_len 5 |\
+  --use_ec 1 --ec_split 0  --lookup_len 1 |\
+  --dae 1 --ec_split 1 --lookup_len 5 |\
+  --dae 1 --ec_split 1  --lookup_len 1 |\
+  --use_ec 0 --ec_split 1"
 
 # Count the number of configurations by counting the number of delimiters (|) + 1
 num_configs=$(echo "$configs" | tr -cd '|' | wc -c)
