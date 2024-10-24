@@ -181,7 +181,10 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
                                           DEBUG=DEBUG, sample_size=3000)
     val_ecreact = SeqToSeqDataset([ecreact_dataset], eval_split, weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                   DEBUG=DEBUG)
-    eval_datasets = {"ecreact": val_ecreact, "ecreact_train": train_ecreact_small}
+    test_ecreact = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
+                                   DEBUG=DEBUG)
+    eval_datasets = {"ecreact": val_ecreact, "ecreact_train": train_ecreact_small, "ecreact_test": test_ecreact}
+
 
     run_name = args_to_name(use_ec, ec_split, lookup_len, dae, ecreact_only, freeze_encoder, post_encoder, quantization,
                             q_groups, q_codevectors, q_index, prequantization, n_hierarchical_clusters,
@@ -194,14 +197,14 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     training_args = TrainingArguments(
         output_dir=output_dir,
         evaluation_strategy="steps",
-        save_steps=1_000 if not DEBUG else 10,
+        save_steps=5_000 if not DEBUG else 10,
         save_total_limit=2,
         max_steps=500_000,
         # auto_find_batch_size=True,
         per_device_train_batch_size=64,
         per_device_eval_batch_size=64 // 8,
-        logging_steps=500 if not DEBUG else 10,
-        eval_steps=1_000 if not DEBUG else 10,
+        logging_steps=2_500 if not DEBUG else 10,
+        eval_steps=5_000 if not DEBUG else 10,
         metric_for_best_model="eval_ecreact_accuracy",
         warmup_steps=8_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
