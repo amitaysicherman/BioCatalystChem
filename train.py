@@ -149,16 +149,17 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
             loaded_state_dict =load_file(os.path.join(load_cp, model_filename))
         else:
             model_filename = "pytorch_model.bin"
-            loaded_state_dict = torch.load(os.path.join(load_cp, model_filename))
+            loaded_state_dict = torch.load(os.path.join(load_cp, model_filename), map_location="cpu")
 
         if prequantization:
             m = model.t5_model if isinstance(model, EnzymaticT5Model) else model
             model_v_size = len(m.shared.weight)
             cp_v_size = len(loaded_state_dict["shared.weight"])
-            d_model = m.config.d_model
-            random_init_new_tokens_param = torch.randn(model_v_size - cp_v_size, d_model)
-            new_shared = torch.cat([loaded_state_dict["shared.weight"], random_init_new_tokens_param], dim=0)
-            loaded_state_dict["shared.weight"] = new_shared.float()
+            if model_v_size!=cp_v_size:
+                d_model = m.config.d_model
+                random_init_new_tokens_param = torch.randn(model_v_size - cp_v_size, d_model)
+                new_shared = torch.cat([loaded_state_dict["shared.weight"], random_init_new_tokens_param], dim=0)
+                loaded_state_dict["shared.weight"] = new_shared.float()
         if isinstance(model, EnzymaticT5Model):
             missing_keys, unexpected_keys = model.t5_model.load_state_dict(loaded_state_dict, strict=False)
         else:
