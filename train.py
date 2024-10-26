@@ -58,8 +58,7 @@ def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, free
             run_name = f"prequantization_dae" + suff
         else:
             run_name = f"prequantization_pretrained" + suff
-        return run_name
-    if dae:
+    elif dae:
         run_name = f"dae_{lookup_len}"
     elif use_ec:
         if ec_split:
