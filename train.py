@@ -129,7 +129,6 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
                                                n_hierarchical_clusters=n_hierarchical_clusters,
                                                n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca)
     if load_cp:
-        model_filename = "model.safetensors"
         if load_cp=="best_no_ecreact":
             run_name_no_eceract = args_to_name(use_ec, ec_split, lookup_len, dae, 0, freeze_encoder, post_encoder,
                                     quantization,
@@ -145,7 +144,13 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
             with open(trainer_state_file) as f:
                 trainer_state = json.load(f)
             load_cp = trainer_state["best_model_checkpoint"]
-        loaded_state_dict = load_file(os.path.join(load_cp, model_filename))
+        model_filename="model.safetensors"
+        if os.path.exists(os.path.join(load_cp, model_filename)):
+            loaded_state_dict =load_file(os.path.join(load_cp, model_filename))
+        else:
+            model_filename = "pytorch_model.bin"
+            loaded_state_dict = torch.load(os.path.join(load_cp, model_filename))
+
         if prequantization:
             m = model.t5_model if isinstance(model, EnzymaticT5Model) else model
             model_v_size = len(m.shared.weight)
