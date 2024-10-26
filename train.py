@@ -4,7 +4,7 @@ from transformers import (
     T5ForConditionalGeneration,
 )
 from transformers import Trainer, TrainingArguments
-
+import os
 from transformers import PreTrainedTokenizerFast
 from safetensors.torch import load_file
 
@@ -18,6 +18,8 @@ import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
 import torch
 from dataset import ECType
+import re
+import json
 
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
@@ -44,19 +46,6 @@ def compute_metrics(eval_pred, tokenizer):
     accuracy = np.mean(accuracy)
     is_valid = np.mean(is_valid)
     return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
-
-
-def get_last_cp(base_dir):
-    import os
-    import re
-    if not os.path.exists(base_dir):
-        return None
-    cp_dirs = os.listdir(base_dir)
-    cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
-    cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
-    if len(cp_dirs) == 0:
-        return None
-    return f"{base_dir}/{cp_dirs[-1]}"
 
 
 def args_to_name(use_ec, ec_split, lookup_len=5, dae=False, ecreact_only=0, freeze_encoder=0, post_encoder=0,
@@ -140,7 +129,23 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
                                                n_hierarchical_clusters=n_hierarchical_clusters,
                                                n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca)
     if load_cp:
-        loaded_state_dict = load_file(load_cp + "/model.safetensors")
+        model_filename = "model.safetensors"
+        if load_cp=="best_no_ecreact":
+            run_name_no_eceract = args_to_name(use_ec, ec_split, lookup_len, dae, 0, freeze_encoder, post_encoder,
+                                    quantization,
+                                    q_groups, q_codevectors, q_index, prequantization, n_hierarchical_clusters,
+                                    n_pca_components,
+                                    n_clusters_pca)
+            load_cp=f"results/{run_name_no_eceract}"
+            cp_dirs = os.listdir(load_cp)
+            cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
+            cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
+            last_cp = f"{load_cp}/{cp_dirs[-1]}"
+            trainer_state_file = f"{last_cp}/trainer_state.json"
+            with open(trainer_state_file) as f:
+                trainer_state = json.load(f)
+            load_cp = trainer_state["best_model_checkpoint"]
+        loaded_state_dict = load_file(os.path.join(load_cp, model_filename))
         if prequantization:
             m = model.t5_model if isinstance(model, EnzymaticT5Model) else model
             model_v_size = len(m.shared.weight)
@@ -161,7 +166,8 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     ec_type = get_ec_type(use_ec, ec_split, dae) if not prequantization else ECType.PAPER
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
-        ecreact_dataset = args_to_quant_dataset(ECType.DAE if dae else ECType.PRETRAINED, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
+        ecreact_dataset = args_to_quant_dataset(ECType.DAE if dae else ECType.PRETRAINED, n_hierarchical_clusters,
+                                                n_pca_components, n_clusters_pca)
         ecreact_dataset = ecreact_dataset.replace("datasets/", "")
 
     else:
@@ -185,7 +191,6 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
                                    DEBUG=DEBUG)
     eval_datasets = {"ecreact": val_ecreact, "ecreact_train": train_ecreact_small, "ecreact_test": test_ecreact}
 
-
     run_name = args_to_name(use_ec, ec_split, lookup_len, dae, ecreact_only, freeze_encoder, post_encoder, quantization,
                             q_groups, q_codevectors, q_index, prequantization, n_hierarchical_clusters,
                             n_pca_components,
@@ -199,7 +204,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
         evaluation_strategy="steps",
         save_steps=5_000 if not DEBUG else 10,
         save_total_limit=2,
-        max_steps=250_000,
+        max_steps=100_000,
         # auto_find_batch_size=True,
         per_device_train_batch_size=64,
         per_device_eval_batch_size=64 // 8,
