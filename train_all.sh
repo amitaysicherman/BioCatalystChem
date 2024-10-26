@@ -1,22 +1,22 @@
 #!/bin/bash
 
 # Define the configurations as a long string with a delimiter (| in this case)
-configs="--ecreact_only 1   --best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
-  --ecreact_only 1   --best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
-  --ecreact_only 1   --best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
-  --ecreact_only 1   --best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
-  --ecreact_only 1   --best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
-  --ecreact_only 1   --best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
-  --ecreact_only 1   --best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 0 |\
-  --ecreact_only 1   --best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 0 |\
-  --ecreact_only 1   --best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 10 --n_clusters_pca 20 |\
-  --ecreact_only 1   --best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 10 --n_clusters_pca 20 |\
-  --ecreact_only 1   --best_no_ecreact --use_ec 1 --ec_split 1 |\
-  --ecreact_only 1   --best_no_ecreact --use_ec 1 --ec_split 0 --lookup_len 5 |\
-  --ecreact_only 1   --best_no_ecreact --use_ec 1 --ec_split 0  --lookup_len 1 |\
-  --ecreact_only 1   --best_no_ecreact --dae 1 --ec_split 1 --lookup_len 5 |\
-  --ecreact_only 1   --best_no_ecreact --dae 1 --ec_split 1  --lookup_len 1 |\
-  --ecreact_only 1   --best_no_ecreact --use_ec 0 --ec_split 1"
+configs="--ecreact_only 1   --load_cp best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 0 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 0 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 10 --n_clusters_pca 20 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 10 --n_clusters_pca 20 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --use_ec 1 --ec_split 1 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --use_ec 1 --ec_split 0 --lookup_len 5 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --use_ec 1 --ec_split 0  --lookup_len 1 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 1 --ec_split 1 --lookup_len 5 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --dae 1 --ec_split 1  --lookup_len 1 |\
+  --ecreact_only 1   --load_cp best_no_ecreact --use_ec 0 --ec_split 1"
 
 # Count the number of configurations by counting the number of delimiters (|) + 1
 num_configs=$(echo "$configs" | tr -cd '|' | wc -c)
