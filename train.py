@@ -200,7 +200,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
                             n_clusters_pca)
     print(f"Run name: {run_name}")
     # Training arguments
-    output_dir = f"results/{run_name}"
+    output_dir = f"results40/{run_name}"
 
     training_args = TrainingArguments(
         output_dir=output_dir,
