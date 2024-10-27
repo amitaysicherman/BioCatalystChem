@@ -205,14 +205,14 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     training_args = TrainingArguments(
         output_dir=output_dir,
         evaluation_strategy="steps",
-        save_steps=5 if not DEBUG else 5,
+        save_steps=200 if not DEBUG else 5,
         save_total_limit=2,
         max_steps=200 if not DEBUG else 25,
         # auto_find_batch_size=True,
         per_device_train_batch_size=64,
         per_device_eval_batch_size=64 // 8,
-        logging_steps=5 if not DEBUG else 5,
-        eval_steps=5 if not DEBUG else 5,
+        logging_steps=200 if not DEBUG else 5,
+        eval_steps=200 if not DEBUG else 5,
         metric_for_best_model="eval_ecreact_accuracy",
         warmup_steps=8 if not DEBUG else 10,
         eval_accumulation_steps=8,
@@ -238,7 +238,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     # Switch to the ecreact_only dataset
     print("Switching to the ecreact_only dataset...")
     trainer.train_dataset = ec_only_train_dataset
-    trainer.args.max_steps = 30 if not DEBUG else 40
+    trainer.args.max_steps = 400 if not DEBUG else 40
     trainer.args.lr_scheduler_type = "constant"
 
     trainer.train(resume_from_checkpoint=True)
