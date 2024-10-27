@@ -79,7 +79,7 @@ def get_protein_mol_att(protein_id, molecule_id, alpha=0.5):
     weights = weights / weights.sum(axis=0)
     weights = weights.sum(axis=1)
     weights = weights / weights.sum()
-    weights = weights ** alpha + np.ones_like(weights) * (1 - alpha)
+    weights = weights * alpha + (1 - alpha) / len(weights)
 
     protein_emd_file = f'datasets/docking/{protein_id}/protein.npy'
     emb = np.load(protein_emd_file)[1:-1]  # remove cls and eos tokens
