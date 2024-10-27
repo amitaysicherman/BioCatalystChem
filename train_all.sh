@@ -7,10 +7,10 @@ configs="--dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 -
   --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
   --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
   --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
-  --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 0 |\
-  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 0 |\
-  --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 10 --n_clusters_pca 20 |\
-  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 7 --n_pca_components 10 --n_clusters_pca 20 |\
+  --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 5 --n_pca_components 0 --n_clusters_pca 0 |\
+  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 5 --n_pca_components 0 --n_clusters_pca 0 |\
+  --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 5 --n_pca_components 10 --n_clusters_pca 10 |\
+  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 5 --n_pca_components 10 --n_clusters_pca 10 |\
   --use_ec 1 --ec_split 1 |\
   --use_ec 1 --ec_split 0 --lookup_len 5 |\
   --use_ec 1 --ec_split 0  --lookup_len 1 |\
