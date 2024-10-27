@@ -211,7 +211,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
         # auto_find_batch_size=True,
         per_device_train_batch_size=64,
         per_device_eval_batch_size=64 // 8,
-        logging_steps=10_000 if not DEBUG else 5,
+        logging_steps=5_000 if not DEBUG else 5,
         eval_steps=10_000 if not DEBUG else 5,
         metric_for_best_model="eval_ecreact_accuracy",
         warmup_steps=10_000 if not DEBUG else 10,
