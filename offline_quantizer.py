@@ -106,6 +106,10 @@ def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_compon
     return f"datasets/ecreact/quant_{ec_type.value}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}/"
 
 
+def get_reaction_attention_emb_wrapper(args):
+    text, ec, ec_to_uniprot, smiles_to_id = args
+    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id)
+
 def read_dataset_split(ec_type: ECType, split: str):
     input_base = "datasets/ecreact/level4"
     if ec_type == ECType.PRETRAINED:
@@ -134,9 +138,7 @@ def read_dataset_split(ec_type: ECType, split: str):
         emb_lines = [ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
     else:
 
-        def get_reaction_attention_emb_wrapper(args):
-            text, ec, ec_to_uniprot, smiles_to_id = args
-            return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id)
+
 
         # Prepare the argument list
         args_list = [(text, ec, ec_to_uniprot, smiles_to_id) for text, ec in zip(src_lines, ec_lines)]
