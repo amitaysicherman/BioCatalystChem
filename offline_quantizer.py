@@ -12,7 +12,7 @@ from collections import defaultdict
 import pandas as pd
 from dataset import ECType
 import pickle
-from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool
 
 
 class HierarchicalPCATokenizer:
@@ -138,13 +138,12 @@ def read_dataset_split(ec_type: ECType, split: str):
             text, ec, ec_to_uniprot, smiles_to_id = args
             return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id)
 
-        # Create a list of arguments for parallel processing
+        # Prepare the argument list
         args_list = [(text, ec, ec_to_uniprot, smiles_to_id) for text, ec in zip(src_lines, ec_lines)]
 
-        with ProcessPoolExecutor() as executor:
-            emb_lines = list(
-                tqdm(executor.map(get_reaction_attention_emb_wrapper, args_list), total=len(src_lines))
-            )
+        # Use Pool to parallelize
+        with Pool() as pool:
+            emb_lines = list(tqdm(pool.imap(get_reaction_attention_emb_wrapper, args_list), total=len(src_lines)))
 
     not_none_mask = [x is not None for x in emb_lines]
     src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
