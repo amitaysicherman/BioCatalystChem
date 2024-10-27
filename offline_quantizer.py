@@ -156,6 +156,10 @@ def read_dataset_split(ec_type: ECType, split: str):
 
 def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
     split = "train"
+    outputfile = args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
+    if os.path.exists(outputfile):
+        print("Model already exists")
+        return
     _, _, emb_lines = read_dataset_split(ec_type, split)
     vecs = np.array(emb_lines)
     print(vecs.shape)

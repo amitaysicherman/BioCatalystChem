@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --time=7-00
 #SBATCH --array=1-24
-#SBATCH --mem=64G
+#SBATCH --mem=256G
 #SBATCH -c 8
 #SBATCH --requeue
 
