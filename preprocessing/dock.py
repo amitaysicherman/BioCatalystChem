@@ -6,7 +6,8 @@ import re
 from rdkit import Chem
 from collections import defaultdict
 import pandas as pd
-from preprocessing.build_tokenizer import  ec_tokens_to_seq
+from preprocessing.build_tokenizer import ec_tokens_to_seq
+
 aa3to1 = {
     'ALA': 'A', 'VAL': 'V', 'PHE': 'F', 'PRO': 'P', 'MET': 'M',
     'ILE': 'I', 'LEU': 'L', 'ASP': 'D', 'GLU': 'E', 'LYS': 'K',
@@ -56,7 +57,9 @@ def check_protein_exists(protein_id):
     protein_file = f'datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb'
     protein_emd_file = f'datasets/docking/{protein_id}/protein.npy'
     return os.path.exists(protein_file) and os.path.exists(protein_emd_file)
-def get_protein_mol_att(protein_id, molecule_id):
+
+
+def get_protein_mol_att(protein_id, molecule_id, alpha=0.5):
     protein_file = f'datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb'
     protein_seq, protein_cords = get_protein_cords(protein_file)
     protein_cords = np.array(protein_cords)
@@ -70,6 +73,7 @@ def get_protein_mol_att(protein_id, molecule_id):
     weights = weights / weights.sum(axis=0)
     weights = weights.sum(axis=1)
     weights = weights / weights.sum()
+    weights = weights ** alpha + np.ones_like(weights) * (1 - alpha)
 
     protein_emd_file = f'datasets/docking/{protein_id}/protein.npy'
     emb = np.load(protein_emd_file)[1:-1]  # remove cls and eos tokens
@@ -79,7 +83,7 @@ def get_protein_mol_att(protein_id, molecule_id):
     return docking_attention_emd
 
 
-def get_reaction_attention_emd(non_can_smiles,ec, ec_to_uniprot, smiles_to_id):
+def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha=0.5):
     protein_id = ec_to_uniprot[ec]
     if not check_protein_exists(protein_id):
         return None
@@ -99,7 +103,7 @@ def get_reaction_attention_emd(non_can_smiles,ec, ec_to_uniprot, smiles_to_id):
                 continue
             molecule_id = smiles_to_id[s]
             try:
-                docking_attention_emd = get_protein_mol_att(protein_id, molecule_id)
+                docking_attention_emd = get_protein_mol_att(protein_id, molecule_id, alpha)
             except:
                 continue
             if docking_attention_emd is not None:
@@ -124,8 +128,7 @@ if __name__ == "__main__":
         ec = ec_tokens_to_seq(ec)
         ec = ec[4:-1]
 
-        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles,ec, ec_to_uniprot, smiles_to_id)
+        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id)
         if reaction_attention_emd is not None:
-
             print(reaction_attention_emd)
             print(reaction_attention_emd.shape)

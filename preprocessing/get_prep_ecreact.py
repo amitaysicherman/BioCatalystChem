@@ -23,9 +23,9 @@ with open(output_file, 'w') as f:
 prep_script = "python preprocessing/biocatalysis-model/bin/rbt-preprocess.py"
 
 # level 3
-output_dir = os.path.join(dir_path, 'level3')
-os.makedirs(output_dir, exist_ok=True)
-os.system(f"{prep_script} {output_file} {output_dir} --ec-level 3")
+# output_dir = os.path.join(dir_path, 'level3')
+# os.makedirs(output_dir, exist_ok=True)
+# os.system(f"{prep_script} {output_file} {output_dir} --ec-level 3")
 
 # level 4
 output_dir = os.path.join(dir_path, 'level4')
