@@ -12,6 +12,7 @@ from collections import defaultdict
 import pandas as pd
 from dataset import ECType
 import pickle
+from concurrent.futures import ProcessPoolExecutor
 
 
 class HierarchicalPCATokenizer:
@@ -128,13 +129,22 @@ def read_dataset_split(ec_type: ECType, split: str):
     src_ec = [redo_ec_split(text, True) for text in src_lines]
     src_lines = [x[0] for x in src_ec]
     ec_lines = [x[1] for x in src_ec]
+
     if ec_type == ECType.PRETRAINED:
         emb_lines = [ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
     else:
-        emb_lines = [
-            get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id)
-            for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
-        ]
+
+        def get_reaction_attention_emb_wrapper(args):
+            text, ec, ec_to_uniprot, smiles_to_id = args
+            return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id)
+
+        # Create a list of arguments for parallel processing
+        args_list = [(text, ec, ec_to_uniprot, smiles_to_id) for text, ec in zip(src_lines, ec_lines)]
+
+        with ProcessPoolExecutor() as executor:
+            emb_lines = list(
+                tqdm(executor.map(get_reaction_attention_emb_wrapper, args_list), total=len(src_lines))
+            )
 
     not_none_mask = [x is not None for x in emb_lines]
     src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
