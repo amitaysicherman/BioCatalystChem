@@ -7,6 +7,12 @@ from rdkit import Chem
 from collections import defaultdict
 import pandas as pd
 from preprocessing.build_tokenizer import ec_tokens_to_seq
+import rdkit.rdBase as rkrb
+import rdkit.RDLogger as rkl
+
+logger = rkl.logger()
+logger.setLevel(rkl.ERROR)
+rkrb.DisableLog("rdApp.error")
 
 aa3to1 = {
     'ALA': 'A', 'VAL': 'V', 'PHE': 'F', 'PRO': 'P', 'MET': 'M',
