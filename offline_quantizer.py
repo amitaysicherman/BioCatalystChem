@@ -169,9 +169,8 @@ def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pc
     with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca), "rb") as f:
         tokenizer: HierarchicalPCATokenizer = pickle.load(f)
     src_lines, tgt_lines, emb_lines = read_dataset_split(ec_type, split)
-    tokenized_lines = []
-    for emb in tqdm(emb_lines):
-        tokenized_lines.append(tokenizer.tokenize_vector(emb))
+    with Pool() as pool:
+        tokenized_lines = list(tqdm(pool.imap(tokenizer.tokenize_vector, emb_lines), total=len(emb_lines)))
     assert len(src_lines) == len(tgt_lines) == len(tokenized_lines)
 
     output_base = args_to_quant_dataset(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
@@ -194,9 +193,15 @@ if __name__ == "__main__":
     parser.add_argument("--n_hierarchical_clusters", type=int, default=5)
     parser.add_argument("--n_pca_components", type=int, default=6)
     parser.add_argument("--n_clusters_pca", type=int, default=10)
+    parser.add_argument("--ec_type", type=int, default=ECType.PRETRAINED.value)
     args = parser.parse_args()
-    for ec_type in [ECType.PRETRAINED, ECType.DAE]:
-        train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca)
-        for split in ["train", "valid", "test"]:
-            tokenize_dataset_split(ec_type, split, args.n_hierarchical_clusters, args.n_pca_components,
-                                   args.n_clusters_pca)
+    if args.ec_type == ECType.PRETRAINED.value:
+        ec_type = ECType.PRETRAINED
+    elif args.ec_type == ECType.DAE.value:
+        ec_type = ECType.DAE
+    else:
+        raise ValueError("Invalid ec_type")
+    train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca)
+    for split in ["train", "valid", "test"]:
+        tokenize_dataset_split(ec_type, split, args.n_hierarchical_clusters, args.n_pca_components,
+                               args.n_clusters_pca)
