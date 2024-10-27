@@ -128,13 +128,14 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
                                                n_hierarchical_clusters=n_hierarchical_clusters,
                                                n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca)
     if load_cp:
-        if load_cp=="best_no_ecreact":
+        if load_cp == "best_no_ecreact":
             run_name_no_eceract = args_to_name(use_ec, ec_split, lookup_len, dae, 0, freeze_encoder, post_encoder,
-                                    quantization,
-                                    q_groups, q_codevectors, q_index, prequantization, n_hierarchical_clusters,
-                                    n_pca_components,
-                                    n_clusters_pca)
-            load_cp=f"results/{run_name_no_eceract}"
+                                               quantization,
+                                               q_groups, q_codevectors, q_index, prequantization,
+                                               n_hierarchical_clusters,
+                                               n_pca_components,
+                                               n_clusters_pca)
+            load_cp = f"results/{run_name_no_eceract}"
             cp_dirs = os.listdir(load_cp)
             cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
             cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
@@ -143,9 +144,9 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
             with open(trainer_state_file) as f:
                 trainer_state = json.load(f)
             load_cp = trainer_state["best_model_checkpoint"]
-        model_filename="model.safetensors"
+        model_filename = "model.safetensors"
         if os.path.exists(os.path.join(load_cp, model_filename)):
-            loaded_state_dict =load_file(os.path.join(load_cp, model_filename))
+            loaded_state_dict = load_file(os.path.join(load_cp, model_filename))
         else:
             model_filename = "pytorch_model.bin"
             loaded_state_dict = torch.load(os.path.join(load_cp, model_filename), map_location="cpu")
@@ -154,7 +155,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
             m = model.t5_model if isinstance(model, EnzymaticT5Model) else model
             model_v_size = len(m.shared.weight)
             cp_v_size = len(loaded_state_dict["shared.weight"])
-            if model_v_size!=cp_v_size:
+            if model_v_size != cp_v_size:
                 d_model = m.config.d_model
                 random_init_new_tokens_param = torch.randn(model_v_size - cp_v_size, d_model)
                 new_shared = torch.cat([loaded_state_dict["shared.weight"], random_init_new_tokens_param], dim=0)
@@ -177,15 +178,12 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
 
     else:
         ecreact_dataset = "ecreact/level4"
-    if ecreact_only:
-        train_datasets_names = [ecreact_dataset]
-        w = [1]
-    else:
-        train_datasets_names = [ecreact_dataset, "uspto"]
-        w = [9, 1]
 
-    train_dataset = SeqToSeqDataset(train_datasets_names, "train", weights=w, tokenizer=tokenizer,
-                                    ec_type=ec_type, DEBUG=DEBUG)
+    ec_only_train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer,
+                                            ec_type=ec_type,
+                                            DEBUG=DEBUG)
+    full_train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[9, 1], tokenizer=tokenizer,
+                                         ec_type=ec_type, DEBUG=DEBUG)
     eval_split = "valid" if not DEBUG else "train"
 
     train_ecreact_small = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
@@ -207,22 +205,21 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     training_args = TrainingArguments(
         output_dir=output_dir,
         evaluation_strategy="steps",
-        save_steps=5_000 if not DEBUG else 10,
+        save_steps=5_000 if not DEBUG else 5,
         save_total_limit=2,
-        max_steps=100_000,
+        max_steps=250_000 if not DEBUG else 25,
         # auto_find_batch_size=True,
         per_device_train_batch_size=64,
         per_device_eval_batch_size=64 // 8,
-        logging_steps=2_500 if not DEBUG else 10,
-        eval_steps=5_000 if not DEBUG else 10,
+        logging_steps=2_500 if not DEBUG else 5,
+        eval_steps=5_000 if not DEBUG else 5,
         metric_for_best_model="eval_ecreact_accuracy",
         warmup_steps=8_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
         report_to='none' if DEBUG else 'tensorboard',
         run_name=run_name,
-        resume_from_checkpoint=True,
         load_best_model_at_end=True,
-        learning_rate=1e-4,
+        learning_rate=5e-4,
         save_safetensors=False
     )
 
@@ -230,13 +227,21 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_dataset,
+        train_dataset=full_train_dataset,
         eval_dataset=eval_datasets,
         tokenizer=tokenizer,
         compute_metrics=lambda x: compute_metrics(x, tokenizer)
     )
-    # Train the model
-    trainer.train()
+
+    trainer.train(resume_from_checkpoint=False)
+
+    # Switch to the ecreact_only dataset
+    print("Switching to the ecreact_only dataset...")
+    trainer.train_dataset = ec_only_train_dataset
+    trainer.args.max_steps = 400_000 if not DEBUG else 40
+    trainer.args.lr_scheduler_type = "constant"
+
+    trainer.train(resume_from_checkpoint=True)
 
 
 if __name__ == '__main__':

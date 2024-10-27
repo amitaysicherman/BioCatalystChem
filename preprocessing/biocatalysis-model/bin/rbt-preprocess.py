@@ -97,43 +97,53 @@ def write_splits(df: pd.DataFrame, ec_level: int, output_dir: Path) -> None:
     """
     df_internal = df.copy()
     splits = {}
-    splits["train"] = pd.DataFrame(columns=df_internal.columns)
-    splits["valid"] = pd.DataFrame(columns=df_internal.columns)
-    splits["test"] = pd.DataFrame(columns=df_internal.columns)
+
+    # random split
+    df_internal = df_internal.sample(frac=1, random_state=42)
+
+    # splits["train"] = pd.DataFrame(columns=df_internal.columns)
+    # splits["valid"] = pd.DataFrame(columns=df_internal.columns)
+    # splits["test"] = pd.DataFrame(columns=df_internal.columns)
 
     df_internal[["rxn_str"]].to_csv(
         Path(output_dir, "combined.txt"), header=False, index=False
     )
+    splits={
+        "train": df_internal.iloc[:int(0.8*len(df_internal))],
+        "valid": df_internal.iloc[int(0.8*len(df_internal)):int(0.9*len(df_internal))],
+        "test": df_internal.iloc[int(0.9*len(df_internal)):],
+    }
 
-    # Get the training set from reactions with unique products¨
-    prod_val_cnts = df_internal.products.value_counts()
-    df_unique_prods = df_internal[
-        df_internal.products.isin(prod_val_cnts.index[prod_val_cnts.eq(1)])
-    ]
-    df_internal.drop(df_unique_prods.index, inplace=True)
 
-    # Always group by x.x.x.- for splits to have a good coverage and
-    # not miss sub-sub-classes
-    for ec in df_internal.ec_1.unique():
-        df_subset = df_internal[df_internal.ec_1 == ec]
-        df_unique_prods_subset = df_unique_prods[df_unique_prods.ec_1 == ec]
-
-        # Get 5% (of total) from rxns with unique products for test set
-        n_total = len(df_subset) + len(df_unique_prods_subset)
-        n_samples = round(n_total * 0.05)
-        df_test = df_unique_prods_subset.sample(
-            n=min(n_samples, len(df_unique_prods_subset)), random_state=42
-        )
-        df_unique_prods_subset.drop(df_test.index, inplace=True)
-
-        # Join again to get training and validation sets
-        df_subset = pd.concat([df_subset, df_test], ignore_index=True)
-        df_valid = df_subset.sample(n=n_samples, random_state=42)
-        df_subset.drop(df_valid.index, inplace=True)
-
-        splits['train'] = pd.concat([splits['train'], df_subset], ignore_index=True)
-        splits["valid"] = pd.concat([splits["valid"], df_valid], ignore_index=True)
-        splits["test"] = pd.concat([splits["test"], df_test], ignore_index=True)
+    # # Get the training set from reactions with unique products¨
+    # prod_val_cnts = df_internal.products.value_counts()
+    # df_unique_prods = df_internal[
+    #     df_internal.products.isin(prod_val_cnts.index[prod_val_cnts.eq(1)])
+    # ]
+    # df_internal.drop(df_unique_prods.index, inplace=True)
+    #
+    # # Always group by x.x.x.- for splits to have a good coverage and
+    # # not miss sub-sub-classes
+    # for ec in df_internal.ec_1.unique():
+    #     df_subset = df_internal[df_internal.ec_1 == ec]
+    #     df_unique_prods_subset = df_unique_prods[df_unique_prods.ec_1 == ec]
+    #
+    #     # Get 5% (of total) from rxns with unique products for test set
+    #     n_total = len(df_subset) + len(df_unique_prods_subset)
+    #     n_samples = round(n_total * 0.05)
+    #     df_test = df_unique_prods_subset.sample(
+    #         n=min(n_samples, len(df_unique_prods_subset)), random_state=42
+    #     )
+    #     df_unique_prods_subset.drop(df_test.index, inplace=True)
+    #
+    #     # Join again to get training and validation sets
+    #     df_subset = pd.concat([df_subset, df_test], ignore_index=True)
+    #     df_valid = df_subset.sample(n=n_samples, random_state=42)
+    #     df_subset.drop(df_valid.index, inplace=True)
+    #
+    #     splits['train'] = pd.concat([splits['train'], df_subset], ignore_index=True)
+    #     splits["valid"] = pd.concat([splits["valid"], df_valid], ignore_index=True)
+    #     splits["test"] = pd.concat([splits["test"], df_test], ignore_index=True)
 
     for key, value in splits.items():
         value["reactants"].to_csv(
