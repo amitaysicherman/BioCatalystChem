@@ -153,6 +153,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         logging_steps=0.01,
         save_steps=0.01,
         save_total_limit=2,
+        save_strategy="steps",
+        eval_strategy="steps",
 
         auto_find_batch_size=True,
         per_device_train_batch_size=1024,
@@ -168,6 +170,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         learning_rate=1e-4,
 
         save_safetensors=False
+
     )
 
     # Initialize Trainer
