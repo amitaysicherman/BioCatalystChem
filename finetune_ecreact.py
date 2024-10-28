@@ -120,8 +120,9 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
     else:
         model = CustomT5Model(config, lookup_len)
     pretrained_file = load_pretrained_model()
-    pretrained_file = f"{pretrained_file}/pytorch_model.bin"
-    load_weights(model, torch.load(pretrained_file, map_location="cpu"))
+    pretrained_model = T5ForConditionalGeneration.from_pretrained(pretrained_file)
+    pretrained_model.resize_token_embeddings(model.config.vocab_size)
+    model.load_state_dict(pretrained_model.state_dict())
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     return tokenizer, model
 
