@@ -71,22 +71,26 @@ def main():
 
     training_args = TrainingArguments(
         output_dir=output_dir,
-        evaluation_strategy="steps",
-        save_steps=10_000 if not DEBUG else 5,
+        num_train_epochs=10,
+        warmup_ratio=0.05,
+        eval_steps=0.01,
+        logging_steps=0.01,
+        save_steps=0.01,
         save_total_limit=2,
-        max_steps=200_000 if not DEBUG else 25,
+
         auto_find_batch_size=True,
         per_device_train_batch_size=1024,
         per_device_eval_batch_size=1024 // 8,
-        logging_steps=1_000 if not DEBUG else 5,
-        eval_steps=10_000 if not DEBUG else 5,
-        metric_for_best_model="eval_ecreact_accuracy",
-        warmup_steps=10_000 if not DEBUG else 10,
         eval_accumulation_steps=8,
-        report_to='none' if DEBUG else 'tensorboard',
-        run_name=run_name,
+
+        metric_for_best_model="eval_valid_accuracy",
         load_best_model_at_end=True,
+        greater_is_better=True,
+        report_to='none' if DEBUG else 'tensorboard',
+
+        run_name=run_name,
         learning_rate=1e-4,
+
         save_safetensors=False
     )
 

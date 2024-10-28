@@ -1,23 +1,22 @@
 #!/bin/bash
 
 # Define the configurations as a long string with a delimiter (| in this case)
-configs="--dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
-  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
-  --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
-  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
-  --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
-  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
-  --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 5 --n_pca_components 0 --n_clusters_pca 0 |\
-  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 5 --n_pca_components 0 --n_clusters_pca 0 |\
-  --dae 1  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 5 --n_pca_components 10 --n_clusters_pca 10 |\
-  --dae 0  --prequantization 1 --ec_split 1 --n_hierarchical_clusters 5 --n_pca_components 10 --n_clusters_pca 10 |\
-  --use_ec 1 --ec_split 1 |\
-  --use_ec 1 --ec_split 0 --lookup_len 5 |\
-  --use_ec 1 --ec_split 0  --lookup_len 1 |\
-  --dae 1 --ec_split 1 --lookup_len 5 |\
-  --dae 1 --ec_split 1  --lookup_len 1 |\
-  --use_ec 0 --ec_split 1"
-
+configs="--ec_type 0 |\
+  --ec_type 1 |\
+  --ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
+  --ec_type 2  --prequantization 1  --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
+  --ec_type 3  --prequantization 1  --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
+  --ec_type 2  --prequantization 1  --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
+  --ec_type 3  --prequantization 1  --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
+  --ec_type 2  --prequantization 1  --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 |\
+  --ec_type 3  --prequantization 1  --n_hierarchical_clusters 5 --n_pca_components 0 --n_clusters_pca 0 |\
+  --ec_type 2  --prequantization 1  --n_hierarchical_clusters 5 --n_pca_components 0 --n_clusters_pca 0 |\
+  --ec_type 3  --prequantization 1  --n_hierarchical_clusters 5 --n_pca_components 10 --n_clusters_pca 10 |\
+  --ec_type 2  --prequantization 1  --n_hierarchical_clusters 5 --n_pca_components 10 --n_clusters_pca 10 |\
+  --ec_type 2 --lookup_len 5 |\
+  --ec_type 2 --lookup_len 1 |\
+  --ec_type 3 --lookup_len 5 |\
+  --ec_type 3 --lookup_len 1"
 # Count the number of configurations by counting the number of delimiters (|) + 1
 num_configs=$(echo "$configs" | tr -cd '|' | wc -c)
 num_configs=$((num_configs + 1))
@@ -39,7 +38,7 @@ IFS='|' read -ra config_array <<< "\$configs"
 
 # Check if the index is valid and run the python script with the selected configuration
 if [ "\$index" -ge 0 ] && [ "\$index" -lt "\${#config_array[@]}" ]; then
-  python train.py \${config_array[\$index]}
+  python finetune_ecreact.py \${config_array[\$index]}
 else
   echo "Invalid SLURM_ARRAY_TASK_ID: \$SLURM_ARRAY_TASK_ID"
 fi
