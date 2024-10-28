@@ -157,8 +157,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         eval_strategy="steps",
 
         auto_find_batch_size=True,
-        per_device_train_batch_size=1024,
-        per_device_eval_batch_size=1024 // 8,
+        per_device_train_batch_size=64,
+        per_device_eval_batch_size=64 // 8,
         eval_accumulation_steps=8,
 
         metric_for_best_model="eval_valid_accuracy",
