@@ -71,10 +71,10 @@ class SeqToSeqDataset(Dataset):
 
     def load_dataset(self, input_base, split, w, have_ec=True):
         with open(f"{input_base}/src-{split}.txt") as f:
-            src_lines = f.read().splitlines()
+            src_lines = f.read().splitlines()[:5000]
 
         with open(f"{input_base}/tgt-{split}.txt") as f:
-            tgt_lines = f.read().splitlines()
+            tgt_lines = f.read().splitlines()[:5000]
 
         assert len(src_lines) == len(tgt_lines)
 

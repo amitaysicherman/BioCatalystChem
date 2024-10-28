@@ -77,6 +77,8 @@ def main():
         logging_steps=0.01,
         save_steps=0.01,
         save_total_limit=2,
+        save_strategy="steps",
+        eval_strategy="steps",
 
         auto_find_batch_size=True,
         per_device_train_batch_size=1024,
