@@ -219,7 +219,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
         report_to='none' if DEBUG else 'tensorboard',
         run_name=run_name,
         load_best_model_at_end=True,
-        learning_rate=5e-4,
+        learning_rate=1e-4,
         save_safetensors=False
     )
 
@@ -239,7 +239,7 @@ def main(use_ec=True, ec_split=False, lookup_len=5, dae=False, load_cp="", ecrea
     print("Switching to the ecreact_only dataset...")
     trainer.train_dataset = ec_only_train_dataset
     trainer.args.max_steps = 250_000 if not DEBUG else 40
-    trainer.args.learning_rate = 5e-4
+    trainer.args.learning_rate = 1e-4
     trainer.args.lr_scheduler_type = "constant"
 
     trainer.train(resume_from_checkpoint=True)
