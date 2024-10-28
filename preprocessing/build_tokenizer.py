@@ -8,6 +8,7 @@ EOS = "[EOS]"
 UNK = "[UNK]"
 SPACIAL_TOKENS = {PAD: 0, EOS: 1, UNK: 2}
 
+
 def encode_eos_pad(tokenizer, text, max_length):
     tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
     tokens = tokens + [tokenizer.eos_token_id]
@@ -70,14 +71,14 @@ def ec_tokens_to_seq(ec_tokens_str):
     return wrap_ec(".".join(ec))
 
 
-def redo_ec_split(text,return_smiles_num=False):
+def redo_ec_split(text, return_smiles_num=False):
     if "|" not in text:
         return text
     text_no_ec = text.split("|")[0].strip()
     ec = text.split("|")[1].strip()
     ec = ec_tokens_to_seq(ec)
     if return_smiles_num:
-        ec=ec.replace("[","").replace("]","").replace("ec:","")
+        ec = ec.replace("[", "").replace("]", "").replace("ec:", "")
         return text_no_ec, ec
     return f"{text_no_ec} | {ec}"
 
@@ -158,7 +159,5 @@ if __name__ == "__main__":
     decoded = word_tokenizer.decode(encoded, clean_up_tokenization_spaces=False, skip_special_tokens=True)
     print(f"DE: {decoded}")
     assert decoded == test_text
-    output_path = get_tokenizer_file_path(args.ec_split)
+    output_path = get_tokenizer_file_path()
     word_tokenizer.save_pretrained(output_path)
-
-
