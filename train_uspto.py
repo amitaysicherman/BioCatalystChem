@@ -1,4 +1,4 @@
-# sbatch --gres=gpu:1 --mem=16G --time=1-00:00:00 --account=def-bengioy --cpus-per-task=4 train.sh
+# sbatch --gres=gpu:gpu:A100:1 --mem=128G --time=7-00 --wrap="python train_uspto.py"
 from transformers import (
     T5Config,
     T5ForConditionalGeneration,
