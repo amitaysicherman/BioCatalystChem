@@ -18,8 +18,10 @@ class ECType(Enum):
     PRETRAINED = 2
     DAE = 3
 
+
 def get_ec_type_from_num(num):
     return ECType(num)
+
 
 DEFAULT_EMB_VALUE = torch.tensor([0] * 2560)
 
@@ -60,7 +62,7 @@ class SeqToSeqDataset(Dataset):
         for ds, w in zip(datasets, weights):
             have_ec = "ec" in ds
             if "quant" in ds:
-                have_ec = False # TODO : there is EC , but like paper, not like pretrained
+                have_ec = False  # TODO : there is EC , but like paper, not like pretrained
             self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec)
         if not DEBUG:
             if sample_size is not None:
@@ -71,10 +73,10 @@ class SeqToSeqDataset(Dataset):
 
     def load_dataset(self, input_base, split, w, have_ec=True):
         with open(f"{input_base}/src-{split}.txt") as f:
-            src_lines = f.read().splitlines()[:5000]
+            src_lines = f.read().splitlines()
 
         with open(f"{input_base}/tgt-{split}.txt") as f:
-            tgt_lines = f.read().splitlines()[:5000]
+            tgt_lines = f.read().splitlines()
 
         assert len(src_lines) == len(tgt_lines)
 
