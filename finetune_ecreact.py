@@ -122,8 +122,10 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
     pretrained_file = load_pretrained_model()
     pretrained_model = T5ForConditionalGeneration.from_pretrained(pretrained_file)
     pretrained_model.resize_token_embeddings(model.config.vocab_size)
-    model.load_state_dict(pretrained_model.state_dict())
+    missing_keys, unexpected_keys = model.load_state_dict(pretrained_model.state_dict(), strict=False)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
+    print("Missing keys in the model (not loaded):", missing_keys)
+    print("Unexpected keys in the checkpoint (not used by the model):", unexpected_keys)
     return tokenizer, model
 
 
