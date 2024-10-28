@@ -18,6 +18,8 @@ class ECType(Enum):
     PRETRAINED = 2
     DAE = 3
 
+def get_ec_type_from_num(num):
+    return ECType(num)
 
 DEFAULT_EMB_VALUE = torch.tensor([0] * 2560)
 

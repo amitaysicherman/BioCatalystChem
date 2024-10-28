@@ -17,52 +17,52 @@ def get_layers(dims, dropout=0.0):
     return layers
 
 
-class EnzymaticT5Model(nn.Module):
-    def __init__(self, config, lookup_len, protein_embedding_dim=2560, quantization=False, q_groups=5,
-                 q_codevectors=512, q_index=0):
-        super().__init__()
-        self.t5_model = T5ForConditionalGeneration(config)
-        layers_dims = [protein_embedding_dim] + [config.d_model] * lookup_len
-        self.protein_proj = get_layers(layers_dims, dropout=config.dropout_rate)
-        self.quantizer = None
-        if quantization:
-            if q_index == 0:
-                from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2GumbelVectorQuantizer
-                from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
-                self.q_config = Wav2Vec2Config()
-                self.q_config.num_codevector_groups = q_groups
-                self.q_config.num_codevectors_per_group = q_codevectors
-                self.q_config.codevector_dim = config.d_model
-                self.q_config.conv_dim = (config.d_model,)
-                self.q_config.diversity_loss_weight = 0.1
-                self.quantizer = Wav2Vec2GumbelVectorQuantizer(self.q_config)
-            else:
-                from quantizer import IndexGumbelVectorQuantizer, IndexGumbelVectorQuantizerConfig
-                self.q_config = IndexGumbelVectorQuantizerConfig(num_codevector_groups=q_groups,
-                                                                 num_codevectors_per_group=q_codevectors,
-                                                                 codevector_dim=config.d_model,
-                                                                 conv_dim=(config.d_model,))
-                self.quantizer = IndexGumbelVectorQuantizer(self.q_config)
-
-    def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, encoder_outputs=None,
-                emb=None, **kwargs):
-        # Encode SMILES input
-        encoder_outputs = self.t5_model.encoder(input_ids=input_ids, attention_mask=attention_mask)
-
-        # Encode protein vector
-        protein_proj = self.protein_proj(emb)
-        if protein_proj.ndim == 2:
-            protein_proj = protein_proj.unsqueeze(1)
-
-        if self.quantizer is not None:
-            protein_proj, perplexity = self.quantizer(protein_proj)
-        # Combine SMILES encoding and protein encoding
-        combined_encoded = torch.cat([protein_proj, encoder_outputs.last_hidden_state], dim=1)
-        attention_mask = torch.cat(
-            [torch.ones(protein_proj.shape[0], protein_proj.shape[1], device=attention_mask.device),
-             attention_mask], dim=1)
-        output = self.t5_model(encoder_outputs=[combined_encoded], attention_mask=attention_mask, labels=labels)
-        return output
+# class EnzymaticT5Model(nn.Module):
+#     def __init__(self, config, lookup_len, protein_embedding_dim=2560, quantization=False, q_groups=5,
+#                  q_codevectors=512, q_index=0):
+#         super().__init__()
+#         self.t5_model = T5ForConditionalGeneration(config)
+#         layers_dims = [protein_embedding_dim] + [config.d_model] * lookup_len
+#         self.protein_proj = get_layers(layers_dims, dropout=config.dropout_rate)
+#         self.quantizer = None
+#         if quantization:
+#             if q_index == 0:
+#                 from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2GumbelVectorQuantizer
+#                 from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
+#                 self.q_config = Wav2Vec2Config()
+#                 self.q_config.num_codevector_groups = q_groups
+#                 self.q_config.num_codevectors_per_group = q_codevectors
+#                 self.q_config.codevector_dim = config.d_model
+#                 self.q_config.conv_dim = (config.d_model,)
+#                 self.q_config.diversity_loss_weight = 0.1
+#                 self.quantizer = Wav2Vec2GumbelVectorQuantizer(self.q_config)
+#             else:
+#                 from quantizer import IndexGumbelVectorQuantizer, IndexGumbelVectorQuantizerConfig
+#                 self.q_config = IndexGumbelVectorQuantizerConfig(num_codevector_groups=q_groups,
+#                                                                  num_codevectors_per_group=q_codevectors,
+#                                                                  codevector_dim=config.d_model,
+#                                                                  conv_dim=(config.d_model,))
+#                 self.quantizer = IndexGumbelVectorQuantizer(self.q_config)
+#
+#     def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, encoder_outputs=None,
+#                 emb=None, **kwargs):
+#         # Encode SMILES input
+#         encoder_outputs = self.t5_model.encoder(input_ids=input_ids, attention_mask=attention_mask)
+#
+#         # Encode protein vector
+#         protein_proj = self.protein_proj(emb)
+#         if protein_proj.ndim == 2:
+#             protein_proj = protein_proj.unsqueeze(1)
+#
+#         if self.quantizer is not None:
+#             protein_proj, perplexity = self.quantizer(protein_proj)
+#         # Combine SMILES encoding and protein encoding
+#         combined_encoded = torch.cat([protein_proj, encoder_outputs.last_hidden_state], dim=1)
+#         attention_mask = torch.cat(
+#             [torch.ones(protein_proj.shape[0], protein_proj.shape[1], device=attention_mask.device),
+#              attention_mask], dim=1)
+#         output = self.t5_model(encoder_outputs=[combined_encoded], attention_mask=attention_mask, labels=labels)
+#         return output
 
     # def _prepare_encoder_decoder_kwargs_for_generation(
     #         self,
@@ -84,7 +84,7 @@ class EnzymaticT5Model(nn.Module):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, lookup_len, quantization=False, q_groups=5, q_codevectors=512, q_index=0):
+    def __init__(self, config: T5Config, lookup_len):
 
         super(CustomT5Model, self).__init__(config)
 
@@ -92,26 +92,6 @@ class CustomT5Model(T5ForConditionalGeneration):
         lookup_dim = self.ec_to_vec.prot_dim
         layers_dims = [lookup_dim] + [config.d_model] * lookup_len
         self.lookup_proj = get_layers(layers_dims, dropout=config.dropout_rate)
-        self.quantizer = None
-        if quantization:
-            if q_index == 0:
-                from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2GumbelVectorQuantizer
-                from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
-                self.q_config = Wav2Vec2Config()
-                self.q_config.num_codevector_groups = q_groups
-                self.q_config.num_codevectors_per_group = q_codevectors
-                self.q_config.codevector_dim = config.d_model
-                self.q_config.conv_dim = (config.d_model,)
-                self.q_config.diversity_loss_weight = 0.1
-                self.quantizer = Wav2Vec2GumbelVectorQuantizer(self.q_config)
-                self.quantizer.temperature = 50
-            else:
-                from quantizer import IndexGumbelVectorQuantizer, IndexGumbelVectorQuantizerConfig
-                self.q_config = IndexGumbelVectorQuantizerConfig(num_codevector_groups=q_groups,
-                                                                 num_codevectors_per_group=q_codevectors,
-                                                                 codevector_dim=config.d_model,
-                                                                 conv_dim=(config.d_model,))
-                self.quantizer = IndexGumbelVectorQuantizer(self.q_config)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)
@@ -121,12 +101,6 @@ class CustomT5Model(T5ForConditionalGeneration):
         emb_projection = self.lookup_proj(emb)  # Shape: (batch_size, 1, embedding_dim)
         if emb_projection.ndim == 2:
             emb_projection = emb_projection.unsqueeze(1)
-        if self.quantizer is not None:
-            emb_projection, perplexity = self.quantizer(emb_projection)
-            if self.quantizer.temperature > 2 and not (
-                    torch.isnan(emb_projection).any() or torch.isinf(emb_projection).any()):
-                self.quantizer.temperature = self.quantizer.temperature - 0.005
-
         new_input_embeddings = torch.cat([emb_projection, input_embeddings], dim=1)
 
         # Update attention mask

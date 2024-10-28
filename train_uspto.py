@@ -72,7 +72,7 @@ def main():
     training_args = TrainingArguments(
         output_dir=output_dir,
         evaluation_strategy="steps",
-        save_steps=5_000 if not DEBUG else 5,
+        save_steps=10_000 if not DEBUG else 5,
         save_total_limit=2,
         max_steps=200_000 if not DEBUG else 25,
         auto_find_batch_size=True,
