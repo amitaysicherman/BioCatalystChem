@@ -82,20 +82,6 @@ def load_pretrained_model():
         trainer_state = json.load(f)
     return trainer_state["best_model_checkpoint"]
 
-
-def load_weights(model, loaded_state_dict):
-    model_v_size = len(model.shared.weight)
-    cp_v_size = len(loaded_state_dict["shared.weight"])
-    if model_v_size != cp_v_size:
-        d_model = model.config.d_model
-        random_init_new_tokens_param = torch.randn(model_v_size - cp_v_size, d_model)
-        new_shared = torch.cat([loaded_state_dict["shared.weight"], random_init_new_tokens_param], dim=0)
-        loaded_state_dict["shared.weight"] = new_shared.float()
-    missing_keys, unexpected_keys = model.load_state_dict(loaded_state_dict, strict=False)
-    print("Missing keys in the model (not loaded):", missing_keys)
-    print("Unexpected keys in the checkpoint (not used by the model):", unexpected_keys)
-
-
 def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hierarchical_clusters, n_pca_components,
                             n_clusters_pca):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
