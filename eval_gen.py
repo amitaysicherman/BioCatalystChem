@@ -95,7 +95,7 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             correct_count[1] += (pred == label)
         else:
             outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
-                                     max_length=200, do_sample=False, num_beams=k * 2,
+                                     max_length=200, do_sample=False, num_beams=k,
                                      num_return_sequences=k, **emb_args)
             mask = (labels != tokenizer.pad_token_id) & (labels != -100)
             labels = labels[mask]
@@ -139,16 +139,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", default="pretrained_5", type=str)
     parser.add_argument("--split", default="test", type=str)
-    parser.add_argument("--fast", default=1, type=int)
+    parser.add_argument("--fast", default=0, type=int)
+    parser.add_argument("--k", default=3, type=int)
 
     args = parser.parse_args()
     run_name = args.run_name
 
     run_args = name_to_args(run_name)
-    print("---"*10)
+    print("---" * 10)
     print(f"Run: {run_name}")
     print(run_args)
-    print("---"*10)
+    print("---" * 10)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
     prequantization = run_args["prequantization"]
@@ -191,7 +192,7 @@ if __name__ == "__main__":
     model.eval()
 
     # Evaluate the averaged model
-    correct_count = eval_dataset(model, gen_dataloader, fast=args.fast)
+    correct_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast)
     print(f"Run: {run_name}")
     for k, acc in correct_count.items():
         print(f"{k}: {acc}")
