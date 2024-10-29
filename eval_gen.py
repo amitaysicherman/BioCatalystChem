@@ -87,9 +87,9 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
         if fast:  # predicnt and not generate
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels, **emb_args)
             predictions = outputs.logits.argmax(dim=-1)
-            mask = (labels[i] != tokenizer.pad_token_id) & (labels[i] != -100)
-            pred = predictions[i][mask]
-            label = labels[i][mask]
+            mask = (labels != tokenizer.pad_token_id) & (labels != -100)
+            pred = predictions[mask]
+            label = labels[mask]
             pred = tokenizer.decode(pred, skip_special_tokens=True)
             label = tokenizer.decode(label, skip_special_tokens=True)
             correct_count[1] += (pred == label)
