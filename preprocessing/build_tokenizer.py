@@ -45,9 +45,6 @@ def get_ec_order(tokenizer: PreTrainedTokenizerFast, ec_split=0):
 
 def get_tokenizer_file_path():
     output_path = "./datasets/tokenizer"
-    # if not ec_split:
-    #     output_path += "_no_ec"
-    # print(f"Tokenizer file path: {output_path}")
     return output_path
 
 
@@ -83,18 +80,16 @@ def redo_ec_split(text, return_smiles_num=False):
     return f"{text_no_ec} | {ec}"
 
 
-def read_files(file_paths, ec_split):
+def read_files(file_paths):
     contents = []
     for file_path in file_paths:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.read().splitlines()
-        if not ec_split and "|" in lines[0]:
-            lines = [redo_ec_split(line) for line in lines]
         contents.extend(lines)
     return contents
 
 
-def build_vocab(texts, ec_split):
+def build_vocab(texts):
     all_word = set()
     for text in texts:
         words = text.split()
@@ -103,23 +98,18 @@ def build_vocab(texts, ec_split):
     no_ec_words = set()
     ec_words = set()
     for word in all_word:
-        if ec_split and word.startswith("[") and word[1] in ["v", "u", "t", "q"]:
-            ec_words.add(word)
-            continue
-        if not ec_split and word.startswith("[ec:"):
+        if word.startswith("[") and word[1] in ["v", "u", "t", "q"]:
             ec_words.add(word)
             continue
         no_ec_words.add(word)
     for word in no_ec_words:
         words_dict[word] = len(words_dict)
-    for word in ec_words:
-        words_dict[word] = len(words_dict)
-    return words_dict
+    return words_dict, list(ec_words)
 
 
-def create_word_tokenizer(file_paths, ec_split):
-    texts = read_files(file_paths, ec_split)
-    vocab = build_vocab(texts, ec_split)
+def create_word_tokenizer(file_paths):
+    texts = read_files(file_paths)
+    vocab, ec_tokens = build_vocab(texts)
     tokenizer = Tokenizer(models.WordLevel(vocab=vocab, unk_token="[UNK]"))
     tokenizer.pre_tokenizer = pre_tokenizers.WhitespaceSplit()
     tokenizer.post_process = None
@@ -130,12 +120,17 @@ def create_word_tokenizer(file_paths, ec_split):
         pad_token=PAD,
     )
 
-    return fast_tokenizer
+    return fast_tokenizer, ec_tokens
+
+
+def get_ec_tokens():
+    with open(f"{get_tokenizer_file_path()}/ec_tokens.txt", "r") as f:
+        ec_tokens = f.read().splitlines()
+    return ec_tokens
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ec_split", type=int, default=0)
     args = parser.parse_args()
 
     file_paths = []
@@ -146,13 +141,10 @@ if __name__ == "__main__":
             for side in ['src', 'tgt']:
                 file_paths.append(f"datasets/{dataset}/{side}-{split}.txt")
 
-    word_tokenizer = create_word_tokenizer(file_paths, args.ec_split)
+    word_tokenizer, ec_tokens = create_word_tokenizer(file_paths)
     print(word_tokenizer)
 
-    if args.ec_split:
-        test_text = "O = S ( = O ) ( [O-] ) S | [v1] [u8] [t5] [q2]"
-    else:
-        test_text = "O = S ( = O ) ( [O-] ) S | [ec:1.8.5.2]"
+    test_text = "O = S ( = O ) ( [O-] ) S"
     print(f"OR: {test_text}")
     encoded = word_tokenizer.encode(test_text, add_special_tokens=False)
     print(f"EN: {encoded}")
@@ -161,3 +153,5 @@ if __name__ == "__main__":
     assert decoded == test_text
     output_path = get_tokenizer_file_path()
     word_tokenizer.save_pretrained(output_path)
+    with open(f"{output_path}/ec_tokens.txt", "w") as f:
+        f.write("\n".join(ec_tokens))
