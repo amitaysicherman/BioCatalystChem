@@ -6,8 +6,8 @@ configs="--ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_com
   --ec_type 3  --prequantization 1  --n_hierarchical_clusters 3 --n_pca_components 0 --n_clusters_pca 0 --alpha 90|\
   --ec_type 3  --prequantization 1  --n_hierarchical_clusters 5 --n_pca_components 0 --n_clusters_pca 0 --alpha 90|\
   --ec_type 3  --prequantization 1  --n_hierarchical_clusters 5 --n_pca_components 10 --n_clusters_pca 10 --alpha 90|\
-  --ec_type 3 --lookup_len 5 --alpha 10|\
-  --ec_type 3 --lookup_len 1 --alpha 10"
+  --ec_type 3 --lookup_len 5 --alpha 90|\
+  --ec_type 3 --lookup_len 1 --alpha 90"
 # Count the number of configurations by counting the number of delimiters (|) + 1
 num_configs=$(echo "$configs" | tr -cd '|' | wc -c)
 num_configs=$((num_configs + 1))
