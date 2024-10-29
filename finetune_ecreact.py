@@ -5,7 +5,7 @@ from transformers import (
 )
 import os
 from transformers import PreTrainedTokenizerFast
-
+from transformers import Trainer, TrainingArguments
 import numpy as np
 from rdkit import Chem
 
