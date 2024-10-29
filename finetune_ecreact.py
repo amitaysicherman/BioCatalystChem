@@ -82,6 +82,7 @@ def load_pretrained_model():
         trainer_state = json.load(f)
     return trainer_state["best_model_checkpoint"]
 
+
 def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hierarchical_clusters, n_pca_components,
                             n_clusters_pca):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
@@ -101,7 +102,7 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
         config.d_model = 128
         config.num_heads = 4
         config.d_ff = 256
-    if (ec_type == ECType.PAPER or ec_type.NO_EC) or prequantization:
+    if (ec_type == ECType.PAPER or ec_type == ec_type.NO_EC) or prequantization:
         model = T5ForConditionalGeneration(config)
     else:
         model = CustomT5Model(config, lookup_len)
