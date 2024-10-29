@@ -107,10 +107,11 @@ def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_compon
 
 
 def get_reaction_attention_emb_wrapper(args):
-    text, ec, ec_to_uniprot, smiles_to_id = args
-    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id)
+    text, ec, ec_to_uniprot, smiles_to_id, alpha = args
+    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha)
 
-def read_dataset_split(ec_type: ECType, split: str):
+
+def read_dataset_split(ec_type: ECType, split: str, alpha):
     input_base = "datasets/ecreact/level4"
     if ec_type == ECType.PRETRAINED:
         ec_to_vec = EC2Vec(load_model=False)
@@ -138,10 +139,8 @@ def read_dataset_split(ec_type: ECType, split: str):
         emb_lines = [ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
     else:
 
-
-
         # Prepare the argument list
-        args_list = [(text, ec, ec_to_uniprot, smiles_to_id) for text, ec in zip(src_lines, ec_lines)]
+        args_list = [(text, ec, ec_to_uniprot, smiles_to_id, alpha) for text, ec in zip(src_lines, ec_lines)]
 
         # Use Pool to parallelize
         with Pool() as pool:
@@ -169,10 +168,10 @@ def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_cl
         pickle.dump(tokenizer, f)
 
 
-def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
+def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
     with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca), "rb") as f:
         tokenizer: HierarchicalPCATokenizer = pickle.load(f)
-    src_lines, tgt_lines, emb_lines = read_dataset_split(ec_type, split)
+    src_lines, tgt_lines, emb_lines = read_dataset_split(ec_type, split, alpha=alpha)
     with Pool() as pool:
         tokenized_lines = list(tqdm(pool.imap(tokenizer.tokenize_vector, emb_lines), total=len(emb_lines)))
     assert len(src_lines) == len(tgt_lines) == len(tokenized_lines)
@@ -197,8 +196,10 @@ if __name__ == "__main__":
     parser.add_argument("--n_hierarchical_clusters", type=int, default=5)
     parser.add_argument("--n_pca_components", type=int, default=6)
     parser.add_argument("--n_clusters_pca", type=int, default=10)
+    parser.add_argument("--alpha", type=int, default=50)
     parser.add_argument("--ec_type", type=int, default=ECType.PRETRAINED.value)
     args = parser.parse_args()
+    args.alpha = float(args.alpha / 100)
     if args.ec_type == ECType.PRETRAINED.value:
         ec_type = ECType.PRETRAINED
     elif args.ec_type == ECType.DAE.value:
@@ -208,4 +209,4 @@ if __name__ == "__main__":
     train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca)
     for split in ["train", "valid", "test"]:
         tokenize_dataset_split(ec_type, split, args.n_hierarchical_clusters, args.n_pca_components,
-                               args.n_clusters_pca)
+                               args.n_clusters_pca, alpha=args.alpha)

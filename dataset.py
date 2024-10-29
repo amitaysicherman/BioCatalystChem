@@ -38,13 +38,14 @@ def get_ec_type(use_ec, ec_split, dae):
 
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
-                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True):
+                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5):
         self.max_length = max_length
         self.tokenizer = tokenizer
         self.data = []
         self.DEBUG = DEBUG
         self.ec_type = ec_type
         self.lookup_embeddings = []
+        self.alpha = alpha
         if ec_type == ECType.PRETRAINED:
             self.ec_to_vec = EC2Vec(load_model=False)
         if ec_type == ECType.DAE:
@@ -94,7 +95,7 @@ class SeqToSeqDataset(Dataset):
 
                 else:
                     emb_lines = [
-                        get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id)
+                        get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
                         for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
                     ]
 

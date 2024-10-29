@@ -65,7 +65,7 @@ def check_protein_exists(protein_id):
     return os.path.exists(protein_file) and os.path.exists(protein_emd_file)
 
 
-def get_protein_mol_att(protein_id, molecule_id, alpha=0.5):
+def get_protein_mol_att(protein_id, molecule_id, alpha):
     protein_file = f'datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb'
     protein_seq, protein_cords = get_protein_cords(protein_file)
     protein_cords = np.array(protein_cords)
@@ -89,7 +89,7 @@ def get_protein_mol_att(protein_id, molecule_id, alpha=0.5):
     return docking_attention_emd
 
 
-def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha=0.5):
+def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha):
     protein_id = ec_to_uniprot[ec]
     if not check_protein_exists(protein_id):
         return None
@@ -134,7 +134,7 @@ if __name__ == "__main__":
         ec = ec_tokens_to_seq(ec)
         ec = ec[4:-1]
 
-        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id)
+        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id,alpha=0.5)
         if reaction_attention_emd is not None:
             print(reaction_attention_emd)
             print(reaction_attention_emd.shape)
