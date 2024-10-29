@@ -105,8 +105,8 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             for j in range(1, k + 1):
                 if labels in preds_list[:j]:
                     correct_count[j] += 1
-        y = tokenizer.decode(labels, skip_special_tokens=True)
-        x = tokenizer.decode(input_ids, skip_special_tokens=True)
+        y = tokenizer.decode(labels[labels!=-100], skip_special_tokens=True)
+        x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
         with open(save_file, "a") as f:
             f.write(f"{x},{y}\n")
         msg = " | ".join([f"{j}:{correct_count[j] / (i + 1):.2f}" for j in range(1, k + 1)])
@@ -188,6 +188,7 @@ if __name__ == "__main__":
     if (ec_type == ECType.PAPER or ec_type == ec_type.NO_EC) or prequantization:
         model = T5ForConditionalGeneration.from_pretrained(best_val_cp)
     else:
+        print("Loading custom model", best_val_cp)
         model = CustomT5Model.from_pretrained(best_val_cp, lookup_len=lookup_len)
     gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False)
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
