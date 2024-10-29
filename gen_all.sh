@@ -3,7 +3,6 @@
 #SBATCH --array=1-30
 #SBATCH --mem=64G
 #SBATCH --requeue
-#SBATCH --gres=gpu:1
 
 # Get the list of directories in results/
 RESULTS_DIR="results/"
