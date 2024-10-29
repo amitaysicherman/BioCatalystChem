@@ -114,7 +114,7 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
         msg = " | ".join([f"{j}:{correct_count[j] / (i + 1):.2f}" for j in range(1, k + 1)])
         msg = f'{i + 1}/{len(gen_dataloader)} | {msg}'
         pbar.set_description(msg)
-    return {i: correct_count[i] / len(gen_dataloader) for i in [1, 3, 5, 10]}
+    return {i: correct_count[i] / len(gen_dataloader) for i in correct_count}
 
 
 def get_last_cp(base_dir):
