@@ -40,7 +40,11 @@ def name_to_args(name):
         ec_type = ECType.PRETRAINED
     elif name.startswith("dae"):
         ec_type = ECType.DAE
-        alpha = float(name[4:].split('_')[0])
+        ec_alpha = name.split("-")[0]
+        if "-" in ec_alpha:
+            alpha = int(ec_alpha.split("-")[1]) / 100
+        else:
+            alpha = 0.5
     # Check if the name contains "quant" (prequantization is True)
     if "_quant" in name:
         prequantization = True
@@ -161,7 +165,8 @@ if __name__ == "__main__":
         model = T5ForConditionalGeneration.from_pretrained(best_val_cp)
     else:
         model = CustomT5Model.from_pretrained(best_val_cp, lookup_len=lookup_len)
-    gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,sample_size=50)
+    gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
+                                  sample_size=50)
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
     model.to(device)
