@@ -105,7 +105,7 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             for j in range(1, k + 1):
                 if labels in preds_list[:j]:
                     correct_count[j] += 1
-        y = tokenizer.decode(labels[labels!=-100], skip_special_tokens=True)
+        y = tokenizer.decode(labels[labels != -100], skip_special_tokens=True)
         x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
         with open(save_file, "a") as f:
             f.write(f"{x},{y}\n")
@@ -208,4 +208,4 @@ if __name__ == "__main__":
     output_file = f"results/eval_gen.csv"
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
         f.write(run_name + args.split + "," + best_val_cp + "," + ",".join(
-            [str(correct_count[i]) for i in [1, 3, 5, 10]]) + "\n")
+            [str(correct_count[i]) for i in correct_count]) + "\n")
