@@ -72,7 +72,7 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
     return Chem.MolToSmiles(mol, canonical=True)
 
 
-def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10, fast=0):
+def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10, fast=0, save_file=None):
     correct_count = {i: 0 for i in range(1, k + 1)}
     pbar = tqdm(enumerate(gen_dataloader), total=len(gen_dataloader))
     for i, batch in pbar:
@@ -105,6 +105,10 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             for j in range(1, k + 1):
                 if labels in preds_list[:j]:
                     correct_count[j] += 1
+        y = tokenizer.decode(labels, skip_special_tokens=True)
+        x = tokenizer.decode(input_ids, skip_special_tokens=True)
+        with open(save_file, "a") as f:
+            f.write(f"{x},{y}\n")
         msg = " | ".join([f"{j}:{correct_count[j] / (i + 1):.2f}" for j in range(1, k + 1)])
         msg = f'{i + 1}/{len(gen_dataloader)} | {msg}'
         pbar.set_description(msg)
@@ -192,7 +196,9 @@ if __name__ == "__main__":
     model.eval()
 
     # Evaluate the averaged model
-    correct_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast)
+    os.makedirs("results/full", exist_ok=True)
+    correct_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast,
+                                 save_file=f"results/full/{run_name}.csv")
     print(f"Run: {run_name}")
     for k, acc in correct_count.items():
         print(f"{k}: {acc}")
