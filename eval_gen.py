@@ -160,9 +160,7 @@ if __name__ == "__main__":
     if (ec_type == ECType.PAPER or ec_type == ec_type.NO_EC) or prequantization:
         model = T5ForConditionalGeneration.from_pretrained(best_val_cp)
     else:
-        model = CustomT5Model.from_pretrained(best_val_cp, models_args={
-            "lookup_len": lookup_len,
-        })
+        model = CustomT5Model.from_pretrained(best_val_cp, lookup_len=lookup_len)
     gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False)
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
