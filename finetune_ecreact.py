@@ -19,6 +19,7 @@ import json
 import os
 import re
 
+DEBUG = False
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
 rkrb.DisableLog("rdApp.error")
@@ -46,7 +47,8 @@ def compute_metrics(eval_pred, tokenizer):
     return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
 
 
-def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
+def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca,
+                 alpha):
     if ec_type == ECType.PAPER:
         return "paper"
     elif ec_type == ECType.NO_EC:
@@ -54,7 +56,7 @@ def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, 
     elif ec_type == ECType.PRETRAINED:
         run_name = f"pretrained"
     elif ec_type == ECType.DAE:
-        run_name = f"dae"
+        run_name = f"dae{alpha}"
     else:
         raise ValueError(f"Invalid ec_type: {ec_type}")
 
@@ -115,7 +117,7 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
     return tokenizer, model
 
 
-def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
+def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
     ec_type = ECType(ec_type)
     tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization=prequantization,
                                                n_hierarchical_clusters=n_hierarchical_clusters,
@@ -129,18 +131,18 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         ecreact_dataset = "ecreact/level4"
 
     train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                    DEBUG=DEBUG)
+                                    DEBUG=DEBUG, alpha=alpha)
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                          DEBUG=DEBUG, sample_size=1000)
+                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha)
     val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, sample_size=1000)
+                                        DEBUG=DEBUG, sample_size=1000, alpha=alpha)
     test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, sample_size=1000)
+                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha)
 
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset}
 
     run_name = args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca)
+                            n_clusters_pca, alpha)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -197,8 +199,11 @@ if __name__ == '__main__':
     parser.add_argument("--n_hierarchical_clusters", type=int, default=5)
     parser.add_argument("--n_pca_components", type=int, default=6)
     parser.add_argument("--n_clusters_pca", type=int, default=10)
+    parser.add_argument("--alpha", type=int, default=50)
     args = parser.parse_args()
+    args.alpha = float(args.alpha / 100)
+    global DEBUG
     DEBUG = args.debug
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
-         n_clusters_pca=args.n_clusters_pca)
+         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha)

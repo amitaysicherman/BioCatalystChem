@@ -102,8 +102,9 @@ def args_to_quant_model_file(ec_type: ECType, n_hierarchical_clusters, n_pca_com
     return f"datasets/ecreact/vec_quant_{ec_type.value}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}.pkl"
 
 
-def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
-    return f"datasets/ecreact/quant_{ec_type.value}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}/"
+def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
+    ec_type = ec_type.value if ec_type != ECType.DAE else f"{ec_type.value}-{alpha}"
+    return f"datasets/ecreact/quant_{ec_type}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}/"
 
 
 def get_reaction_attention_emb_wrapper(args):
@@ -176,7 +177,7 @@ def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pc
         tokenized_lines = list(tqdm(pool.imap(tokenizer.tokenize_vector, emb_lines), total=len(emb_lines)))
     assert len(src_lines) == len(tgt_lines) == len(tokenized_lines)
 
-    output_base = args_to_quant_dataset(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
+    output_base = args_to_quant_dataset(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha)
 
     os.makedirs(output_base, exist_ok=True)
     src_out = open(f"{output_base}/src-{split}.txt", "w")
