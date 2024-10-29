@@ -24,7 +24,7 @@ from enum import Enum
 
 def name_to_args(name):
     # Initialize default values for the arguments
-    args={
+    args = {
         "ec_type": None,
         "lookup_len": None,
         "prequantization": False,
@@ -46,9 +46,9 @@ def name_to_args(name):
         args["ec_type"] = ECType.DAE
         ec_alpha = name.split("-")[0]
         if "-" in ec_alpha:
-            args["alpha"] = int(ec_alpha.split("-")[1])/100
+            args["alpha"] = int(ec_alpha.split("-")[1]) / 100
         else:
-            args["alpha"] = 50/100
+            args["alpha"] = 50 / 100
     # Check if the name contains "quant" (prequantization is True)
     if "_quant" in name:
         args["prequantization"] = True
@@ -63,7 +63,6 @@ def name_to_args(name):
     return args
 
 
-
 def tokens_to_canonical_smiles(tokenizer, tokens):
     smiles = tokenizer.decode(tokens, skip_special_tokens=True)
     smiles = smiles.replace(" ", "")
@@ -73,7 +72,7 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
     return Chem.MolToSmiles(mol, canonical=True)
 
 
-def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10):
+def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10, fast=0):
     correct_count = {i: 0 for i in range(1, k + 1)}
     pbar = tqdm(enumerate(gen_dataloader), total=len(gen_dataloader))
     for i, batch in pbar:
@@ -85,17 +84,27 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             emb_args = {}
         else:
             emb_args = {"emb": emb}
-        outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
-                                 max_length=200, do_sample=False, num_beams=k * 2,
-                                 num_return_sequences=k, **emb_args)
-        mask = (labels != tokenizer.pad_token_id) & (labels != -100)
-        labels = labels[mask]
+        if fast:  # predicnt and not generate
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels, **emb_args)
+            predictions = outputs.logits.argmax(dim=-1)
+            mask = (labels[i] != tokenizer.pad_token_id) & (labels[i] != -100)
+            pred = predictions[i][mask]
+            label = labels[i][mask]
+            pred = tokenizer.decode(pred, skip_special_tokens=True)
+            label = tokenizer.decode(label, skip_special_tokens=True)
+            correct_count[1] += (pred == label)
+        else:
+            outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
+                                     max_length=200, do_sample=False, num_beams=k * 2,
+                                     num_return_sequences=k, **emb_args)
+            mask = (labels != tokenizer.pad_token_id) & (labels != -100)
+            labels = labels[mask]
 
-        labels = tokens_to_canonical_smiles(tokenizer, labels)
-        preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs]
-        for j in range(1, k + 1):
-            if labels in preds_list[:j]:
-                correct_count[j] += 1
+            labels = tokens_to_canonical_smiles(tokenizer, labels)
+            preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs]
+            for j in range(1, k + 1):
+                if labels in preds_list[:j]:
+                    correct_count[j] += 1
         msg = " | ".join([f"{j}:{correct_count[j] / (i + 1):.2f}" for j in range(1, k + 1)])
         msg = f'{i + 1}/{len(gen_dataloader)} | {msg}'
         pbar.set_description(msg)
@@ -130,6 +139,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", default="pretrained_5", type=str)
     parser.add_argument("--split", default="test", type=str)
+    parser.add_argument("--fast", default=1, type=int)
+
     args = parser.parse_args()
     run_name = args.run_name
 
@@ -140,7 +151,7 @@ if __name__ == "__main__":
     n_hierarchical_clusters = run_args["n_hierarchical_clusters"]
     n_pca_components = run_args["n_pca_components"]
     n_clusters_pca = run_args["n_clusters_pca"]
-    alpha=run_args["alpha"]
+    alpha = run_args["alpha"]
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
 
@@ -176,7 +187,7 @@ if __name__ == "__main__":
     model.eval()
 
     # Evaluate the averaged model
-    correct_count = eval_dataset(model, gen_dataloader)
+    correct_count = eval_dataset(model, gen_dataloader, fast=args.fast)
     print(f"Run: {run_name}")
     for k, acc in correct_count.items():
         print(f"{k}: {acc}")
