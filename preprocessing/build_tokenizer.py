@@ -11,6 +11,9 @@ SPACIAL_TOKENS = {PAD: 0, EOS: 1, UNK: 2}
 
 def encode_eos_pad(tokenizer, text, max_length):
     tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
+    if SPACIAL_TOKENS[UNK] in tokens:
+        print(f"UNK in tokens: {text}")
+
     tokens = tokens + [tokenizer.eos_token_id]
     if len(tokens) > max_length:
         return None, None
