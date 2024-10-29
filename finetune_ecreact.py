@@ -3,20 +3,17 @@ from transformers import (
     T5Config,
     T5ForConditionalGeneration,
 )
-from transformers import Trainer, TrainingArguments
 import os
 from transformers import PreTrainedTokenizerFast
-from safetensors.torch import load_file
 
 import numpy as np
 from rdkit import Chem
 
-from dataset import SeqToSeqDataset, get_ec_type
-from preprocessing.build_tokenizer import get_tokenizer_file_path
+from dataset import SeqToSeqDataset
+from preprocessing.build_tokenizer import get_tokenizer_file_path, get_ec_tokens
 from model import CustomT5Model
 import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
-import torch
 from dataset import ECType
 import json
 import os
@@ -93,7 +90,9 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
                                               n_clusters_pca=n_clusters_pca,
                                               ).get_all_tokens()
         tokenizer.add_tokens(new_tokens)
-
+    elif ec_type == ECType.PAPER:
+        new_tokens = get_ec_tokens()
+        tokenizer.add_tokens(new_tokens)
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
                       decoder_start_token_id=tokenizer.pad_token_id)
