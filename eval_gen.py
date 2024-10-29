@@ -12,10 +12,54 @@ import re
 from tqdm import tqdm
 from rdkit import RDLogger
 import json
+from dataset import ECType
+from preprocessing.build_tokenizer import get_ec_tokens
 
 RDLogger.DisableLog('rdApp.*')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+from enum import Enum
+
+
+def name_to_args(name):
+    # Initialize default values for the arguments
+    ec_type = None
+    lookup_len = None
+    prequantization = False
+    n_hierarchical_clusters = None
+    n_pca_components = None
+    n_clusters_pca = None
+    alpha = None
+
+    if name == "paper":
+        ec_type = ECType.PAPER
+    elif name == "regular":
+        ec_type = ECType.NO_EC
+    elif name.startswith("pretrained"):
+        ec_type = ECType.PRETRAINED
+    elif name.startswith("dae"):
+        ec_type = ECType.DAE
+        alpha = float(name[4:].split('_')[0])
+    # Check if the name contains "quant" (prequantization is True)
+    if "_quant" in name:
+        prequantization = True
+        # Extract hierarchical clusters, PCA components, and clusters from the name
+        parts = name.split("_quant_")[1].split("_")
+        n_hierarchical_clusters = int(parts[0])
+        n_pca_components = int(parts[1])
+        n_clusters_pca = int(parts[2])
+    else:
+        # Extract lookup_len from the name if no quantization is used
+        lookup_len = int(name.split("_")[-1])
+
+    return ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha
+
+
+# Example usage
+name = "dae0.5_quant_10_5_3"
+args = name_to_args(name)
+print(args)
 
 
 def tokens_to_canonical_smiles(tokenizer, tokens):
@@ -85,43 +129,43 @@ if __name__ == "__main__":
     parser.add_argument("--run_name", default="pretrained_5_seq", type=str)
     parser.add_argument("--split", default="test", type=str)
     args = parser.parse_args()
-    dataset = "ecreact/level4"
     run_name = args.run_name
-    best_val_cp = get_best_val_cp(run_name)
-    if "pretrained" in run_name or "dae" in run_name:
-        if "pretrained" in run_name:
-            ec_split = False
-            use_ec = True
-        else:  # dae
-            ec_split = True
-            use_ec = True
 
-        lookup_len = int(run_name.split("_")[1])
-        tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
-        model_type = CustomT5Model
-        models_args = {
-            "lookup_len": lookup_len,
-        }
+    ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha = name_to_args(
+        run_name)
+    if prequantization:
+        from offline_quantizer import args_to_quant_dataset
 
+        ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
+                                                n_pca_components, n_clusters_pca, alpha)
+        ecreact_dataset = ecreact_dataset.replace("datasets/", "")
     else:
-        if run_name == "regular":
-            ec_split = True
-            use_ec = False
-        elif run_name == "paper":
-            ec_split = True
-            use_ec = True
-        else:
-            raise ValueError(f"Unknown run_name: {run_name}")
-        tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path(ec_split))
-        model_type = T5ForConditionalGeneration
-        models_args = {}
+        ecreact_dataset = "ecreact/level4"
 
-    ec_type = get_ec_type(use_ec, ec_split, 'dae' in run_name)
-    gen_dataset = SeqToSeqDataset([dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False)
+    tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
+
+    if prequantization:
+        from offline_quantizer import HierarchicalPCATokenizer
+
+        new_tokens = HierarchicalPCATokenizer(n_hierarchical_clusters=n_hierarchical_clusters,
+                                              n_pca_components=n_pca_components,
+                                              n_clusters_pca=n_clusters_pca,
+                                              ).get_all_tokens()
+        tokenizer.add_tokens(new_tokens)
+    elif ec_type == ECType.PAPER:
+        new_tokens = get_ec_tokens()
+        tokenizer.add_tokens(new_tokens)
+    best_val_cp = get_best_val_cp(run_name)
+
+    if (ec_type == ECType.PAPER or ec_type == ec_type.NO_EC) or prequantization:
+        model = T5ForConditionalGeneration.from_pretrained(best_val_cp)
+    else:
+        model = CustomT5Model.from_pretrained(best_val_cp, models_args={
+            "lookup_len": lookup_len,
+        })
+    gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False)
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
-    # List and sort all checkpoint directories
-    model = model_type.from_pretrained(best_val_cp, **models_args)
     model.to(device)
     model.eval()
 

@@ -56,7 +56,7 @@ def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, 
     elif ec_type == ECType.PRETRAINED:
         run_name = f"pretrained"
     elif ec_type == ECType.DAE:
-        run_name = f"dae{alpha}"
+        run_name = f"dae-{alpha}"
     else:
         raise ValueError(f"Invalid ec_type: {ec_type}")
 
@@ -125,7 +125,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
-                                                n_pca_components, n_clusters_pca)
+                                                n_pca_components, n_clusters_pca, alpha)
         ecreact_dataset = ecreact_dataset.replace("datasets/", "")
     else:
         ecreact_dataset = "ecreact/level4"
