@@ -145,6 +145,10 @@ if __name__ == "__main__":
     run_name = args.run_name
 
     run_args = name_to_args(run_name)
+    print("---"*10)
+    print(f"Run: {run_name}")
+    print(run_args)
+    print("---"*10)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
     prequantization = run_args["prequantization"]
