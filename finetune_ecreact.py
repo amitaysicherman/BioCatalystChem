@@ -202,7 +202,6 @@ if __name__ == '__main__':
     parser.add_argument("--alpha", type=int, default=50)
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
-    global DEBUG
     DEBUG = args.debug
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
