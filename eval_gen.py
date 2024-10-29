@@ -24,40 +24,43 @@ from enum import Enum
 
 def name_to_args(name):
     # Initialize default values for the arguments
-    ec_type = None
-    lookup_len = None
-    prequantization = False
-    n_hierarchical_clusters = None
-    n_pca_components = None
-    n_clusters_pca = None
-    alpha = None
+    args={
+        "ec_type": None,
+        "lookup_len": None,
+        "prequantization": False,
+        "n_hierarchical_clusters": None,
+        "n_pca_components": None,
+        "n_clusters_pca": None,
+        "alpha": None
+    }
 
     if name == "paper":
-        ec_type = ECType.PAPER
+        args["ec_type"] = ECType.PAPER
+        return args
     elif name == "regular":
-        ec_type = ECType.NO_EC
+        args["ec_type"] = ECType.NO_EC
+        return args
     elif name.startswith("pretrained"):
-        ec_type = ECType.PRETRAINED
+        args["ec_type"] = ECType.PRETRAINED
     elif name.startswith("dae"):
-        ec_type = ECType.DAE
+        args["ec_type"] = ECType.DAE
         ec_alpha = name.split("-")[0]
         if "-" in ec_alpha:
-            alpha = int(ec_alpha.split("-")[1])
+            args["alpha"] = int(ec_alpha.split("-")[1])
         else:
-            alpha = 50
+            args["alpha"] = 50
     # Check if the name contains "quant" (prequantization is True)
     if "_quant" in name:
-        prequantization = True
+        args["prequantization"] = True
         # Extract hierarchical clusters, PCA components, and clusters from the name
         parts = name.split("_quant_")[1].split("_")
-        n_hierarchical_clusters = int(parts[0])
-        n_pca_components = int(parts[1])
-        n_clusters_pca = int(parts[2])
-    elif ec_type == ECType.PRETRAINED or ec_type == ECType.PAPER:
+        args["n_hierarchical_clusters"] = int(parts[0])
+        args["n_pca_components"] = int(parts[1])
+        args["n_clusters_pca"] = int(parts[2])
+    else:
         # Extract lookup_len from the name if no quantization is used
-        lookup_len = int(name.split("_")[-1])
-
-    return ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha
+        args["lookup_len"] = int(name.split("_")[-1])
+    return args
 
 
 
@@ -130,8 +133,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     run_name = args.run_name
 
-    ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha = name_to_args(
-        run_name)
+    run_args = name_to_args(run_name)
+    ec_type = run_args["ec_type"]
+    lookup_len = run_args["lookup_len"]
+    prequantization = run_args["prequantization"]
+    n_hierarchical_clusters = run_args["n_hierarchical_clusters"]
+    n_pca_components = run_args["n_pca_components"]
+    n_clusters_pca = run_args["n_clusters_pca"]
+    alpha=run_args["alpha"]
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
 
