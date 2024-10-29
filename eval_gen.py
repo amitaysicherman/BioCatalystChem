@@ -42,9 +42,9 @@ def name_to_args(name):
         ec_type = ECType.DAE
         ec_alpha = name.split("-")[0]
         if "-" in ec_alpha:
-            alpha = int(ec_alpha.split("-")[1]) / 100
+            alpha = int(ec_alpha.split("-")[1])
         else:
-            alpha = 0.5
+            alpha = 50
     # Check if the name contains "quant" (prequantization is True)
     if "_quant" in name:
         prequantization = True
@@ -53,17 +53,12 @@ def name_to_args(name):
         n_hierarchical_clusters = int(parts[0])
         n_pca_components = int(parts[1])
         n_clusters_pca = int(parts[2])
-    else:
+    elif ec_type == ECType.PRETRAINED or ec_type == ECType.PAPER:
         # Extract lookup_len from the name if no quantization is used
         lookup_len = int(name.split("_")[-1])
 
     return ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha
 
-
-# Example usage
-name = "dae0.5_quant_10_5_3"
-args = name_to_args(name)
-print(args)
 
 
 def tokens_to_canonical_smiles(tokenizer, tokens):
@@ -174,7 +169,7 @@ if __name__ == "__main__":
 
     # Evaluate the averaged model
     correct_count = eval_dataset(model, gen_dataloader)
-    print(f"Run: {run_name} (Averaged Checkpoints)")
+    print(f"Run: {run_name}")
     for k, acc in correct_count.items():
         print(f"{k}: {acc}")
 
