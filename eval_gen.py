@@ -139,7 +139,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", default="pretrained_5", type=str)
     parser.add_argument("--split", default="test", type=str)
-    parser.add_argument("--fast", default=0, type=int)
+    parser.add_argument("--fast", default=1, type=int)
     parser.add_argument("--k", default=3, type=int)
 
     args = parser.parse_args()
