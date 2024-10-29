@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --time=1-00
-#SBATCH --array=1-Y
+#SBATCH --array=1-30
 #SBATCH --mem=64G
 #SBATCH --requeue
 #SBATCH --gres=gpu:1
