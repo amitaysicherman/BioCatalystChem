@@ -126,7 +126,7 @@ def get_best_val_cp(run_name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run_name", default="pretrained_5_seq", type=str)
+    parser.add_argument("--run_name", default="pretrained_5", type=str)
     parser.add_argument("--split", default="test", type=str)
     args = parser.parse_args()
     run_name = args.run_name
