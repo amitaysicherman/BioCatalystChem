@@ -80,6 +80,7 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
         attention_mask = batch['attention_mask'].to(model.device).bool()
         labels = batch['labels'].to(model.device)
         emb = batch['emb'].to(model.device).float()
+        res = 0
         if (emb == 0).all():
             emb_args = {}
         else:
@@ -93,6 +94,11 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             pred = tokenizer.decode(pred, skip_special_tokens=True)
             label = tokenizer.decode(label, skip_special_tokens=True)
             correct_count[1] += (pred == label)
+            y = tokenizer.decode(labels[labels != -100], skip_special_tokens=True)
+            x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
+            with open(save_file, "a") as f:
+                f.write(f"{x},{y},{label == pred}\n")
+
         else:
             outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
                                      max_length=200, do_sample=False, num_beams=k,
@@ -105,10 +111,6 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             for j in range(1, k + 1):
                 if labels in preds_list[:j]:
                     correct_count[j] += 1
-        y = tokenizer.decode(labels[labels != -100], skip_special_tokens=True)
-        x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
-        with open(save_file, "a") as f:
-            f.write(f"{x},{y}\n")
         msg = " | ".join([f"{j}:{correct_count[j] / (i + 1):.2f}" for j in range(1, k + 1)])
         msg = f'{i + 1}/{len(gen_dataloader)} | {msg}'
         pbar.set_description(msg)
