@@ -12,7 +12,9 @@ from collections import defaultdict
 import pandas as pd
 from dataset import ECType
 import pickle
-from multiprocessing import Pool
+
+
+# from multiprocessing import Pool
 
 
 class HierarchicalPCATokenizer:
@@ -107,9 +109,9 @@ def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_compon
     return f"datasets/ecreact/quant_{ec_type}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}/"
 
 
-def get_reaction_attention_emb_wrapper(args):
-    text, ec, ec_to_uniprot, smiles_to_id, alpha = args
-    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha)
+# def get_reaction_attention_emb_wrapper(args):
+#     text, ec, ec_to_uniprot, smiles_to_id, alpha = args
+#     return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha)
 
 
 def read_dataset_split(ec_type: ECType, split: str, alpha):
@@ -139,13 +141,10 @@ def read_dataset_split(ec_type: ECType, split: str, alpha):
     if ec_type == ECType.PRETRAINED:
         emb_lines = [ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
     else:
-
-        # Prepare the argument list
-        args_list = [(text, ec, ec_to_uniprot, smiles_to_id, alpha) for text, ec in zip(src_lines, ec_lines)]
-
-        # Use Pool to parallelize
-        with Pool() as pool:
-            emb_lines = list(tqdm(pool.imap(get_reaction_attention_emb_wrapper, args_list), total=len(src_lines)))
+        emb_lines = [
+            get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha)
+            for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
+        ]
 
     not_none_mask = [x is not None for x in emb_lines]
     src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
@@ -154,13 +153,13 @@ def read_dataset_split(ec_type: ECType, split: str, alpha):
     return src_lines, tgt_lines, emb_lines
 
 
-def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca,alpha):
+def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
     split = "train"
     outputfile = args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
     if os.path.exists(outputfile):
         print("Model already exists")
         return
-    _, _, emb_lines = read_dataset_split(ec_type, split,alpha)
+    _, _, emb_lines = read_dataset_split(ec_type, split, alpha)
     vecs = np.array(emb_lines)
     print(vecs.shape)
     tokenizer = HierarchicalPCATokenizer(n_hierarchical_clusters, n_pca_components, n_clusters_pca)
@@ -173,8 +172,9 @@ def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pc
     with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca), "rb") as f:
         tokenizer: HierarchicalPCATokenizer = pickle.load(f)
     src_lines, tgt_lines, emb_lines = read_dataset_split(ec_type, split, alpha=alpha)
-    with Pool() as pool:
-        tokenized_lines = list(tqdm(pool.imap(tokenizer.tokenize_vector, emb_lines), total=len(emb_lines)))
+    tokenized_lines = [
+        tokenizer.tokenize_vector(e) for e in emb_lines
+    ]
     assert len(src_lines) == len(tgt_lines) == len(tokenized_lines)
 
     output_base = args_to_quant_dataset(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha)
@@ -207,7 +207,7 @@ if __name__ == "__main__":
         ec_type = ECType.DAE
     else:
         raise ValueError("Invalid ec_type")
-    train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca,args.alpha)
+    train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca, args.alpha)
     for split in ["train", "valid", "test"]:
         tokenize_dataset_split(ec_type, split, args.n_hierarchical_clusters, args.n_pca_components,
                                args.n_clusters_pca, alpha=args.alpha)
