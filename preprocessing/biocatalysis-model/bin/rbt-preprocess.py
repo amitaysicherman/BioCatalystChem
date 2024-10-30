@@ -125,7 +125,7 @@ def write_splits(df: pd.DataFrame, ec_level: int, output_dir: Path) -> None:
         df_internal.ec.isin(ec_val_cnts.index[ec_val_cnts.le(25)])
     ]
 
-    groups = [group for _, group in df.groupby('ec_3')]
+    groups = [group for _, group in df_internal.groupby('ec_3')]
     np.random.shuffle(groups)
     df_internal = pd.concat(groups).reset_index(drop=True)
 
