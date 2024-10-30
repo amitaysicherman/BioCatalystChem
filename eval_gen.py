@@ -73,7 +73,7 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
     return Chem.MolToSmiles(mol, canonical=True)
 
 
-def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10, fast=0, save_file=None):
+def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10, fast=0):
     correct_count = {i: 0 for i in range(1, k + 1)}
     pbar = tqdm(enumerate(gen_dataloader), total=len(gen_dataloader))
     for i, batch in pbar:
@@ -95,10 +95,6 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             pred = tokenizer.decode(pred, skip_special_tokens=True)
             label = tokenizer.decode(label, skip_special_tokens=True)
             correct_count[1] += (pred == label)
-            y = tokenizer.decode(labels[labels != -100], skip_special_tokens=True)
-            x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
-            with open(save_file, "a") as f:
-                f.write(f"{x},{y},{label == pred}\n")
 
         else:
             outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
@@ -201,8 +197,7 @@ if __name__ == "__main__":
 
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
-    correct_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast,
-                                 save_file=f"results/full/{run_name}.csv")
+    correct_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast)
     print(f"Run: {run_name}")
     for k, acc in correct_count.items():
         print(f"{k}: {acc}")
@@ -213,53 +208,3 @@ if __name__ == "__main__":
         f.write(run_name + args.split + "," + best_val_cp + "," + ",".join(
             [str(correct_count[i]) for i in correct_count]) + "\n")
 
-from collections import Counter
-
-first_test_src_file = "datasets/ecreact/level4/src-test.txt"
-first_test_tgt_file = "datasets/ecreact/level4/tgt-test.txt"
-src_tgt_to_ec = dict()
-srcs_counter = Counter()
-tgt_counter = Counter()
-ec_counter = Counter()
-with open(first_test_src_file) as f:
-    first_test_src = f.read().splitlines()
-with open(first_test_tgt_file) as f:
-    first_test_tgt = f.read().splitlines()
-for src, tgt in zip(first_test_src, first_test_tgt):
-    ec = src.split(" | ")[1]
-    src = src.split(" | ")[0]
-    src_tgt_to_ec[src + " >> " + tgt] = ec
-    srcs_counter[src] += 1
-    tgt_counter[tgt] += 1
-    ec_counter[ec] += 1
-
-train_ec_counter = Counter()
-with open("datasets/ecreact/level4/src-train.txt") as f:
-    train_src = f.read().splitlines()
-for src in train_src:
-    ec = src.split(" | ")[1]
-    train_ec_counter[ec] += 1
-
-
-files = os.listdir("results/full")
-full_res = pd.DataFrame(index=list(src_tgt_to_ec.keys()), columns=files)
-for file_name in files:
-    if not file_name.endswith(".csv"):
-        continue
-    with open("results/full/" + file_name) as f:
-        lines = f.read().splitlines()
-        for line in lines:
-            src, tgt, res = line.split(",")
-            src = src.split(" | ")[0]
-            id_ = src + " >> " + tgt
-            full_res.loc[id_, file_name] = res == "True"
-# print top 10 frequent srcs with counts
-print(srcs_counter.most_common(10))
-print("Tgs")
-print(tgt_counter.most_common(10))
-print("Src Tgs")
-print(ec_counter.most_common(10))
-
-# filter out src tg with less than 10 results
-index_mask = [i for i in full_res.index if ec_counter[i] < 10]
-scores = full_res.drop(index_mask).mean(axis=1)
