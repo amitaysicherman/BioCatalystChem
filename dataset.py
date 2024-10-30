@@ -10,7 +10,7 @@ from enum import Enum
 from collections import defaultdict
 import pandas as pd
 import random
-
+import os
 
 class ECType(Enum):
     NO_EC = 0
@@ -73,6 +73,9 @@ class SeqToSeqDataset(Dataset):
                 random.shuffle(self.data)
 
     def load_dataset(self, input_base, split, w, have_ec=True):
+        if not os.path.exists(input_base):
+            print(f"Dataset {input_base} not found")
+            input_base=input_base.replace("-0.5", "")
         with open(f"{input_base}/src-{split}.txt") as f:
             src_lines = f.read().splitlines()
 

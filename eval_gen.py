@@ -1,3 +1,4 @@
+import pandas as pd
 from transformers import PreTrainedTokenizerFast
 from transformers import T5ForConditionalGeneration
 import argparse
@@ -211,3 +212,54 @@ if __name__ == "__main__":
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
         f.write(run_name + args.split + "," + best_val_cp + "," + ",".join(
             [str(correct_count[i]) for i in correct_count]) + "\n")
+
+from collections import Counter
+
+first_test_src_file = "datasets/ecreact/level4/src-test.txt"
+first_test_tgt_file = "datasets/ecreact/level4/tgt-test.txt"
+src_tgt_to_ec = dict()
+srcs_counter = Counter()
+tgt_counter = Counter()
+ec_counter = Counter()
+with open(first_test_src_file) as f:
+    first_test_src = f.read().splitlines()
+with open(first_test_tgt_file) as f:
+    first_test_tgt = f.read().splitlines()
+for src, tgt in zip(first_test_src, first_test_tgt):
+    ec = src.split(" | ")[1]
+    src = src.split(" | ")[0]
+    src_tgt_to_ec[src + " >> " + tgt] = ec
+    srcs_counter[src] += 1
+    tgt_counter[tgt] += 1
+    ec_counter[ec] += 1
+
+train_ec_counter = Counter()
+with open("datasets/ecreact/level4/src-train.txt") as f:
+    train_src = f.read().splitlines()
+for src in train_src:
+    ec = src.split(" | ")[1]
+    train_ec_counter[ec] += 1
+
+
+files = os.listdir("results/full")
+full_res = pd.DataFrame(index=list(src_tgt_to_ec.keys()), columns=files)
+for file_name in files:
+    if not file_name.endswith(".csv"):
+        continue
+    with open("results/full/" + file_name) as f:
+        lines = f.read().splitlines()
+        for line in lines:
+            src, tgt, res = line.split(",")
+            src = src.split(" | ")[0]
+            id_ = src + " >> " + tgt
+            full_res.loc[id_, file_name] = res == "True"
+# print top 10 frequent srcs with counts
+print(srcs_counter.most_common(10))
+print("Tgs")
+print(tgt_counter.most_common(10))
+print("Src Tgs")
+print(ec_counter.most_common(10))
+
+# filter out src tg with less than 10 results
+index_mask = [i for i in full_res.index if ec_counter[i] < 10]
+scores = full_res.drop(index_mask).mean(axis=1)
