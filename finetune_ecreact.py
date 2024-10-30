@@ -130,7 +130,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         ecreact_dataset = "ecreact/level4"
 
-    ecreact_dataset=ecreact_dataset.replace("ecreact/", "ecreact_old/ecreact") #TODO : remove this line
+    ecreact_dataset=ecreact_dataset.replace("ecreact/", "ecreact_old/ecreact/") #TODO : remove this line
 
     train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                     DEBUG=DEBUG, alpha=alpha)
