@@ -7,7 +7,6 @@ from collections import Counter
 
 import click
 import pandas as pd
-from tqdm import trange
 import numpy as np
 from rdkit.Chem import AllChem as rdk
 from rxn_biocatalysis_tools import (
