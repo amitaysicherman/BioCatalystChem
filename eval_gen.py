@@ -50,9 +50,9 @@ def name_to_args(name):
         args["ec_type"] = ECType.DAE
         ec_alpha = name.split("_")[0]
         if "-" in ec_alpha:
-            args["alpha"] = int(ec_alpha.split("-")[1]) / 100
+            args["alpha"] = float(ec_alpha.split("-")[1])
         else:
-            args["alpha"] = 50 / 100
+            args["alpha"] = 0.5
     # Check if the name contains "quant" (prequantization is True)
     if "_quant" in name:
         args["prequantization"] = True
