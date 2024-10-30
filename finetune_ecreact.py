@@ -130,7 +130,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         ecreact_dataset = "ecreact/level4"
 
-    ecreact_dataset=ecreact_dataset.replace("ecreact_old/", "ecreact_old/ecreact")
+    ecreact_dataset=ecreact_dataset.replace("ecreact/", "ecreact_old/ecreact") #TODO : remove this line
 
     train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                     DEBUG=DEBUG, alpha=alpha)
@@ -147,7 +147,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
                             n_clusters_pca, alpha)
     print(f"Run name: {run_name}")
     # Training arguments
-    output_dir = f"results2/{run_name}"
+    output_dir = f"results2/{run_name}" #TODO : change this line
 
     training_args = TrainingArguments(
         output_dir=output_dir,
