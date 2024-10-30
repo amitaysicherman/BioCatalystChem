@@ -8,7 +8,7 @@ from collections import Counter
 import click
 import pandas as pd
 from tqdm import trange
-
+import numpy as np
 from rdkit.Chem import AllChem as rdk
 from rxn_biocatalysis_tools import (
     EnzymaticReaction,
@@ -125,6 +125,9 @@ def write_splits(df: pd.DataFrame, ec_level: int, output_dir: Path) -> None:
         df_internal.ec.isin(ec_val_cnts.index[ec_val_cnts.le(25)])
     ]
 
+    groups = [group for _, group in df.groupby('ec_3')]
+    np.random.shuffle(groups)
+    df_internal = pd.concat(groups).reset_index(drop=True)
 
     splits={
         "train": df_internal.iloc[:int(0.8*len(df_internal))],
