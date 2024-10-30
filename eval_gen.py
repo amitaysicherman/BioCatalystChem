@@ -34,6 +34,9 @@ def name_to_args(name):
         "n_clusters_pca": None,
         "alpha": None
     }
+    if name=="uspto":
+        args["ec_type"] = ECType.NO_EC
+        return args
 
     if name == "paper":
         args["ec_type"] = ECType.PAPER
