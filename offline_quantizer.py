@@ -154,13 +154,13 @@ def read_dataset_split(ec_type: ECType, split: str, alpha):
     return src_lines, tgt_lines, emb_lines
 
 
-def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
+def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca,alpha):
     split = "train"
     outputfile = args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
     if os.path.exists(outputfile):
         print("Model already exists")
         return
-    _, _, emb_lines = read_dataset_split(ec_type, split)
+    _, _, emb_lines = read_dataset_split(ec_type, split,alpha)
     vecs = np.array(emb_lines)
     print(vecs.shape)
     tokenizer = HierarchicalPCATokenizer(n_hierarchical_clusters, n_pca_components, n_clusters_pca)
@@ -207,7 +207,7 @@ if __name__ == "__main__":
         ec_type = ECType.DAE
     else:
         raise ValueError("Invalid ec_type")
-    train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca)
+    train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca,args.alpha)
     for split in ["train", "valid", "test"]:
         tokenize_dataset_split(ec_type, split, args.n_hierarchical_clusters, args.n_pca_components,
                                args.n_clusters_pca, alpha=args.alpha)
