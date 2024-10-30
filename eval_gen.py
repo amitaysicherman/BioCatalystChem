@@ -48,7 +48,7 @@ def name_to_args(name):
         args["ec_type"] = ECType.PRETRAINED
     elif name.startswith("dae"):
         args["ec_type"] = ECType.DAE
-        ec_alpha = name.split("-")[0]
+        ec_alpha = name.split("_")[0]
         if "-" in ec_alpha:
             args["alpha"] = int(ec_alpha.split("-")[1]) / 100
         else:
