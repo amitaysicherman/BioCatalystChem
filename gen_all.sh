@@ -2,6 +2,7 @@
 #SBATCH --time=1-00
 #SBATCH --array=1-30
 #SBATCH --mem=64G
+#SBATCH --gres=gpu:A4000:1
 #SBATCH --requeue
 
 # Get the list of directories in results/
