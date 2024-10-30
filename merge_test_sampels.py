@@ -39,4 +39,4 @@ for file_name in files:
 print(full_res.shape)
 full_res = full_res.dropna()
 print(full_res.shape)
-print(full_res.mean(axis=0))
+print(full_res.mean(axis=0).sort_values().to_frame())
