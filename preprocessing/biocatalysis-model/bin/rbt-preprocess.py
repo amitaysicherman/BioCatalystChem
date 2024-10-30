@@ -108,6 +108,24 @@ def write_splits(df: pd.DataFrame, ec_level: int, output_dir: Path) -> None:
     df_internal[["rxn_str"]].to_csv(
         Path(output_dir, "combined.txt"), header=False, index=False
     )
+
+    prod_val_cnts = df_internal.products.value_counts()
+    df_internal = df_internal[
+        df_internal.products.isin(prod_val_cnts.index[prod_val_cnts.le(5)])
+    ]
+
+    reactants_val_cnts = df_internal.reactants.value_counts()
+    df_internal = df_internal[
+        df_internal.reactants.isin(reactants_val_cnts.index[reactants_val_cnts.le(1)])
+    ]
+
+
+    ec_val_cnts = df_internal.ec.value_counts()
+    df_internal = df_internal[
+        df_internal.ec.isin(ec_val_cnts.index[ec_val_cnts.le(25)])
+    ]
+
+
     splits={
         "train": df_internal.iloc[:int(0.8*len(df_internal))],
         "valid": df_internal.iloc[int(0.8*len(df_internal)):int(0.9*len(df_internal))],

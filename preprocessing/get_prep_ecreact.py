@@ -28,6 +28,6 @@ prep_script = "python preprocessing/biocatalysis-model/bin/rbt-preprocess.py"
 # os.system(f"{prep_script} {output_file} {output_dir} --ec-level 3")
 
 # level 4
-output_dir = os.path.join(dir_path, 'level4')
+output_dir = os.path.join(dir_path, 'level4_filter')
 os.makedirs(output_dir, exist_ok=True)
 os.system(f"{prep_script} {output_file} {output_dir} --ec-level 4")
