@@ -202,7 +202,7 @@ if __name__ == '__main__':
     parser.add_argument("--n_pca_components", type=int, default=6)
     parser.add_argument("--n_clusters_pca", type=int, default=10)
     parser.add_argument("--alpha", type=int, default=50)
-    parser.add_argument("--addec", type=int, default=10)
+    parser.add_argument("--addec", type=int, default=0)
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
     DEBUG = args.debug
