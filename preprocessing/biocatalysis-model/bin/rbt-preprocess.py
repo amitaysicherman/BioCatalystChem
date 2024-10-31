@@ -118,22 +118,20 @@ def write_splits(df: pd.DataFrame, ec_level: int, output_dir: Path) -> None:
         df_internal.reactants.isin(reactants_val_cnts.index[reactants_val_cnts.le(1)])
     ]
 
-
     ec_val_cnts = df_internal.ec.value_counts()
     df_internal = df_internal[
         df_internal.ec.isin(ec_val_cnts.index[ec_val_cnts.le(25)])
     ]
 
-    groups = [group for _, group in df_internal.groupby('ec_3')]
-    np.random.shuffle(groups)
-    df_internal = pd.concat(groups).reset_index(drop=True)
+    # groups = [group for _, group in df_internal.groupby('ec_3')]
+    # np.random.shuffle(groups)
+    # df_internal = pd.concat(groups).reset_index(drop=True)
 
-    splits={
-        "train": df_internal.iloc[:int(0.8*len(df_internal))],
-        "valid": df_internal.iloc[int(0.8*len(df_internal)):int(0.9*len(df_internal))],
-        "test": df_internal.iloc[int(0.9*len(df_internal)):],
+    splits = {
+        "train": df_internal.iloc[:int(0.8 * len(df_internal))],
+        "valid": df_internal.iloc[int(0.8 * len(df_internal)):int(0.9 * len(df_internal))],
+        "test": df_internal.iloc[int(0.9 * len(df_internal)):],
     }
-
 
     # # Get the training set from reactions with unique products¨
     # prod_val_cnts = df_internal.products.value_counts()
