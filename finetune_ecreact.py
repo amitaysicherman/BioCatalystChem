@@ -83,7 +83,7 @@ def load_pretrained_model():
 
 
 def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca):
+                            n_clusters_pca, addec):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if prequantization:
         from offline_quantizer import HierarchicalPCATokenizer
@@ -92,7 +92,7 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
                                               n_clusters_pca=n_clusters_pca,
                                               ).get_all_tokens()
         tokenizer.add_tokens(new_tokens)
-    elif ec_type == ECType.PAPER:
+    if ec_type == ECType.PAPER or addec:
         new_tokens = get_ec_tokens()
         tokenizer.add_tokens(new_tokens)
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
@@ -117,16 +117,18 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
     return tokenizer, model
 
 
-def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
+def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec):
     ec_type = ECType(ec_type)
     tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization=prequantization,
                                                n_hierarchical_clusters=n_hierarchical_clusters,
-                                               n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca)
+                                               n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca,addec=addec)
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
                                                 n_pca_components, n_clusters_pca, alpha)
         ecreact_dataset = ecreact_dataset.replace("datasets/", "")
+        if addec:
+            ecreact_dataset += "_plus"
     else:
         ecreact_dataset = "ecreact/level4"
 
@@ -149,7 +151,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
     training_args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=50,
+        num_train_epochs=100,
         warmup_ratio=0.05,
         eval_steps=0.01,
         logging_steps=0.01,
@@ -200,9 +202,10 @@ if __name__ == '__main__':
     parser.add_argument("--n_pca_components", type=int, default=6)
     parser.add_argument("--n_clusters_pca", type=int, default=10)
     parser.add_argument("--alpha", type=int, default=50)
+    parser.add_argument("--addec", type=int, default=10)
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
     DEBUG = args.debug
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
-         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha)
+         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec)

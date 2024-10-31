@@ -49,7 +49,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--ec_dataset", type=str, default="datasets/ecreact/level4")
     parser.add_argument("--target_dataset", type=str, default="datasets/ecreact/quant_2_5_6_10")
-    parser.add_argument("--output_dataset", type=str, default="datasets/ecreact/quant_2_5_6_10_plus")
     args = parser.parse_args()
     ec_dataset = args.ec_dataset
     target_dataset = args.target_dataset
