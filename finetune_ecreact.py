@@ -48,7 +48,7 @@ def compute_metrics(eval_pred, tokenizer):
 
 
 def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca,
-                 alpha):
+                 alpha, addec):
     if ec_type == ECType.PAPER:
         return "paper"
     elif ec_type == ECType.NO_EC:
@@ -65,6 +65,8 @@ def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, 
         run_name += "_quant" + suff
     else:
         run_name += f"_{lookup_len}"
+    if addec:
+        run_name += "_plus"
     return run_name
 
 
@@ -144,7 +146,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset}
 
     run_name = args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca, alpha)
+                            n_clusters_pca, alpha, addec)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
