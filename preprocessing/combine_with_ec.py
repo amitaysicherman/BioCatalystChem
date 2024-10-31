@@ -44,13 +44,19 @@ def write_data_dict(data_dict, output_base, split):
                 f.write(" | ".join(s) + "\n")
                 g.write(tgt + "\n")
 
-
-ec_dataset = "datasets/ecreact/level4"
-target_dataset = "datasets/ecreact/quant_2_5_6_10"
-output_dataset = target_dataset + "_plus"
-os.makedirs(output_dataset, exist_ok=True)
-for split in ["train", "test", "valid"]:
-    ec_dict = dataset_to_dict(ec_dataset, split)
-    target_dict = dataset_to_dict(target_dataset, split)
-    output_dict = merge_dicts(target_dict, ec_dict)
-    write_data_dict(output_dict, output_dataset, split)
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ec_dataset", type=str, default="datasets/ecreact/level4")
+    parser.add_argument("--target_dataset", type=str, default="datasets/ecreact/quant_2_5_6_10")
+    parser.add_argument("--output_dataset", type=str, default="datasets/ecreact/quant_2_5_6_10_plus")
+    args = parser.parse_args()
+    ec_dataset = args.ec_dataset
+    target_dataset = args.target_dataset
+    output_dataset = target_dataset + "_plus"
+    os.makedirs(output_dataset, exist_ok=True)
+    for split in ["train", "test", "valid"]:
+        ec_dict = dataset_to_dict(ec_dataset, split)
+        target_dict = dataset_to_dict(target_dataset, split)
+        output_dict = merge_dicts(target_dict, ec_dict)
+        write_data_dict(output_dict, output_dataset, split)
