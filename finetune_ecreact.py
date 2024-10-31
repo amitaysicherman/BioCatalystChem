@@ -123,7 +123,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     ec_type = ECType(ec_type)
     tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization=prequantization,
                                                n_hierarchical_clusters=n_hierarchical_clusters,
-                                               n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca,addec=addec)
+                                               n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca,
+                                               addec=addec)
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
@@ -134,8 +135,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         ecreact_dataset = "ecreact/level4"
 
-    train_dataset = SeqToSeqDataset([ecreact_dataset,""], "uspto", weights=[100,1], tokenizer=tokenizer, ec_type=ec_type,
-                                    DEBUG=DEBUG, alpha=alpha)
+    train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[100, 1], tokenizer=tokenizer,
+                                    ec_type=ec_type, DEBUG=DEBUG, alpha=alpha)
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                           DEBUG=DEBUG, sample_size=1000, alpha=alpha)
     val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
@@ -145,7 +146,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha)
 
-    eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset, "uspto": test_uspto_dataset}
+    eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset,
+                     "uspto": test_uspto_dataset}
 
     run_name = args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components,
                             n_clusters_pca, alpha, addec)
