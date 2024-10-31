@@ -134,7 +134,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         ecreact_dataset = "ecreact/level4"
 
-    train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
+    train_dataset = SeqToSeqDataset([ecreact_dataset,""], "uspto", weights=[100,1], tokenizer=tokenizer, ec_type=ec_type,
                                     DEBUG=DEBUG, alpha=alpha)
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                           DEBUG=DEBUG, sample_size=1000, alpha=alpha)
@@ -142,8 +142,10 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha)
     test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha)
+    test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
+                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha)
 
-    eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset}
+    eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset, "uspto": test_uspto_dataset}
 
     run_name = args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components,
                             n_clusters_pca, alpha, addec)
@@ -153,7 +155,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
     training_args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=100,
+        num_train_epochs=1,
         warmup_ratio=0.05,
         eval_steps=0.01,
         logging_steps=0.01,
