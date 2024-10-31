@@ -173,7 +173,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         report_to='none' if DEBUG else 'tensorboard',
 
         run_name=run_name,
-        learning_rate=1e-4,
+        learning_rate=1e-3,
 
         save_safetensors=False
 
