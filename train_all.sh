@@ -3,8 +3,11 @@
 # Define the configurations as a long string with a delimiter (| in this case)
 configs="--ec_type 0 |\
   --ec_type 1 |\
-  --ec_type 2 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
-  --ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 5 --n_clusters_pca 5 |\
+  --ec_type 2 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
+  --ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 |\
+  --ec_type 2 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --addec 1 |\
+  --ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --addec 1|\
+
   --ec_type 2 --lookup_len 1 |\
   --ec_type 3 --lookup_len 1"
 # Count the number of configurations by counting the number of delimiters (|) + 1
@@ -17,7 +20,7 @@ cat <<EOF > slurm_submit.sh
 #SBATCH --array=1-$num_configs
 #SBATCH --mem=64G
 #SBATCH --requeue
-#SBATCH --gres=gpu:A4000:1
+#SBATCH --gres=gpu:A40:1
 
 # Adjust SLURM_ARRAY_TASK_ID to match zero-indexed array (subtract 1 from SLURM_ARRAY_TASK_ID)
 index=\$((SLURM_ARRAY_TASK_ID - 1))
