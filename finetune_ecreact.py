@@ -136,7 +136,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         ecreact_dataset = "ecreact/level4"
 
-    train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[100, 1], tokenizer=tokenizer,
+    train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer,
                                     ec_type=ec_type, DEBUG=DEBUG, alpha=alpha)
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                           DEBUG=DEBUG, sample_size=1000, alpha=alpha)
