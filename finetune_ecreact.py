@@ -151,7 +151,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
                      "uspto": test_uspto_dataset}
 
     run_name = args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca, alpha, addec,nopre)
+                            n_clusters_pca, alpha, addec)
     if nopre:
         run_name += f"_nopre"
     # run_name += f"_mix"
@@ -220,4 +220,4 @@ if __name__ == '__main__':
     DEBUG = args.debug
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
-         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec,nopre=nopre)
+         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec,nopre=args.nopre)
