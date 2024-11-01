@@ -161,7 +161,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
     training_args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=100,
+        num_train_epochs=250,
         warmup_ratio=0.05,
         eval_steps=0.01,
         logging_steps=0.01,
