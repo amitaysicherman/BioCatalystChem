@@ -85,7 +85,7 @@ def load_pretrained_model():
 
 
 def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca, addec):
+                            n_clusters_pca, addec,nopre):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if prequantization:
         from offline_quantizer import HierarchicalPCATokenizer
@@ -109,22 +109,23 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
         model = T5ForConditionalGeneration(config)
     else:
         model = CustomT5Model(config, lookup_len)
-    pretrained_file = load_pretrained_model()
-    pretrained_model = T5ForConditionalGeneration.from_pretrained(pretrained_file)
-    pretrained_model.resize_token_embeddings(model.config.vocab_size)
-    missing_keys, unexpected_keys = model.load_state_dict(pretrained_model.state_dict(), strict=False)
-    print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
-    print("Missing keys in the model (not loaded):", missing_keys)
-    print("Unexpected keys in the checkpoint (not used by the model):", unexpected_keys)
+    if not nopre:
+        pretrained_file = load_pretrained_model()
+        pretrained_model = T5ForConditionalGeneration.from_pretrained(pretrained_file)
+        pretrained_model.resize_token_embeddings(model.config.vocab_size)
+        missing_keys, unexpected_keys = model.load_state_dict(pretrained_model.state_dict(), strict=False)
+        print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
+        print("Missing keys in the model (not loaded):", missing_keys)
+        print("Unexpected keys in the checkpoint (not used by the model):", unexpected_keys)
     return tokenizer, model
 
 
-def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec):
+def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,nopre):
     ec_type = ECType(ec_type)
     tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization=prequantization,
                                                n_hierarchical_clusters=n_hierarchical_clusters,
                                                n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca,
-                                               addec=addec)
+                                               addec=addec,nopre=nopre)
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
@@ -210,9 +211,11 @@ if __name__ == '__main__':
     parser.add_argument("--n_clusters_pca", type=int, default=10)
     parser.add_argument("--alpha", type=int, default=50)
     parser.add_argument("--addec", type=int, default=0)
+    parser.add_argument("--nopre", type=int, default=0)
+
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
     DEBUG = args.debug
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
-         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec)
+         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec,nopre=nopre)
