@@ -8,6 +8,13 @@ from transformers import PreTrainedTokenizerFast
 from transformers import Trainer, TrainingArguments
 import numpy as np
 from rdkit import Chem
+from peft import (
+    get_peft_model,
+    LoraConfig,
+    TaskType,
+    PeftModel,
+    PeftConfig
+)
 
 from dataset import SeqToSeqDataset
 from preprocessing.build_tokenizer import get_tokenizer_file_path, get_ec_tokens
@@ -85,7 +92,7 @@ def load_pretrained_model():
 
 
 def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca, addec,nopre):
+                            n_clusters_pca, addec, nopre, lora):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if prequantization:
         from offline_quantizer import HierarchicalPCATokenizer
@@ -112,20 +119,38 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
     if not nopre:
         pretrained_file = load_pretrained_model()
         pretrained_model = T5ForConditionalGeneration.from_pretrained(pretrained_file)
+
         pretrained_model.resize_token_embeddings(model.config.vocab_size)
         missing_keys, unexpected_keys = model.load_state_dict(pretrained_model.state_dict(), strict=False)
         print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
         print("Missing keys in the model (not loaded):", missing_keys)
-        print("Unexpected keys in the checkpoint (not used by the model):", unexpected_keys)
+    if lora:
+        modules_to_save = ["shared"]
+        target_modules = [key for key, _ in model.named_modules() if "Linear" in str(type(_))]
+
+
+        lora_config = LoraConfig(
+            task_type=TaskType.SEQ_2_SEQ_LM,
+            inference_mode=False,
+            r=8,
+            lora_alpha=32,
+            lora_dropout=0.1,
+            target_modules=target_modules,
+            modules_to_save=modules_to_save,
+        )
+        model = get_peft_model(model, lora_config)
+        model.print_trainable_parameters()
+
     return tokenizer, model
 
 
-def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,nopre):
+def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
+         nopre, lora):
     ec_type = ECType(ec_type)
     tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization=prequantization,
                                                n_hierarchical_clusters=n_hierarchical_clusters,
                                                n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca,
-                                               addec=addec,nopre=nopre)
+                                               addec=addec, nopre=nopre, lora=lora)
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
@@ -145,7 +170,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha)
     test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, sample_size=1000, alpha=alpha)
+                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha)
 
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset,
                      "uspto": test_uspto_dataset}
@@ -154,6 +179,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
                             n_clusters_pca, alpha, addec)
     if nopre:
         run_name += f"_nopre"
+    if lora:
+        run_name += f"_lora"
     # run_name += f"_mix"
     print(f"Run name: {run_name}")
     # Training arguments
@@ -214,10 +241,11 @@ if __name__ == '__main__':
     parser.add_argument("--alpha", type=int, default=50)
     parser.add_argument("--addec", type=int, default=0)
     parser.add_argument("--nopre", type=int, default=0)
+    parser.add_argument("--lora", type=int, default=0)
 
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
     DEBUG = args.debug
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
-         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec,nopre=args.nopre)
+         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora)

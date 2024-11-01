@@ -23,7 +23,7 @@ def get_ec_type_from_num(num):
     return ECType(num)
 
 
-DEFAULT_EMB_VALUE = torch.tensor([0] * 2560)
+DEFAULT_EMB_VALUE = torch.tensor([0.0] * 2560).float()
 
 
 def get_ec_type(use_ec, ec_split, dae):
