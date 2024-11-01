@@ -145,13 +145,15 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha)
     test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha)
+                                        DEBUG=DEBUG, sample_size=1000, alpha=alpha)
 
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset,
                      "uspto": test_uspto_dataset}
 
     run_name = args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca, alpha, addec)
+                            n_clusters_pca, alpha, addec,nopre)
+    if nopre:
+        run_name += f"_nopre"
     # run_name += f"_mix"
     print(f"Run name: {run_name}")
     # Training arguments
