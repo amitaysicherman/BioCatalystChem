@@ -136,7 +136,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         ecreact_dataset = "ecreact/level4"
 
-    train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[100, 1], tokenizer=tokenizer,
+    train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[100, 1], tokenizer=tokenizer,
                                     ec_type=ec_type, DEBUG=DEBUG, alpha=alpha)
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                           DEBUG=DEBUG, sample_size=1000, alpha=alpha)
@@ -152,14 +152,14 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
     run_name = args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components,
                             n_clusters_pca, alpha, addec)
-    run_name += f"_mix"
+    # run_name += f"_mix"
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
 
     training_args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=1,
+        num_train_epochs=100,
         warmup_ratio=0.05,
         eval_steps=0.01,
         logging_steps=0.01,
@@ -179,7 +179,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         report_to='none' if DEBUG else 'tensorboard',
 
         run_name=run_name,
-        learning_rate=1e-5,
+        learning_rate=1e-4,
 
         save_safetensors=False
 
