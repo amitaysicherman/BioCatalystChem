@@ -77,8 +77,12 @@ def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, 
     return run_name
 
 
-def load_pretrained_model():
-    base_dir = "results/uspto"
+def load_pretrained_model(regpre):
+    if not regpre:
+        base_dir = "results/uspto"
+    else:
+        base_dir = "results/regular"
+
     cp_dirs = os.listdir(base_dir)
     cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
     cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
@@ -92,7 +96,7 @@ def load_pretrained_model():
 
 
 def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca, addec, nopre, lora,lora_d):
+                            n_clusters_pca, addec, nopre, lora, lora_d,regpre):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if prequantization:
         from offline_quantizer import HierarchicalPCATokenizer
@@ -117,7 +121,7 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
     else:
         model = CustomT5Model(config, lookup_len)
     if not nopre:
-        pretrained_file = load_pretrained_model()
+        pretrained_file = load_pretrained_model(regpre=regpre)
         pretrained_model = T5ForConditionalGeneration.from_pretrained(pretrained_file)
 
         pretrained_model.resize_token_embeddings(model.config.vocab_size)
@@ -127,7 +131,6 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
     if lora:
         modules_to_save = ["shared"]
         target_modules = [key for key, _ in model.named_modules() if "Linear" in str(type(_))]
-
 
         lora_config = LoraConfig(
             task_type=TaskType.SEQ_2_SEQ_LM,
@@ -144,12 +147,12 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora,lora_d):
+         nopre, lora, lora_d,regpre):
     ec_type = ECType(ec_type)
     tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization=prequantization,
                                                n_hierarchical_clusters=n_hierarchical_clusters,
                                                n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca,
-                                               addec=addec, nopre=nopre, lora=lora,lora_d=lora_d)
+                                               addec=addec, nopre=nopre, lora=lora, lora_d=lora_d,regpre=regpre)
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
@@ -178,6 +181,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
                             n_clusters_pca, alpha, addec)
     if nopre:
         run_name += f"_nopre"
+    if regpre:
+        run_name += f"_regpre"
     if lora:
         run_name += f"_lora_{lora_d}"
     # run_name += f"_mix"
@@ -240,6 +245,8 @@ if __name__ == '__main__':
     parser.add_argument("--alpha", type=int, default=50)
     parser.add_argument("--addec", type=int, default=0)
     parser.add_argument("--nopre", type=int, default=0)
+    parser.add_argument("--regpre", type=int, default=0)
+
     parser.add_argument("--lora", type=int, default=0)
     parser.add_argument("--lora_d", type=int, default=8)
 
@@ -248,4 +255,5 @@ if __name__ == '__main__':
     DEBUG = args.debug
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
-         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,lora_d=args.lora_d)
+         n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,
+         lora_d=args.lora_d,regpre=args.regpre)
