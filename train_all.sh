@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the configurations as a long string with a delimiter (| in this case)
-configs="--ec_type 0 --lora 1 --lora_d 16  --regpre 1 |\ 
+configs="--ec_type 0 --lora 1 --lora_d 16  --regpre 1 |\
   --ec_type 1 --lora 1 --lora_d 16 --regpre 1 |\
   --ec_type 2 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --lora 1  --lora_d 16 --regpre 1 |\
   --ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --lora 1  --lora_d 16 --regpre 1 |\
