@@ -35,7 +35,7 @@ for split in ["test", "train", "valid"]:
     removed_lines = 0
     for i in range(len(first_src_lines)):
         if (pre_lines[i] is not None) and (dae_lines[i] is not None):
-            final_src_lines.append(src_lines[i])
+            final_src_lines.append(first_src_lines[i])
             final_tgt_lines.append(first_tgt_lines[i])
         else:
             removed_lines += 1
