@@ -8,8 +8,6 @@ logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
 rkrb.DisableLog("rdApp.error")
 
-
-
 dir_path = os.path.join('datasets', 'ecreact')
 os.makedirs(dir_path, exist_ok=True)
 
@@ -57,3 +55,5 @@ prep_script = "python preprocessing/biocatalysis-model/bin/rbt-preprocess.py"
 output_dir = os.path.join(dir_path, 'level4')
 os.makedirs(output_dir, exist_ok=True)
 os.system(f"{prep_script} {output_file} {output_dir} --ec-level 4")
+os.system("mv datasets/ecreact/level4/experiments/4/* datasets/ecreact/level4/")
+os.system("rm -r datasets/ecreact/level4/experiments")

@@ -12,6 +12,7 @@ import pandas as pd
 import random
 import os
 
+
 class ECType(Enum):
     NO_EC = 0
     PAPER = 1
@@ -75,7 +76,7 @@ class SeqToSeqDataset(Dataset):
     def load_dataset(self, input_base, split, w, have_ec=True):
         if not os.path.exists(input_base):
             print(f"Dataset {input_base} not found")
-            input_base=input_base.replace("-0.5", "")
+            input_base = input_base.replace("-0.5", "")
         with open(f"{input_base}/src-{split}.txt") as f:
             src_lines = f.read().splitlines()
 
@@ -137,3 +138,24 @@ class SeqToSeqDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.data_to_dict(self.data[idx])
+
+
+
+
+def to_src_ec_tgt(line):
+    src_ec, tgt = line.split(">>")
+    src, ec = src_ec.split("|")
+    return src, ec, tgt
+
+
+with open("/Users/amitay.s/PycharmProjects/BioCatalystChem/datasets/ecreact/level4/combined.txt") as f:
+    data = f.read().splitlines()
+data = [to_src_ec_tgt(x) for x in data]
+# count number of EC per source
+ec_counts = {}
+for src, ec, tgt in data:
+    if src not in ec_counts:
+        ec_counts[src] = 0
+    ec_counts[src] += 1
+# number of source with more than 1 EC
+print(len([x for x in ec_counts.values() if x > 1]))

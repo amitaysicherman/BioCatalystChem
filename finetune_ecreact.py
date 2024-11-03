@@ -96,7 +96,7 @@ def load_pretrained_model(regpre):
 
 
 def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca, addec, nopre, lora, lora_d,regpre):
+                            n_clusters_pca, addec, nopre, lora, lora_d, regpre):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if prequantization:
         from offline_quantizer import HierarchicalPCATokenizer
@@ -147,12 +147,12 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora, lora_d,regpre):
+         nopre, lora, lora_d, regpre, mix):
     ec_type = ECType(ec_type)
     tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization=prequantization,
                                                n_hierarchical_clusters=n_hierarchical_clusters,
                                                n_pca_components=n_pca_components, n_clusters_pca=n_clusters_pca,
-                                               addec=addec, nopre=nopre, lora=lora, lora_d=lora_d,regpre=regpre)
+                                               addec=addec, nopre=nopre, lora=lora, lora_d=lora_d, regpre=regpre)
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
@@ -163,8 +163,12 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         ecreact_dataset = "ecreact/level4"
 
-    train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer,
-                                    ec_type=ec_type, DEBUG=DEBUG, alpha=alpha)
+    if mix:
+        train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[20, 1], tokenizer=tokenizer,
+                                        ec_type=ec_type, DEBUG=DEBUG, alpha=alpha)
+    else:
+        train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
+                                        DEBUG=DEBUG, alpha=alpha)
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                           DEBUG=DEBUG, sample_size=1000, alpha=alpha)
     val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
@@ -185,14 +189,20 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         run_name += f"_regpre"
     if lora:
         run_name += f"_lora_{lora_d}"
-    # run_name += f"_mix"
+    if mix:
+        run_name += f"_mix"
+
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
+    if not mix:
+        num_train_epochs = 100
+    else:
+        num_train_epochs = 5
 
     training_args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=100,
+        num_train_epochs=num_train_epochs,
         warmup_ratio=0.05,
         eval_steps=0.01,
         logging_steps=0.01,
@@ -246,7 +256,7 @@ if __name__ == '__main__':
     parser.add_argument("--addec", type=int, default=0)
     parser.add_argument("--nopre", type=int, default=0)
     parser.add_argument("--regpre", type=int, default=0)
-
+    parser.add_argument("--mix", type=int, default=0)
     parser.add_argument("--lora", type=int, default=0)
     parser.add_argument("--lora_d", type=int, default=8)
 
@@ -256,4 +266,4 @@ if __name__ == '__main__':
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
          n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,
-         lora_d=args.lora_d,regpre=args.regpre)
+         lora_d=args.lora_d, regpre=args.regpre, mix=args.mix)

@@ -7,8 +7,10 @@ from collections import Counter
 
 import click
 import pandas as pd
-import numpy as np
+from tqdm import trange
+
 from rdkit.Chem import AllChem as rdk
+
 from rxn_biocatalysis_tools import (
     EnzymaticReaction,
     tokenize_enzymatic_reaction_smiles,
@@ -17,7 +19,7 @@ from rxn_biocatalysis_tools import (
 
 
 def process_reaction(
-        rxn: EnzymaticReaction, min_atom_count: int = 4
+    rxn: EnzymaticReaction, min_atom_count: int = 4
 ) -> EnzymaticReaction:
     """Removing precursors from products, remove molecules that couldn't be parsed by RDKit
     and remove single atoms from productsself.
@@ -40,7 +42,7 @@ def process_reaction(
 
 
 def remove_from_products(
-        rxn: EnzymaticReaction, smart_patterns: List[str], smiles: List[str]
+    rxn: EnzymaticReaction, smart_patterns: List[str], smiles: List[str]
 ) -> EnzymaticReaction:
     """Remove the supplied cofactors from the products.
 
@@ -96,75 +98,44 @@ def write_splits(df: pd.DataFrame, ec_level: int, output_dir: Path) -> None:
     """
     df_internal = df.copy()
     splits = {}
-
-    # random split
-    df_internal = df_internal.sample(frac=1, random_state=42)
-
-    # splits["train"] = pd.DataFrame(columns=df_internal.columns)
-    # splits["valid"] = pd.DataFrame(columns=df_internal.columns)
-    # splits["test"] = pd.DataFrame(columns=df_internal.columns)
+    splits["train"] = pd.DataFrame(columns=df_internal.columns)
+    splits["valid"] = pd.DataFrame(columns=df_internal.columns)
+    splits["test"] = pd.DataFrame(columns=df_internal.columns)
 
     df_internal[["rxn_str"]].to_csv(
         Path(output_dir, "combined.txt"), header=False, index=False
     )
 
-    # prod_val_cnts = df_internal.products.value_counts()
-    # df_internal = df_internal[
-    #     df_internal.products.isin(prod_val_cnts.index[prod_val_cnts.le(5)])
-    # ]
-    #
-    # reactants_val_cnts = df_internal.reactants.value_counts()
-    # df_internal = df_internal[
-    #     df_internal.reactants.isin(reactants_val_cnts.index[reactants_val_cnts.le(1)])
-    # ]
-    #
-    ec_val_cnts = df_internal.ec.value_counts()
-    l_before = len(df_internal)
-    df_internal = df_internal[
-        df_internal.ec.isin(ec_val_cnts.index[ec_val_cnts.le(50)])
+    # Get the training set from reactions with unique products¨
+    prod_val_cnts = df_internal.products.value_counts()
+    df_unique_prods = df_internal[
+        df_internal.products.isin(prod_val_cnts.index[prod_val_cnts.eq(1)])
     ]
-    l_after = len(df_internal)
-    print(f"Removed {l_before - l_after} reactions with less than 50 occurrences.")
+    df_internal.drop(df_unique_prods.index, inplace=True)
 
-    # groups = [group for _, group in df_internal.groupby('ec_3')]
-    # np.random.shuffle(groups)
-    # df_internal = pd.concat(groups).reset_index(drop=True)
+    # Always group by x.x.x.- for splits to have a good coverage and
+    # not miss sub-sub-classes
+    for ec in df_internal.ec_1.unique():
+        df_subset = df_internal[df_internal.ec_1 == ec]
+        df_unique_prods_subset = df_unique_prods[df_unique_prods.ec_1 == ec]
 
-    splits = {
-        "train": df_internal.iloc[:int(0.8 * len(df_internal))],
-        "valid": df_internal.iloc[int(0.8 * len(df_internal)):int(0.9 * len(df_internal))],
-        "test": df_internal.iloc[int(0.9 * len(df_internal)):],
-    }
+        # Get 5% (of total) from rxns with unique products for test set
+        n_total = len(df_subset) + len(df_unique_prods_subset)
+        n_samples = round(n_total * 0.05)
+        df_test = df_unique_prods_subset.sample(
+            n=min(n_samples, len(df_unique_prods_subset)), random_state=42
+        )
+        df_unique_prods_subset.drop(df_test.index, inplace=True)
 
-    # # Get the training set from reactions with unique products¨
-    # prod_val_cnts = df_internal.products.value_counts()
-    # df_unique_prods = df_internal[
-    #     df_internal.products.isin(prod_val_cnts.index[prod_val_cnts.eq(1)])
-    # ]
-    # df_internal.drop(df_unique_prods.index, inplace=True)
-    #
-    # # Always group by x.x.x.- for splits to have a good coverage and
-    # # not miss sub-sub-classes
-    # for ec in df_internal.ec_1.unique():
-    #     df_subset = df_internal[df_internal.ec_1 == ec]
-    #     df_unique_prods_subset = df_unique_prods[df_unique_prods.ec_1 == ec]
-    #
-    #     # Get 5% (of total) from rxns with unique products for test set
-    #     n_total = len(df_subset) + len(df_unique_prods_subset)
-    #     n_samples = round(n_total * 0.05)
-    #     df_test = df_unique_prods_subset.sample(
-    #         n=min(n_samples, len(df_unique_prods_subset)), random_state=42
-    #     )
-    #     df_unique_prods_subset.drop(df_test.index, inplace=True)
-    #
-    #     # Join again to get training and validation sets
-    #     df_subset = pd.concat([df_subset, df_test], ignore_index=True)
-    #     df_valid = df_subset.sample(n=n_samples, random_state=42)
-    #     df_subset.drop(df_valid.index, inplace=True)
-    #
-    #     splits['train'] = pd.concat([splits['train'], df_subset], ignore_index=True)
-    #     splits["valid"] = pd.concat([splits["valid"], df_valid], ignore_index=True)
-    #     splits["test"] = pd.concat([splits["test"], df_test], ignore_index=True)
+        # Join again to get training and validation sets
+        df_subset = df_subset._append(df_unique_prods_subset)
+
+        df_valid = df_subset.sample(n=n_samples, random_state=42)
+        df_subset.drop(df_valid.index, inplace=True)
+
+        splits["train"] = splits["train"]._append(df_subset, ignore_index=True)
+        splits["valid"] = splits["valid"]._append(df_valid, ignore_index=True)
+        splits["test"] = splits["test"]._append(df_test, ignore_index=True)
 
     for key, value in splits.items():
         value["reactants"].to_csv(
@@ -228,15 +199,15 @@ def write_splits(df: pd.DataFrame, ec_level: int, output_dir: Path) -> None:
     help="Wheter to split reactions with multiple products into multiple reactions with one product",
 )
 def main(
-        input_files: str,
-        output_path: str,
-        remove_patterns_path: str,
-        remove_molecules_path: str,
-        ec_levels: Tuple[int, ...],
-        max_products: int,
-        min_atom_count: int,
-        bi_directional: bool,
-        split_products: bool,
+    input_files: str,
+    output_path: str,
+    remove_patterns_path: str,
+    remove_molecules_path: str,
+    ec_levels: Tuple[int, ...],
+    max_products: int,
+    min_atom_count: int,
+    bi_directional: bool,
+    split_products: bool,
 ):
     disable_rdkit_logging()
     remove_patterns = []
@@ -311,8 +282,8 @@ def main(
         rxn
         for rxn in enzymatic_reactions
         if len(rxn.reactants) > 0
-           and len(rxn.products) <= max_products
-           and len(rxn.products) > 0
+        and len(rxn.products) <= max_products
+        and len(rxn.products) > 0
     ]
     print("Done.\n")
 
@@ -390,7 +361,7 @@ def main(
         df_tmp.reactants = df_tmp.reactants.str.strip()
         df_tmp.products = df_tmp.products.str.strip()
 
-        parent_dir = Path(output_path)
+        parent_dir = Path(output_path, f"experiments/{ec_level}")
         parent_dir.mkdir(parents=True, exist_ok=True)
 
         write_splits(df_tmp, ec_level, parent_dir)
