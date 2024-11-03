@@ -196,9 +196,9 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     # Training arguments
     output_dir = f"results/{run_name}"
     if not mix:
-        num_train_epochs = 100
+        num_train_epochs = 1000
     else:
-        num_train_epochs = 5
+        num_train_epochs = 50
 
     training_args = TrainingArguments(
         output_dir=output_dir,
@@ -224,7 +224,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         run_name=run_name,
         learning_rate=1e-4,
 
-        save_safetensors=False
+        save_safetensors=False,
+        resume_from_checkpoint=True,
 
     )
 
