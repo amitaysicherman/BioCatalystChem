@@ -258,7 +258,7 @@ if __name__ == '__main__':
     parser.add_argument("--regpre", type=int, default=0)
     parser.add_argument("--mix", type=int, default=0)
     parser.add_argument("--lora", type=int, default=0)
-    parser.add_argument("--lora_d", type=int, default=8)
+    parser.add_argument("--lora_d", type=int, default=64)
 
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
