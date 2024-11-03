@@ -1,4 +1,6 @@
 from tqdm import tqdm
+import sys
+sys.path.append("../")
 from preprocessing.build_tokenizer import redo_ec_split
 from preprocessing.ec_to_vec import EC2Vec
 from preprocessing.dock import get_reaction_attention_emd
