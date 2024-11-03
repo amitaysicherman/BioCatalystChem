@@ -108,20 +108,23 @@ def write_splits(df: pd.DataFrame, ec_level: int, output_dir: Path) -> None:
         Path(output_dir, "combined.txt"), header=False, index=False
     )
 
-    prod_val_cnts = df_internal.products.value_counts()
-    df_internal = df_internal[
-        df_internal.products.isin(prod_val_cnts.index[prod_val_cnts.le(5)])
-    ]
-
-    reactants_val_cnts = df_internal.reactants.value_counts()
-    df_internal = df_internal[
-        df_internal.reactants.isin(reactants_val_cnts.index[reactants_val_cnts.le(1)])
-    ]
-
+    # prod_val_cnts = df_internal.products.value_counts()
+    # df_internal = df_internal[
+    #     df_internal.products.isin(prod_val_cnts.index[prod_val_cnts.le(5)])
+    # ]
+    #
+    # reactants_val_cnts = df_internal.reactants.value_counts()
+    # df_internal = df_internal[
+    #     df_internal.reactants.isin(reactants_val_cnts.index[reactants_val_cnts.le(1)])
+    # ]
+    #
     ec_val_cnts = df_internal.ec.value_counts()
+    l_before = len(df_internal)
     df_internal = df_internal[
-        df_internal.ec.isin(ec_val_cnts.index[ec_val_cnts.le(25)])
+        df_internal.ec.isin(ec_val_cnts.index[ec_val_cnts.le(50)])
     ]
+    l_after = len(df_internal)
+    print(f"Removed {l_before - l_after} reactions with less than 50 occurrences.")
 
     # groups = [group for _, group in df_internal.groupby('ec_3')]
     # np.random.shuffle(groups)
