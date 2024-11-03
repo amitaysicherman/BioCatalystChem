@@ -1,6 +1,4 @@
 from tqdm import tqdm
-import sys
-sys.path.append("../")
 from preprocessing.build_tokenizer import redo_ec_split
 from preprocessing.ec_to_vec import EC2Vec
 from preprocessing.dock import get_reaction_attention_emd
@@ -44,9 +42,9 @@ for split in ["test", "train", "valid"]:
     print(
         f"Removed {removed_lines} samples (out of {len(first_src_lines)})[{removed_lines / len(first_src_lines) * 100}%] from {split}")
 
-    with open(f"{input_base}/src-{split}.txt", "w") as f:
+    with open(f"{input_base}/src-{split}_u.txt", "w") as f:
         for line in final_src_lines:
             f.write(line + "\n")
-    with open(f"{input_base}/tgt-{split}.txt", "w") as f:
+    with open(f"{input_base}/tgt-{split}_u.txt", "w") as f:
         for line in final_tgt_lines:
             f.write(line + "\n")
