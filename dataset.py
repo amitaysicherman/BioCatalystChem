@@ -106,7 +106,7 @@ class SeqToSeqDataset(Dataset):
 
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
         if self.ec_map is not None:
-            ec_lines = [self.ec_map[(src, tgt)] for src, tgt in zip(src_lines, tgt_lines)]
+            ec_lines = [self.ec_map[(src.split("|")[0], tgt)] for src, tgt in zip(src_lines, tgt_lines)]
         else:
             ec_lines = [0] * len(src_lines)
 
