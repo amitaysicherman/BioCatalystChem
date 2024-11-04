@@ -32,9 +32,12 @@ def name_to_args(name):
         "n_hierarchical_clusters": None,
         "n_pca_components": None,
         "n_clusters_pca": None,
-        "alpha": None
+        "alpha": None,
+        'addec': False
     }
-    if name=="uspto":
+    name = name.replace("_mix", "").replace("_nopre", "").replace("_regpre", "")
+
+    if name == "uspto":
         args["ec_type"] = ECType.NO_EC
         return args
 
@@ -64,6 +67,9 @@ def name_to_args(name):
     else:
         # Extract lookup_len from the name if no quantization is used
         args["lookup_len"] = int(name.split("_")[-1])
+    if "plus" in name:
+        args["addec"] = True
+
     return args
 
 
@@ -215,4 +221,3 @@ if __name__ == "__main__":
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
         f.write(run_name + args.split + "," + best_val_cp + "," + ",".join(
             [str(correct_count[i]) for i in correct_count]) + "\n")
-
