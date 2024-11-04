@@ -82,10 +82,13 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
     return Chem.MolToSmiles(mol, canonical=True)
 
 
-def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10, fast=0, save_file=None):
-    correct_count = {i: 0 for i in range(1, k + 1)}
+def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10, fast=0, save_file=None,
+                 all_ec=None):
+    correct_count = {ec: {i: 0 for i in range(1, k + 1)} for ec in set(all_ec)}
+    ec_count = {ec: 0 for ec in set(all_ec)}
     pbar = tqdm(enumerate(gen_dataloader), total=len(gen_dataloader))
     for i, batch in pbar:
+        ec = all_ec[i]
         input_ids = batch['input_ids'].to(model.device)
         attention_mask = batch['attention_mask'].to(model.device).bool()
         labels = batch['labels'].to(model.device)
@@ -103,7 +106,8 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             label = labels[mask]
             pred = tokenizer.decode(pred, skip_special_tokens=True)
             label = tokenizer.decode(label, skip_special_tokens=True)
-            correct_count[1] += (pred == label)
+            correct_count[ec][1] += (pred == label)
+            ec_count[ec] += 1
             y = tokenizer.decode(labels[labels != -100], skip_special_tokens=True)
             x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
             with open(save_file, "a") as f:
@@ -120,11 +124,18 @@ def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, 
             preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs]
             for j in range(1, k + 1):
                 if labels in preds_list[:j]:
-                    correct_count[j] += 1
-        msg = " | ".join([f"{j}:{correct_count[j] / (i + 1):.2f}" for j in range(1, k + 1)])
-        msg = f'{i + 1}/{len(gen_dataloader)} | {msg}'
+                    correct_count[ec][j] += 1
+            ec_count[ec] += 1
+        msg = ""
+        for ec in correct_count:
+            msg += f"[{ec}: "
+            for i in range(1, k + 1):
+                if ec_count[ec] == 0:
+                    continue
+                msg += f"{i}:{correct_count[ec][i] / ec_count[ec]:.2f} "
+            msg += f"|{ec_count[ec]:.2f}] "
         pbar.set_description(msg)
-    return {i: correct_count[i] / len(gen_dataloader) for i in correct_count}
+    return correct_count, ec_count
 
 
 def get_last_cp(base_dir):
@@ -155,12 +166,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", default="pretrained_5", type=str)
     parser.add_argument("--split", default="valid", type=str)
-    parser.add_argument("--fast", default=0, type=int)
+    parser.add_argument("--fast", default=1, type=int)
     parser.add_argument("--k", default=5, type=int)
+    parser.add_argument("--per_level", default=1, type=int)
 
     args = parser.parse_args()
     run_name = args.run_name
-
     run_args = name_to_args(run_name)
     print("---" * 10)
     print(f"Run: {run_name}")
@@ -174,6 +185,7 @@ if __name__ == "__main__":
     n_clusters_pca = run_args["n_clusters_pca"]
     addec = run_args["addec"]
     alpha = run_args["alpha"]
+    per_level = args.per_level
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
 
@@ -206,6 +218,15 @@ if __name__ == "__main__":
         print("Loading custom model", best_val_cp)
         model = CustomT5Model.from_pretrained(best_val_cp, lookup_len=lookup_len)
     gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False)
+    all_ec = gen_dataset.all_ecs
+    if all_ec is None or per_level == 0:
+        all_ec = [0] * len(gen_dataset)
+    else:
+        all_ec = [".".join(ec.split(".")[:per_level]) for ec in all_ec]
+
+    all_ec=all_ec[:100]
+    gen_dataset.data=gen_dataset.data[:100]
+
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
     model.to(device)
@@ -213,14 +234,21 @@ if __name__ == "__main__":
 
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
-    correct_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast,
-                                 save_file=f"results/full/{run_name}.csv")
+    correct_count, ec_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast,
+                                           save_file=f"results/full/{run_name}.csv", all_ec=all_ec)
     print(f"Run: {run_name}")
-    for k, acc in correct_count.items():
-        print(f"{k}: {acc}")
-
+    for ec in correct_count:
+        for i in range(1, args.k + 1):
+            if ec_count[ec] == 0:
+                continue
+            print(f"{ec}: {i}: {correct_count[ec][i] / ec_count[ec]:.2f}")
+        print(f"{ec}: {ec_count[ec]:.2f}")
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
-        f.write(run_name + args.split + "," + best_val_cp + "," + ",".join(
-            [str(correct_count[i]) for i in correct_count]) + "\n")
+        for ec in correct_count:
+            for i in range(1, args.k + 1):
+                if ec_count[ec] == 0:
+                    continue
+                f.write(
+                    run_name + "," + args.split + "," + ec + f",{i},{correct_count[ec][i] / ec_count[ec]:.2f},{ec_count[ec]}\n")
