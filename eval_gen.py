@@ -172,6 +172,7 @@ if __name__ == "__main__":
     n_hierarchical_clusters = run_args["n_hierarchical_clusters"]
     n_pca_components = run_args["n_pca_components"]
     n_clusters_pca = run_args["n_clusters_pca"]
+    addec = run_args["addec"]
     alpha = run_args["alpha"]
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
@@ -181,6 +182,8 @@ if __name__ == "__main__":
         ecreact_dataset = ecreact_dataset.replace("datasets/", "")
     else:
         ecreact_dataset = "ecreact/level4"
+    if addec:
+        ecreact_dataset += "_plus"
 
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
 
@@ -192,7 +195,7 @@ if __name__ == "__main__":
                                               n_clusters_pca=n_clusters_pca,
                                               ).get_all_tokens()
         tokenizer.add_tokens(new_tokens)
-    elif ec_type == ECType.PAPER:
+    elif ec_type == ECType.PAPER or addec:
         new_tokens = get_ec_tokens()
         tokenizer.add_tokens(new_tokens)
     best_val_cp = get_best_val_cp(run_name)
