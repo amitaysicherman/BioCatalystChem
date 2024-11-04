@@ -106,9 +106,9 @@ class SeqToSeqDataset(Dataset):
 
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
         if self.ec_map is not None:
-            ec_lines = [self.ec_map[(src.split("|")[0], tgt)] for src, tgt in zip(src_lines, tgt_lines)]
+            save_ec_lines = [self.ec_map[(src.split("|")[0], tgt)] for src, tgt in zip(src_lines, tgt_lines)]
         else:
-            ec_lines = [0] * len(src_lines)
+            save_ec_lines = [0] * len(src_lines)
 
         if have_ec:
             if self.ec_type == ECType.NO_EC:
@@ -134,7 +134,7 @@ class SeqToSeqDataset(Dataset):
                 src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
                 tgt_lines = [tgt_lines[i] for i in range(len(tgt_lines)) if not_none_mask[i]]
                 emb_lines = [emb_lines[i] for i in range(len(emb_lines)) if not_none_mask[i]]
-                ec_lines = [ec_lines[i] for i in range(len(ec_lines)) if not_none_mask[i]]
+                save_ec_lines = [save_ec_lines[i] for i in range(len(save_ec_lines)) if not_none_mask[i]]
                 len_after = len(src_lines)
                 print(f"Removed {len_before - len_after} samples, total: {len_after}, {len_before}")
 
@@ -142,8 +142,8 @@ class SeqToSeqDataset(Dataset):
             src_lines = src_lines[:1]
             tgt_lines = tgt_lines[:1]
             emb_lines = emb_lines[:1]
-            ec_lines = ec_lines[:1]
-        assert len(src_lines) == len(tgt_lines) == len(emb_lines) == len(ec_lines)
+            ec_lines = save_ec_lines[:1]
+        assert len(src_lines) == len(tgt_lines) == len(emb_lines) == len(save_ec_lines)
         skip_count = 0
         data = []
         ec_final = []
@@ -156,7 +156,7 @@ class SeqToSeqDataset(Dataset):
             label[label_mask == 0] = -100
             emb = emb_lines[i]
             data.append((input_id, attention_mask, label, emb))
-            ec_final.append(ec_lines[i])
+            ec_final.append(save_ec_lines[i])
         for _ in range(w):
             self.data.extend(data)
             self.all_ecs.extend(ec_final)

@@ -223,7 +223,6 @@ if __name__ == "__main__":
     all_ec = gen_dataset.all_ecs
     if per_level != 0:
         all_ec = [" ".join(ec.split(" ")[:per_level]) for ec in all_ec]
-
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
     model.to(device)
