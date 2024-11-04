@@ -35,7 +35,10 @@ def name_to_args(name):
         "alpha": None,
         'addec': False
     }
-    name = name.replace("_mix", "").replace("_nopre", "").replace("_regpre", "")
+    if "plus" in name:
+        args["addec"] = True
+
+    name = name.replace("_mix", "").replace("_nopre", "").replace("_regpre", "").replace("_plus", "")
 
     if name == "uspto":
         args["ec_type"] = ECType.NO_EC
@@ -67,8 +70,6 @@ def name_to_args(name):
     else:
         # Extract lookup_len from the name if no quantization is used
         args["lookup_len"] = int(name.split("_")[-1])
-    if "plus" in name:
-        args["addec"] = True
 
     return args
 
