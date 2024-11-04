@@ -13,6 +13,19 @@ import random
 import os
 
 
+def get_ec_map(split):
+    with open(f"datasets/ecreact/level4/src-{split}.txt") as f:
+        src_lines = f.read().splitlines()
+        src_ec = [x.split("|") for x in src_lines]
+        src_lines = [x[0] for x in src_ec]
+        ec_lines = [x[1] for x in src_ec]
+    with open(f"datasets/ecreact/level4/tgt-{split}.txt") as f:
+        tgt_lines = f.read().splitlines()
+    assert len(src_lines) == len(tgt_lines) == len(ec_lines)
+    mapping = {(src, tgt): ec for src, tgt, ec in zip(src_lines, tgt_lines, ec_lines)}
+    return mapping
+
+
 class ECType(Enum):
     NO_EC = 0
     PAPER = 1
@@ -39,7 +52,7 @@ def get_ec_type(use_ec, ec_split, dae):
 
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
-                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False):
+                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False,save_ec=False):
         self.max_length = max_length
         self.tokenizer = tokenizer
         self.addec = addec
@@ -48,6 +61,11 @@ class SeqToSeqDataset(Dataset):
         self.ec_type = ec_type
         self.lookup_embeddings = []
         self.alpha = alpha
+        if save_ec:
+            self.ec_map = get_ec_map(split)
+            self.all_ecs = []
+        else:
+            self.ec_map = None
         if ec_type == ECType.PRETRAINED:
             self.ec_to_vec = EC2Vec(load_model=False)
         if ec_type == ECType.DAE:
@@ -87,6 +105,11 @@ class SeqToSeqDataset(Dataset):
         assert len(src_lines) == len(tgt_lines)
 
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
+        if self.ec_map is not None:
+            ec_lines = [self.ec_map[(src, tgt)] for src, tgt in zip(src_lines, tgt_lines)]
+        else:
+            ec_lines = [None] * len(src_lines)
+
         if have_ec:
             if self.ec_type == ECType.NO_EC:
                 src_lines = [remove_ec(text) for text in src_lines]
@@ -111,6 +134,7 @@ class SeqToSeqDataset(Dataset):
                 src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
                 tgt_lines = [tgt_lines[i] for i in range(len(tgt_lines)) if not_none_mask[i]]
                 emb_lines = [emb_lines[i] for i in range(len(emb_lines)) if not_none_mask[i]]
+                ec_lines = [ec_lines[i] for i in range(len(ec_lines)) if not_none_mask[i]]
                 len_after = len(src_lines)
                 print(f"Removed {len_before - len_after} samples, total: {len_after}, {len_before}")
 
@@ -118,9 +142,11 @@ class SeqToSeqDataset(Dataset):
             src_lines = src_lines[:1]
             tgt_lines = tgt_lines[:1]
             emb_lines = emb_lines[:1]
-
+            ec_lines = ec_lines[:1]
+        assert len(src_lines) == len(tgt_lines) == len(emb_lines) == len(ec_lines)
         skip_count = 0
         data = []
+        ec_final = []
         for i in tqdm(range(len(src_lines))):
             input_id, attention_mask = encode_eos_pad(self.tokenizer, src_lines[i], self.max_length)
             label, label_mask = encode_eos_pad(self.tokenizer, tgt_lines[i], self.max_length)
@@ -130,8 +156,10 @@ class SeqToSeqDataset(Dataset):
             label[label_mask == 0] = -100
             emb = emb_lines[i]
             data.append((input_id, attention_mask, label, emb))
+            ec_final.append(ec_lines[i])
         for _ in range(w):
             self.data.extend(data)
+            self.all_ecs.extend(ec_final)
 
     def __len__(self):
         return len(self.data)
@@ -141,4 +169,3 @@ class SeqToSeqDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.data_to_dict(self.data[idx])
-
