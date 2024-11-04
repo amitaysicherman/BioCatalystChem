@@ -217,12 +217,14 @@ if __name__ == "__main__":
     else:
         print("Loading custom model", best_val_cp)
         model = CustomT5Model.from_pretrained(best_val_cp, lookup_len=lookup_len)
-    gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,save_ec=True)
+    gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
+                                  save_ec=True)
     all_ec = gen_dataset.all_ecs
-    if all_ec is None or per_level == 0:
-        all_ec = [0] * len(gen_dataset)
-    else:
+    if per_level != 0:
         all_ec = [".".join(ec.split(".")[:per_level]) for ec in all_ec]
+
+    all_ec=all_ec[:100]
+    gen_dataset.data=gen_dataset.data[:100]
 
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 

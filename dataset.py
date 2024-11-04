@@ -108,7 +108,7 @@ class SeqToSeqDataset(Dataset):
         if self.ec_map is not None:
             ec_lines = [self.ec_map[(src, tgt)] for src, tgt in zip(src_lines, tgt_lines)]
         else:
-            ec_lines = [None] * len(src_lines)
+            ec_lines = [0] * len(src_lines)
 
         if have_ec:
             if self.ec_type == ECType.NO_EC:
