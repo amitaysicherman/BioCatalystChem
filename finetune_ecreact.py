@@ -165,18 +165,18 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
     if mix:
         train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[20, 1], tokenizer=tokenizer,
-                                        ec_type=ec_type, DEBUG=DEBUG, alpha=alpha)
+                                        ec_type=ec_type, DEBUG=DEBUG, alpha=alpha, addec=addec)
     else:
         train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, alpha=alpha)
+                                        DEBUG=DEBUG, alpha=alpha, addec=addec)
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha)
+                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
     val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, sample_size=1000, alpha=alpha)
+                                        DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
     test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha)
+                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
     test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha)
+                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
 
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset,
                      "uspto": test_uspto_dataset}

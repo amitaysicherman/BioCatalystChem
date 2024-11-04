@@ -39,9 +39,10 @@ def get_ec_type(use_ec, ec_split, dae):
 
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
-                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5):
+                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False):
         self.max_length = max_length
         self.tokenizer = tokenizer
+        self.addec = addec
         self.data = []
         self.DEBUG = DEBUG
         self.ec_type = ec_type
@@ -91,18 +92,20 @@ class SeqToSeqDataset(Dataset):
                 src_lines = [remove_ec(text) for text in src_lines]
                 tgt_lines = [remove_ec(text) for text in tgt_lines]
             elif self.ec_type == ECType.PRETRAINED or self.ec_type == ECType.DAE:
+                if self.addec:
+                    first_src_lines = src_lines[:]
                 src_ec = [redo_ec_split(text, True) for text in src_lines]
                 src_lines = [x[0] for x in src_ec]
                 ec_lines = [x[1] for x in src_ec]
                 if self.ec_type == ECType.PRETRAINED:
                     emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
-
                 else:
                     emb_lines = [
                         get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
                         for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
                     ]
-
+                if self.addec:
+                    src_lines = first_src_lines
                 not_none_mask = [x is not None for x in emb_lines]
                 len_before = len(src_lines)
                 src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
