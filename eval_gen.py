@@ -221,7 +221,7 @@ if __name__ == "__main__":
                                   save_ec=True)
     all_ec = gen_dataset.all_ecs
     if per_level != 0:
-        all_ec = [".".join(ec.split(".")[:per_level]) for ec in all_ec]
+        all_ec = [" ".join(ec.split(" ")[:per_level]) for ec in all_ec]
 
     all_ec=all_ec[:100]
     gen_dataset.data=gen_dataset.data[:100]
