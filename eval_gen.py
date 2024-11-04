@@ -224,9 +224,6 @@ if __name__ == "__main__":
     else:
         all_ec = [".".join(ec.split(".")[:per_level]) for ec in all_ec]
 
-    all_ec=all_ec[:100]
-    gen_dataset.data=gen_dataset.data[:100]
-
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
     model.to(device)
