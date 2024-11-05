@@ -20,8 +20,6 @@ RDLogger.DisableLog('rdApp.*')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from enum import Enum
-
 
 def name_to_args(name):
     # Initialize default values for the arguments
@@ -83,7 +81,8 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
     return Chem.MolToSmiles(mol, canonical=True)
 
 
-def eval_dataset(model: T5ForConditionalGeneration, gen_dataloader: DataLoader, k=10, fast=0, save_file=None,
+def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokenizerFast, gen_dataloader: DataLoader,
+                 k=10, fast=0, save_file=None,
                  all_ec=None):
     correct_count = {ec: {i: 0 for i in range(1, k + 1)} for ec in set(all_ec)}
     ec_count = {ec: 0 for ec in set(all_ec)}
@@ -163,21 +162,8 @@ def get_best_val_cp(run_name):
     return trainer_state["best_model_checkpoint"]
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--run_name", default="pretrained_5", type=str)
-    parser.add_argument("--split", default="valid", type=str)
-    parser.add_argument("--fast", default=1, type=int)
-    parser.add_argument("--k", default=5, type=int)
-    parser.add_argument("--per_level", default=1, type=int)
-
-    args = parser.parse_args()
-    run_name = args.run_name
+def load_model_tokenizer_dataest(run_name, split):
     run_args = name_to_args(run_name)
-    print("---" * 10)
-    print(f"Run: {run_name}")
-    print(run_args)
-    print("---" * 10)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
     prequantization = run_args["prequantization"]
@@ -186,7 +172,6 @@ if __name__ == "__main__":
     n_clusters_pca = run_args["n_clusters_pca"]
     addec = run_args["addec"]
     alpha = run_args["alpha"]
-    per_level = args.per_level
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
 
@@ -219,22 +204,46 @@ if __name__ == "__main__":
     else:
         print("Loading custom model", best_val_cp)
         model = CustomT5Model.from_pretrained(best_val_cp, lookup_len=lookup_len)
-    gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
+    gen_dataset = SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
                                   save_ec=True, addec=addec, alpha=alpha)
-    all_ec = gen_dataset.all_ecs
+    model.to(device)
+    model.eval()
+    return model, tokenizer, gen_dataset
+
+
+def get_ec_from_df(dataset, per_level):
+    all_ec = dataset.all_ecs
     if per_level != 0:
         all_ec = [" ".join(ec.strip().split(" ")[:per_level]) for ec in all_ec]
     else:
         all_ec = [0] * len(all_ec)
-    gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
+    return all_ec
 
-    model.to(device)
-    model.eval()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run_name", default="pretrained_5", type=str)
+    parser.add_argument("--split", default="valid", type=str)
+    parser.add_argument("--fast", default=1, type=int)
+    parser.add_argument("--k", default=5, type=int)
+    parser.add_argument("--per_level", default=1, type=int)
+
+    args = parser.parse_args()
+    run_name = args.run_name
+    per_level = args.per_level
+
+    print("---" * 10)
+    print(f"Run: {run_name}")
+    print("---" * 10)
+
+    model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split)
+    all_ec = get_ec_from_df(gen_dataset, per_level)
+    gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
     with torch.no_grad():
-        correct_count, ec_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast,
+        correct_count, ec_count = eval_dataset(model, tokenizer, gen_dataloader, k=args.k, fast=args.fast,
                                                save_file=f"results/full/{run_name}.csv", all_ec=all_ec)
     print(f"Run: {run_name}")
     for ec in correct_count:
