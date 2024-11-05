@@ -243,10 +243,11 @@ if __name__ == "__main__":
         print(f"{ec}: {ec_count[ec]:.2f}")
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
+    config_cols = run_name + "," + args.split + "," + str(args.k) + "," + str(args.fast) + "," + str(args.per_level)
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
         for ec in correct_count:
             for i in range(1, args.k + 1):
                 if ec_count[ec] == 0:
                     continue
                 f.write(
-                    run_name + "," + args.split + "," + ec + f",{i},{correct_count[ec][i] / ec_count[ec]:.2f},{ec_count[ec]}\n")
+                    config_cols + "," + ec + f",{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]}\n")
