@@ -66,8 +66,11 @@ def main(retro):
     test_small_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, DEBUG=DEBUG,
                                          sample_size=1000,retro=retro)
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset}
-    run_name = "uspto_a40"
-    output_dir = f"results/{run_name}"
+    run_name = "uspto"
+    if retro:
+        output_dir = f"results_retro/{run_name}"
+    else:
+        output_dir = f"results/{run_name}"
 
     training_args = TrainingArguments(
         output_dir=output_dir,
