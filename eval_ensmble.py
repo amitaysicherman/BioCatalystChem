@@ -9,14 +9,13 @@ RDLogger.DisableLog('rdApp.*')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from eval_gen import load_model_tokenizer_dataest, get_ec_from_df,tokens_to_canonical_smiles
+from eval_gen import load_model_tokenizer_dataest, get_ec_from_df, tokens_to_canonical_smiles
 
 import torch
 from tqdm import tqdm
 
 
 def eval_ensemble(models, tokenizers, dataloaders, max_length=200):
-
     pbar = tqdm(enumerate(zip(*dataloaders)), total=len(dataloaders[0]))
 
     for i, batches in pbar:
@@ -67,17 +66,17 @@ if __name__ == "__main__":
     parser.add_argument("--per_level", default=1, type=int)
 
     args = parser.parse_args()
-    run_name = args.run_name
+    run_names = args.run_names
     per_level = args.per_level
 
     print("---" * 10)
-    print(f"Run: {run_name}")
+    print(f"Run: {run_names}")
     print("---" * 10)
     models, tokenizers, dataloaders = [], [], []
     dataset_len = None
     all_ec = None
     for run_name in args.run_names:
-        model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split)
+        model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, same_length=True)
         models.append(model)
         tokenizers.append(tokenizer)
         if dataset_len is None:

@@ -162,7 +162,18 @@ def get_best_val_cp(run_name):
     return trainer_state["best_model_checkpoint"]
 
 
-def load_model_tokenizer_dataest(run_name, split):
+def args_to_lens(args):
+    length = 200
+    if args['ec_type'] == ECType.PAPER:
+        length += 5
+    if args['prequantization']:
+        length += args['n_hierarchical_clusters'] + args['n_pca_components'] + 1
+    if args['addec']:
+        length += 5
+    return length
+
+
+def load_model_tokenizer_dataest(run_name, split, same_length=False):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
@@ -204,8 +215,12 @@ def load_model_tokenizer_dataest(run_name, split):
     else:
         print("Loading custom model", best_val_cp)
         model = CustomT5Model.from_pretrained(best_val_cp, lookup_len=lookup_len)
+    if same_length:
+        max_length = args_to_lens(run_args)
+    else:
+        max_length = 200
     gen_dataset = SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
-                                  save_ec=True, addec=addec, alpha=alpha)
+                                  save_ec=True, addec=addec, alpha=alpha, max_length=max_length)
     model.to(device)
     model.eval()
     return model, tokenizer, gen_dataset
