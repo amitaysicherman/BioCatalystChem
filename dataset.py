@@ -52,9 +52,10 @@ def get_ec_type(use_ec, ec_split, dae):
 
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
-                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False,save_ec=False):
+                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False,save_ec=False,retro=False):
         self.max_length = max_length
         self.tokenizer = tokenizer
+        self.retro = retro
         self.addec = addec
         self.data = []
         self.DEBUG = DEBUG
@@ -101,7 +102,8 @@ class SeqToSeqDataset(Dataset):
 
         with open(f"{input_base}/tgt-{split}.txt") as f:
             tgt_lines = f.read().splitlines()
-
+        if self.retro:
+            src_lines, tgt_lines = tgt_lines, src_lines
         assert len(src_lines) == len(tgt_lines)
 
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)

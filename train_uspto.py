@@ -1,4 +1,4 @@
-# sbatch --gres=gpu:A40:1 --mem=128G --time=7-00 --wrap="python train_uspto.py"
+# sbatch --gres=gpu:A100:1 --mem=128G --time=7-00 --wrap="python train_uspto.py"
 from transformers import (
     T5Config,
     T5ForConditionalGeneration,
@@ -54,17 +54,17 @@ def get_tokenizer_and_model():
     return tokenizer, model
 
 
-def main():
+def main(retro):
     tokenizer, model = get_tokenizer_and_model()
 
-    train_dataset = SeqToSeqDataset(["uspto"], "train", weights=[1], tokenizer=tokenizer, DEBUG=DEBUG)
+    train_dataset = SeqToSeqDataset(["uspto"], "train", weights=[1], tokenizer=tokenizer, DEBUG=DEBUG,retro=retro)
     eval_split = "valid" if not DEBUG else "train"
     train_small_dataset = SeqToSeqDataset(["uspto"], "train", weights=[1], tokenizer=tokenizer, DEBUG=DEBUG,
-                                          sample_size=1000)
+                                          sample_size=1000,retro=retro)
     val_small_dataset = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, DEBUG=DEBUG,
-                                        sample_size=1000)
+                                        sample_size=1000,retro=retro)
     test_small_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, DEBUG=DEBUG,
-                                         sample_size=1000)
+                                         sample_size=1000,retro=retro)
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset}
     run_name = "uspto_a40"
     output_dir = f"results/{run_name}"
@@ -111,6 +111,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--retro", action="store_true")
+
     args = parser.parse_args()
     DEBUG = args.debug
-    main()
+    main(args.retro)

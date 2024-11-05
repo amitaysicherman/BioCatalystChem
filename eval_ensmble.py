@@ -15,10 +15,10 @@ import torch
 from tqdm import tqdm
 
 
-def eval_ensemble(models, tokenizers, dataloaders,all_ecs):
+def eval_ensemble(models, tokenizers, dataloaders,all_ec):
     ens_scores = []
-    for model, tokenizer, dataloader,ec in zip(models, tokenizers, dataloaders,all_ecs):
-        correct_count, ec_count, all_scores=eval_dataset(model, tokenizer, dataloader, fast=1,all_ec=ec,return_all=True)
+    for model, tokenizer, dataloader in zip(models, tokenizers, dataloaders):
+        correct_count, ec_count, all_scores=eval_dataset(model, tokenizer, dataloader, fast=1,all_ec=all_ec,return_all=True)
         ens_scores.append(all_scores)
     ens_scores = torch.stack(ens_scores, dim=1)
     ens_scores = ens_scores.mean(dim=1).mean(dim=0)
@@ -59,4 +59,4 @@ if __name__ == "__main__":
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
     with torch.no_grad():
-        eval_ensemble(models, tokenizers, dataloaders,all_ecs=all_ec)
+        eval_ensemble(models, tokenizers, dataloaders,all_ec=all_ec)
