@@ -83,17 +83,19 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
 
 def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokenizerFast, gen_dataloader: DataLoader,
                  k=10, fast=0, save_file=None,
-                 all_ec=None):
+                 all_ec=None, return_all=False):
     correct_count = {ec: {i: 0 for i in range(1, k + 1)} for ec in set(all_ec)}
     ec_count = {ec: 0 for ec in set(all_ec)}
+    if return_all:
+        all_scores = []
     pbar = tqdm(enumerate(gen_dataloader), total=len(gen_dataloader))
+
     for i, batch in pbar:
         ec = all_ec[i]
         input_ids = batch['input_ids'].to(model.device)
         attention_mask = batch['attention_mask'].to(model.device).bool()
         labels = batch['labels'].to(model.device)
         emb = batch['emb'].to(model.device).float()
-        res = 0
         if (emb == 0).all():
             emb_args = {}
         else:
@@ -107,6 +109,8 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
             pred = tokenizer.decode(pred, skip_special_tokens=True)
             label = tokenizer.decode(label, skip_special_tokens=True)
             correct_count[ec][1] += (pred == label)
+            if return_all:
+                all_scores.append((pred == label))
             ec_count[ec] += 1
             y = tokenizer.decode(labels[labels != -100], skip_special_tokens=True)
             x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
@@ -135,6 +139,8 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
                 msg += f"{i}:{correct_count[ec][i] / ec_count[ec]:.2f} "
             msg += f"|{ec_count[ec]:.2f}] "
         pbar.set_description(msg)
+    if return_all:
+        return correct_count, ec_count, all_scores
     return correct_count, ec_count
 
 
