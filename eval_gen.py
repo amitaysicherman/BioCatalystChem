@@ -193,10 +193,11 @@ if __name__ == "__main__":
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
                                                 n_pca_components, n_clusters_pca, alpha)
         ecreact_dataset = ecreact_dataset.replace("datasets/", "")
+        if addec:
+            ecreact_dataset += "_plus"
+
     else:
         ecreact_dataset = "ecreact/level4"
-    if addec:
-        ecreact_dataset += "_plus"
 
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
 
