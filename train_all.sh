@@ -43,10 +43,7 @@ IFS='|' read -ra config_array <<< "\$configs"
 
 # Check if the index is valid and run the python script with the selected configuration
 if [ "\$index" -ge 0 ] && [ "\$index" -lt "\${#config_array[@]}" ]; then
-  python finetune_ecreact.py \${config_array[\$index]} --fast 0
-  python finetune_ecreact.py \${config_array[\$index]} --fast 1
-  python finetune_ecreact.py \${config_array[\$index]} --fast 0 --split test
-  python finetune_ecreact.py \${config_array[\$index]} --fast 1 --split test
+  python finetune_ecreact.py \${config_array[\$index]}
 else
   echo "Invalid SLURM_ARRAY_TASK_ID: \$SLURM_ARRAY_TASK_ID"
 fi

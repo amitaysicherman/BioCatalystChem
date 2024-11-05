@@ -220,11 +220,12 @@ if __name__ == "__main__":
         print("Loading custom model", best_val_cp)
         model = CustomT5Model.from_pretrained(best_val_cp, lookup_len=lookup_len)
     gen_dataset = SeqToSeqDataset([ecreact_dataset], args.split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
-                                  save_ec=True)
+                                  save_ec=True, addec=addec, alpha=alpha)
     all_ec = gen_dataset.all_ecs
     if per_level != 0:
         all_ec = [" ".join(ec.strip().split(" ")[:per_level]) for ec in all_ec]
-
+    else:
+        all_ec = [0] * len(all_ec)
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
     model.to(device)
@@ -232,8 +233,9 @@ if __name__ == "__main__":
 
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
-    correct_count, ec_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast,
-                                           save_file=f"results/full/{run_name}.csv", all_ec=all_ec)
+    with torch.no_grad():
+        correct_count, ec_count = eval_dataset(model, gen_dataloader, k=args.k, fast=args.fast,
+                                               save_file=f"results/full/{run_name}.csv", all_ec=all_ec)
     print(f"Run: {run_name}")
     for ec in correct_count:
         for i in range(1, args.k + 1):
