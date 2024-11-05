@@ -209,7 +209,7 @@ if __name__ == "__main__":
                                               n_clusters_pca=n_clusters_pca,
                                               ).get_all_tokens()
         tokenizer.add_tokens(new_tokens)
-    elif ec_type == ECType.PAPER or addec:
+    if ec_type == ECType.PAPER or addec:
         new_tokens = get_ec_tokens()
         tokenizer.add_tokens(new_tokens)
     best_val_cp = get_best_val_cp(run_name)
