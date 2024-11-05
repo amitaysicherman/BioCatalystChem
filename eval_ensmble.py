@@ -34,7 +34,9 @@ def eval_ensemble(models, tokenizers, dataloaders, max_length=200):
                 else:
                     emb_args = {"emb": emb}
 
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask, **emb_args)
+                outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
+                                     max_new_tokens=1, do_sample=False, num_beams=1,
+                                     num_return_sequences=1, **emb_args)
                 logits = outputs.logits[:, -1, :]
                 if ensemble_logits is None:
                     ensemble_logits = logits
