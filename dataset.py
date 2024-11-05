@@ -52,7 +52,7 @@ def get_ec_type(use_ec, ec_split, dae):
 
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
-                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False,save_ec=True,retro=False):
+                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False,save_ec=False,retro=False):
         self.max_length = max_length
         self.tokenizer = tokenizer
         self.retro = retro
@@ -67,6 +67,8 @@ class SeqToSeqDataset(Dataset):
             self.all_ecs = []
         else:
             self.ec_map = None
+            self.all_ecs = []
+
         if ec_type == ECType.PRETRAINED:
             self.ec_to_vec = EC2Vec(load_model=False)
         if ec_type == ECType.DAE:
