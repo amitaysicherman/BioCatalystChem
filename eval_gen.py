@@ -213,7 +213,7 @@ if __name__ == "__main__":
         tokenizer.add_tokens(new_tokens)
     best_val_cp = get_best_val_cp(run_name)
 
-    if (ec_type == ECType.PAPER or ec_type == ec_type.NO_EC) or prequantization:
+    if (ec_type == ECType.PAPER or ec_type == ECType.NO_EC) or prequantization:
         model = T5ForConditionalGeneration.from_pretrained(best_val_cp)
     else:
         print("Loading custom model", best_val_cp)
@@ -223,9 +223,6 @@ if __name__ == "__main__":
     all_ec = gen_dataset.all_ecs
     if per_level != 0:
         all_ec = [" ".join(ec.strip().split(" ")[:per_level]) for ec in all_ec]
-
-    all_ec=all_ec[:100]
-    gen_dataset.data = gen_dataset.data[:100]
 
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
