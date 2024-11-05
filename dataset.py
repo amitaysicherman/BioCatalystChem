@@ -142,7 +142,7 @@ class SeqToSeqDataset(Dataset):
             src_lines = src_lines[:1]
             tgt_lines = tgt_lines[:1]
             emb_lines = emb_lines[:1]
-            ec_lines = save_ec_lines[:1]
+            save_ec_lines = save_ec_lines[:1]
         assert len(src_lines) == len(tgt_lines) == len(emb_lines) == len(save_ec_lines)
         skip_count = 0
         data = []
