@@ -32,6 +32,7 @@ def compute_metrics(eval_pred, tokenizer):
         pred = tokenizer.decode(pred, skip_special_tokens=True)
         is_valid.append(Chem.MolFromSmiles(pred.replace(" ", "")) is not None)
         label = tokenizer.decode(label, skip_special_tokens=True)
+        print(f"Pre: {pred}\nLab: {label}")
         accuracy.append(pred == label)
 
     token_acc = np.mean(token_acc)
@@ -74,7 +75,7 @@ def main(retro):
 
     training_args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=10,
+        num_train_epochs=10 if not DEBUG else 1000,
         warmup_ratio=0.05,
         eval_steps=0.01,
         logging_steps=0.01,

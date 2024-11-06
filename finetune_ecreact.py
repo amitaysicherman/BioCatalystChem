@@ -147,7 +147,7 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora, lora_d, regpre, mix):
+         nopre, lora, lora_d, regpre, mix, batch_size=64, learning_rate=1e-4):
     ec_type = ECType(ec_type)
     tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization=prequantization,
                                                n_hierarchical_clusters=n_hierarchical_clusters,
@@ -172,11 +172,11 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                           DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
     val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
+                                        DEBUG=DEBUG, alpha=alpha, addec=addec)
     test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
     test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
+                                         DEBUG=DEBUG, alpha=alpha, addec=addec)
 
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset,
                      "uspto": test_uspto_dataset}
@@ -191,7 +191,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         run_name += f"_lora_{lora_d}"
     if mix:
         run_name += f"_mix"
-
+    run_name += f"_bs-{batch_size}_lr-{learning_rate}"
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -204,16 +204,16 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         output_dir=output_dir,
         num_train_epochs=num_train_epochs,
         warmup_ratio=0.05,
-        eval_steps=0.01,
-        logging_steps=0.01,
-        save_steps=0.01,
+        eval_steps=0.005,
+        logging_steps=0.005,
+        save_steps=0.005,
         save_total_limit=2,
         save_strategy="steps",
         eval_strategy="steps",
 
-        auto_find_batch_size=True,
-        per_device_train_batch_size=64,
-        per_device_eval_batch_size=64 // 8,
+        auto_find_batch_size=False,
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size // 8,
         eval_accumulation_steps=8,
 
         metric_for_best_model="eval_valid_accuracy",
@@ -222,7 +222,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         report_to='none' if DEBUG else 'tensorboard',
 
         run_name=run_name,
-        learning_rate=1e-4,
+        learning_rate=learning_rate,
 
         save_safetensors=False,
         resume_from_checkpoint=True,
@@ -260,6 +260,8 @@ if __name__ == '__main__':
     parser.add_argument("--mix", type=int, default=0)
     parser.add_argument("--lora", type=int, default=0)
     parser.add_argument("--lora_d", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--learning_rate", type=float, default=1e-4)
 
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
@@ -267,4 +269,5 @@ if __name__ == '__main__':
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
          n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,
-         lora_d=args.lora_d, regpre=args.regpre, mix=args.mix)
+         lora_d=args.lora_d, regpre=args.regpre, mix=args.mix, batch_size=args.batch_size,
+         learning_rate=args.learning_rate)
