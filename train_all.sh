@@ -11,15 +11,15 @@ configs="--ec_type 3 --mix 1 --addec 1 --alpha 10 --batch_size 1024 --learning_r
 --ec_type 3 --mix 1 --addec 1 --alpha 90 --batch_size 1024 --learning_rate 0.001|\
 --ec_type 3 --mix 1 --addec 1 --alpha 90 --batch_size 1024 --learning_rate 0.0001|\
 --ec_type 3 --mix 1 --addec 1 --alpha 90 --batch_size 1024 --learning_rate 0.00001|\
---ec_type 3 --mix 1 --addec 1 --alpha 10 --batch_size 128 --learning_rate 0.001|\
---ec_type 3 --mix 1 --addec 1 --alpha 10 --batch_size 128 --learning_rate 0.0001|\
---ec_type 3 --mix 1 --addec 1 --alpha 10 --batch_size 128 --learning_rate 0.00001|\
---ec_type 3 --mix 1 --addec 1 --alpha 50 --batch_size 128 --learning_rate 0.001|\
---ec_type 3 --mix 1 --addec 1 --alpha 50 --batch_size 128 --learning_rate 0.0001|\
---ec_type 3 --mix 1 --addec 1 --alpha 50 --batch_size 128 --learning_rate 0.00001|\
---ec_type 3 --mix 1 --addec 1 --alpha 90 --batch_size 128 --learning_rate 0.001|\
---ec_type 3 --mix 1 --addec 1 --alpha 90 --batch_size 128 --learning_rate 0.0001|\
---ec_type 3 --mix 1 --addec 1 --alpha 90 --batch_size 128 --learning_rate 0.00001"
+--ec_type 3 --mix 1 --addec 1 --alpha 10 --batch_size 64 --learning_rate 0.001|\
+--ec_type 3 --mix 1 --addec 1 --alpha 10 --batch_size 64 --learning_rate 0.0001|\
+--ec_type 3 --mix 1 --addec 1 --alpha 10 --batch_size 64 --learning_rate 0.00001|\
+--ec_type 3 --mix 1 --addec 1 --alpha 50 --batch_size 64 --learning_rate 0.001|\
+--ec_type 3 --mix 1 --addec 1 --alpha 50 --batch_size 64 --learning_rate 0.0001|\
+--ec_type 3 --mix 1 --addec 1 --alpha 50 --batch_size 64 --learning_rate 0.00001|\
+--ec_type 3 --mix 1 --addec 1 --alpha 90 --batch_size 64 --learning_rate 0.001|\
+--ec_type 3 --mix 1 --addec 1 --alpha 90 --batch_size 64 --learning_rate 0.0001|\
+--ec_type 3 --mix 1 --addec 1 --alpha 90 --batch_size 64 --learning_rate 0.00001"
 
 # Count the number of configurations by counting the number of delimiters (|) + 1
 num_configs=$(echo "$configs" | tr -cd '|' | wc -c)
