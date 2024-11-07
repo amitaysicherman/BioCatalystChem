@@ -85,10 +85,18 @@ def main(retro, size):
         output_dir = f"results_retro/{run_name}"
     else:
         output_dir = f"results/{run_name}"
-
+    if size == "s":
+        batch_size = 1024
+        nun_train_epochs = 40
+    elif size == "m":
+        batch_size = 256
+        nun_train_epochs = 10
+    else:# size == "l":
+        batch_size = 64
+        nun_train_epochs = 3
     training_args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=10 if not DEBUG else 1000,
+        num_train_epochs=nun_train_epochs if not DEBUG else 1000,
         warmup_ratio=0.05,
         eval_steps=0.01,
         logging_steps=0.01,
@@ -97,9 +105,9 @@ def main(retro, size):
         save_strategy="steps",
         eval_strategy="steps",
 
-        auto_find_batch_size=True,
-        per_device_train_batch_size=1024,
-        per_device_eval_batch_size=1024 // 8,
+        auto_find_batch_size=False,
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size // 8,
         eval_accumulation_steps=8,
 
         metric_for_best_model="eval_valid_accuracy",
@@ -110,7 +118,10 @@ def main(retro, size):
         run_name=run_name,
         learning_rate=1e-4,
 
-        save_safetensors=False
+        save_safetensors=False,
+        # continue from last cp
+        resume_from_checkpoint=output_dir,
+
     )
 
     trainer = Trainer(
