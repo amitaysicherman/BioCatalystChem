@@ -41,33 +41,46 @@ def compute_metrics(eval_pred, tokenizer):
     return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
 
 
-def get_tokenizer_and_model():
+def get_t5_config(size):
+    if size == "s":
+        return T5Config(d_ff=1024, d_kv=64, d_model=256, num_heads=4, num_layers=4)
+    if size == "m":
+        return T5Config(d_ff=2048, d_kv=64, d_model=512, num_heads=8, num_layers=6)
+    elif size == "l":
+        return T5Config(d_ff=3072, d_kv=64, d_model=768, num_heads=12, num_layers=12)
+
+
+def get_tokenizer_and_model(size="m"):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
-    config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
-                      eos_token_id=tokenizer.eos_token_id,
-                      decoder_start_token_id=tokenizer.pad_token_id)
+    config = get_t5_config(size)
+    config.vocab_size = len(tokenizer.get_vocab())
+    config.pad_token_id = tokenizer.pad_token_id
+    config.eos_token_id = tokenizer.eos_token_id
+    config.decoder_start_token_id = tokenizer.pad_token_id
+
     if DEBUG:
         config.num_layers = 1
         config.d_model = 128
         config.num_heads = 4
         config.d_ff = 256
     model = T5ForConditionalGeneration(config)
+
     return tokenizer, model
 
 
-def main(retro):
-    tokenizer, model = get_tokenizer_and_model()
+def main(retro, size):
+    tokenizer, model = get_tokenizer_and_model(size)
 
-    train_dataset = SeqToSeqDataset(["uspto"], "train", weights=[1], tokenizer=tokenizer, DEBUG=DEBUG,retro=retro)
+    train_dataset = SeqToSeqDataset(["uspto"], "train", weights=[1], tokenizer=tokenizer, DEBUG=DEBUG, retro=retro)
     eval_split = "valid" if not DEBUG else "train"
     train_small_dataset = SeqToSeqDataset(["uspto"], "train", weights=[1], tokenizer=tokenizer, DEBUG=DEBUG,
-                                          sample_size=1000,retro=retro)
+                                          sample_size=1000, retro=retro)
     val_small_dataset = SeqToSeqDataset(["uspto"], eval_split, weights=[1], tokenizer=tokenizer, DEBUG=DEBUG,
-                                        sample_size=1000,retro=retro)
+                                        sample_size=1000, retro=retro)
     test_small_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, DEBUG=DEBUG,
-                                         sample_size=1000,retro=retro)
+                                         sample_size=1000, retro=retro)
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset}
-    run_name = "uspto"
+    run_name = f"uspto_{size}"
     if retro:
         output_dir = f"results_retro/{run_name}"
     else:
@@ -110,13 +123,15 @@ def main(retro):
     )
     trainer.train()
 
+
 if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--retro", action="store_true")
+    parser.add_argument("--size", default="m")
 
     args = parser.parse_args()
     DEBUG = args.debug
-    main(args.retro)
+    main(args.retro, args.size)
