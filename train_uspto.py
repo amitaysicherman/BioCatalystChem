@@ -118,10 +118,7 @@ def main(retro, size):
         run_name=run_name,
         learning_rate=1e-4,
 
-        save_safetensors=False,
-        # continue from last cp
-        resume_from_checkpoint=output_dir,
-
+        save_safetensors=False
     )
 
     trainer = Trainer(
