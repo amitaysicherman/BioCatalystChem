@@ -23,7 +23,6 @@ cat <<EOF > slurm_submit.sh
 #SBATCH --mem=130G
 #SBATCH --requeue
 #SBATCH --gres=gpu:A40:1
-#SBATCH --nodelist=newton3,newton4
 
 # Adjust SLURM_ARRAY_TASK_ID to match zero-indexed array (subtract 1 from SLURM_ARRAY_TASK_ID)
 index=\$((SLURM_ARRAY_TASK_ID - 1))
