@@ -226,7 +226,6 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
         save_safetensors=False,
         resume_from_checkpoint=True,
-
     )
 
     # Initialize Trainer
