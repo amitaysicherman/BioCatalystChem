@@ -5,8 +5,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run_name", default="pretrained_5", type=str)
-    parser.add_argument("--fast", default=1, type=int)
+    parser.add_argument("--run_name", default="regular_mix_bs-256_lr-0.001", type=str)
     args = parser.parse_args()
 
     run_name = args.run_name
