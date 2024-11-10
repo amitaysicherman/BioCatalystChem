@@ -223,7 +223,7 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False):
         new_tokens = get_ec_tokens()
         tokenizer.add_tokens(new_tokens)
     best_val_cp = get_best_val_cp(run_name)
-
+    print("Loading model", best_val_cp)
     if (ec_type == ECType.PAPER or ec_type == ECType.NO_EC) or prequantization:
         model = T5ForConditionalGeneration.from_pretrained(best_val_cp)
     else:
