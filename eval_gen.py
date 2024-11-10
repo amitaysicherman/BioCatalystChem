@@ -31,11 +31,18 @@ def name_to_args(name):
         "n_pca_components": None,
         "n_clusters_pca": None,
         "alpha": None,
-        'addec': False
+        'addec': False,
+        'batch_size': 64,
+        'lr': 1e-4,
     }
     if "plus" in name:
         args["addec"] = True
-
+    if "_bs" in name:
+        args["batch_size"] = int(name.split("_bs")[1].split("_")[0])
+        name = name.replace(f"_bs{args['batch_size']}", "")
+    if "_lr" in name:
+        args["lr"] = float(name.split("_lr")[1].split("_")[0])
+        name = name.replace(f"_lr{args['lr']}", "")
     name = name.replace("_mix", "").replace("_nopre", "").replace("_regpre", "").replace("_plus", "")
 
     if name == "uspto":
