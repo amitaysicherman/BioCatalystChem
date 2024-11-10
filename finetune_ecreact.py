@@ -196,16 +196,16 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     # Training arguments
     output_dir = f"results/{run_name}"
     if not mix:
-        num_train_epochs = 1000
+        num_train_epochs = 100
     else:
-        num_train_epochs = 50
+        num_train_epochs = 5
 
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=num_train_epochs,
         warmup_ratio=0.05,
-        eval_steps=0.005,
-        logging_steps=0.005,
+        eval_steps=0.001,
+        logging_steps=0.001,
         save_steps=0.005,
         save_total_limit=2,
         save_strategy="steps",
@@ -260,8 +260,8 @@ if __name__ == '__main__':
     parser.add_argument("--mix", type=int, default=0)
     parser.add_argument("--lora", type=int, default=0)
     parser.add_argument("--lora_d", type=int, default=64)
-    parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--learning_rate", type=float, default=1e-4)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--learning_rate", type=float, default=0.001)
 
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
