@@ -158,7 +158,7 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora, lora_d, regpre, mix, batch_size=64, learning_rate=1e-4):
+         nopre, lora, lora_d, regpre, mix, batch_size=256, learning_rate=1e-3):
     if DEBUG:
         batch_size = 8
     ec_type = ECType(ec_type)
