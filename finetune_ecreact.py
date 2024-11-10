@@ -151,6 +151,8 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
 
 class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
     def __call__(self, features):
+        if "emb" not in features[0]:
+            return super().__call__(features)
         emb = [f.pop("emb") for f in features]
         batch = super().__call__(features)
         batch["emb"] = torch.stack(emb)  # Stack the 'emb' tensors into a batch
