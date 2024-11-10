@@ -6,6 +6,8 @@ from transformers import (
 import os
 from transformers import PreTrainedTokenizerFast
 from transformers import Trainer, TrainingArguments
+from transformers import DataCollatorForSeq2Seq
+
 import numpy as np
 from rdkit import Chem
 from peft import (
@@ -15,6 +17,7 @@ from peft import (
     PeftModel,
     PeftConfig
 )
+import torch
 
 from dataset import SeqToSeqDataset
 from preprocessing.build_tokenizer import get_tokenizer_file_path, get_ec_tokens
@@ -146,8 +149,18 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
     return tokenizer, model
 
 
+class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
+    def __call__(self, features):
+        emb = [f.pop("emb") for f in features]
+        batch = super().__call__(features)
+        batch["emb"] = torch.stack(emb)  # Stack the 'emb' tensors into a batch
+        return batch
+
+
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
          nopre, lora, lora_d, regpre, mix, batch_size=64, learning_rate=1e-4):
+    if DEBUG:
+        batch_size = 8
     ec_type = ECType(ec_type)
     tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization=prequantization,
                                                n_hierarchical_clusters=n_hierarchical_clusters,
@@ -199,14 +212,18 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         num_train_epochs = 100
     else:
         num_train_epochs = 5
-
+    if batch_size > 64:
+        gradient_accumulation_steps = batch_size // 64
+        batch_size = 64
+    else:
+        gradient_accumulation_steps = 1
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=num_train_epochs,
         warmup_ratio=0.05,
-        eval_steps=0.001,
-        logging_steps=0.001,
-        save_steps=0.005,
+        eval_steps=0.01,
+        logging_steps=0.01,
+        save_steps=0.01,
         save_total_limit=2,
         save_strategy="steps",
         eval_strategy="steps",
@@ -223,9 +240,10 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
         run_name=run_name,
         learning_rate=learning_rate,
-
+        gradient_accumulation_steps=gradient_accumulation_steps,
         save_safetensors=False,
         resume_from_checkpoint=True,
+        group_by_length=True,
     )
 
     # Initialize Trainer
@@ -235,6 +253,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         train_dataset=train_dataset,
         eval_dataset=eval_datasets,
         tokenizer=tokenizer,
+        data_collator=CustomDataCollatorForSeq2Seq(tokenizer, model=model, padding=True),
         compute_metrics=lambda x: compute_metrics(x, tokenizer)
     )
 

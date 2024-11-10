@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -52,7 +53,8 @@ def get_ec_type(use_ec, ec_split, dae):
 
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
-                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False,save_ec=False,retro=False):
+                 ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False, save_ec=False,
+                 retro=False):
         self.max_length = max_length
         self.tokenizer = tokenizer
         self.retro = retro
@@ -143,23 +145,28 @@ class SeqToSeqDataset(Dataset):
                 print(f"Removed {len_before - len_after} samples, total: {len_after}, {len_before}")
 
         if self.DEBUG:
-            src_lines = src_lines[:1]
-            tgt_lines = tgt_lines[:1]
-            emb_lines = emb_lines[:1]
-            save_ec_lines = save_ec_lines[:1]
+            src_lines = src_lines[:100]
+            tgt_lines = tgt_lines[:100]
+            emb_lines = emb_lines[:100]
+            save_ec_lines = save_ec_lines[:100]
         assert len(src_lines) == len(tgt_lines) == len(emb_lines) == len(save_ec_lines)
         skip_count = 0
         data = []
         ec_final = []
         for i in tqdm(range(len(src_lines))):
-            input_id, attention_mask = encode_eos_pad(self.tokenizer, src_lines[i], self.max_length)
-            label, label_mask = encode_eos_pad(self.tokenizer, tgt_lines[i], self.max_length)
+            input_id = encode_eos_pad(self.tokenizer, src_lines[i], self.max_length,no_pad=True)
+            label = encode_eos_pad(self.tokenizer, tgt_lines[i], self.max_length,no_pad=True)
             if input_id is None or label is None:
                 skip_count += 1
                 continue
-            label[label_mask == 0] = -100
+            # label[label_mask == 0] = -100
+
             emb = emb_lines[i]
-            data.append((input_id, attention_mask, label, emb))
+            if isinstance(emb, torch.Tensor):
+                emb = emb.float()
+            else:#numpy array
+                emb = torch.tensor(emb).float()
+            data.append((input_id, label, emb))
             ec_final.append(save_ec_lines[i])
         for _ in range(w):
             self.data.extend(data)
@@ -169,7 +176,7 @@ class SeqToSeqDataset(Dataset):
         return len(self.data)
 
     def data_to_dict(self, data):
-        return {"input_ids": data[0], "attention_mask": data[1], "labels": data[2], "emb": data[3]}
+        return {"input_ids": data[0], "labels": data[1], "emb": data[2]}
 
     def __getitem__(self, idx):
         return self.data_to_dict(self.data[idx])

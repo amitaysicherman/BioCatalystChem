@@ -20,9 +20,9 @@ cat <<EOF > slurm_submit.sh
 #!/bin/bash
 #SBATCH --time=7-00
 #SBATCH --array=1-$num_configs
-#SBATCH --mem=130G
+#SBATCH --mem=128G
 #SBATCH --requeue
-#SBATCH --gres=gpu:A40:1
+#SBATCH --gres=gpu:A4000:1
 
 # Adjust SLURM_ARRAY_TASK_ID to match zero-indexed array (subtract 1 from SLURM_ARRAY_TASK_ID)
 index=\$((SLURM_ARRAY_TASK_ID - 1))
