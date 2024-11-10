@@ -119,10 +119,11 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
             if return_all:
                 all_scores.append((pred == label))
             ec_count[ec] += 1
-            y = tokenizer.decode(labels[labels != -100], skip_special_tokens=True)
-            x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
-            with open(save_file, "a") as f:
-                f.write(f"{x},{y},{label == pred}\n")
+            if save_file:
+                y = tokenizer.decode(labels[labels != -100], skip_special_tokens=True)
+                x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
+                with open(save_file, "a") as f:
+                    f.write(f"{x},{y},{label == pred}\n")
 
         else:
             outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
@@ -186,7 +187,7 @@ def args_to_lens(args):
     return length
 
 
-def load_model_tokenizer_dataest(run_name, split, same_length=False):
+def load_model_tokenizer_dataest(run_name, splits, same_length=False):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
@@ -232,8 +233,13 @@ def load_model_tokenizer_dataest(run_name, split, same_length=False):
         max_length = args_to_lens(run_args)
     else:
         max_length = 200
-    gen_dataset = SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
-                                  save_ec=True, addec=addec, alpha=alpha, max_length=max_length)
+    if type(splits) == str:
+        gen_dataset = SeqToSeqDataset([ecreact_dataset], splits, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
+                                      save_ec=True, addec=addec, alpha=alpha, max_length=max_length)
+    else:
+        gen_dataset = [SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
+                                       save_ec=True, addec=addec, alpha=alpha, max_length=max_length) for split in
+                       splits]
     model.to(device)
     model.eval()
     return model, tokenizer, gen_dataset
