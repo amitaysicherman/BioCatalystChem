@@ -165,15 +165,19 @@ def get_last_cp(base_dir):
     return f"{base_dir}/{cp_dirs[-1]}"
 
 
-def get_best_val_cp(run_name):
-    base_dir = f"results/{run_name}"
+def get_best_val_cp(run_name, base_results_dir="results"):
+    base_dir = f"{base_results_dir}/{run_name}"
     last_cp = get_last_cp(base_dir)
     trainer_state_file = f"{last_cp}/trainer_state.json"
     if not os.path.exists(trainer_state_file):
         raise ValueError(f"trainer_state.json not found in {base_dir}")
     with open(trainer_state_file) as f:
         trainer_state = json.load(f)
-    return trainer_state["best_model_checkpoint"]
+    best_model_checkpoint = trainer_state["best_model_checkpoint"]
+    if not best_model_checkpoint.startswith(base_results_dir):
+        best_model_checkpoint_split = best_model_checkpoint.split("/")
+        best_model_checkpoint = f"{base_results_dir}/" + "/".join(best_model_checkpoint_split[1:])
+    return best_model_checkpoint
 
 
 def args_to_lens(args):
@@ -187,7 +191,7 @@ def args_to_lens(args):
     return length
 
 
-def load_model_tokenizer_dataest(run_name, splits, same_length=False,samples=None):
+def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=None,base_results_dir="results"):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
@@ -222,7 +226,7 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False,samples=Non
     if ec_type == ECType.PAPER or addec:
         new_tokens = get_ec_tokens()
         tokenizer.add_tokens(new_tokens)
-    best_val_cp = get_best_val_cp(run_name)
+    best_val_cp = get_best_val_cp(run_name, base_results_dir)
     print("Loading model", best_val_cp)
     if (ec_type == ECType.PAPER or ec_type == ECType.NO_EC) or prequantization:
         model = T5ForConditionalGeneration.from_pretrained(best_val_cp)
@@ -237,14 +241,16 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False,samples=Non
     if type(splits) == str:
         assert samples is not None or type(samples) == int
         gen_dataset = SeqToSeqDataset([ecreact_dataset], splits, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
-                                      save_ec=True, addec=addec, alpha=alpha, max_length=max_length, sample_size=samples)
+                                      save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
+                                      sample_size=samples)
     else:
         assert samples is None or type(samples) == list
         if samples is None:
-            samples = [None]*len(splits)
+            samples = [None] * len(splits)
         samples = {split: sample for split, sample in zip(splits, samples)}
         gen_dataset = [SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
-                                       save_ec=True, addec=addec, alpha=alpha, max_length=max_length,sample_size=samples[split]) for split in
+                                       save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
+                                       sample_size=samples[split]) for split in
                        splits]
     model.to(device)
     model.eval()
