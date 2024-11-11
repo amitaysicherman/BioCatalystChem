@@ -18,7 +18,8 @@ def encode_eos_pad(tokenizer, text, max_length,no_pad=False):
     if no_pad:
         if len(tokens) > max_length:
             return None
-        return tokens
+
+        return torch.tensor(tokens)
     if len(tokens) > max_length:
         return None, None
     n_tokens = len(tokens)

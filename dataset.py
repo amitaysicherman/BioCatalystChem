@@ -118,7 +118,7 @@ class SeqToSeqDataset(Dataset):
             src_lines = [src_lines[i] for i in samples_idx]
             tgt_lines = [tgt_lines[i] for i in samples_idx]
             emb_lines = [emb_lines[i] for i in samples_idx]
-            
+
 
         if self.ec_map is not None:
             save_ec_lines = [self.ec_map[(src.split("|")[0], tgt)] for src, tgt in zip(src_lines, tgt_lines)]
