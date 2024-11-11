@@ -45,15 +45,16 @@ run_process() {
     # Set memory limit (in KB)
     local mem_limit=$((MEMORY_PER_PROCESS * 1024 * 1024))
 
-    # Run the process with resource limits
-    {
-        # Set CPU affinity and memory limits
-        taskset -c ${start_core}-${end_core} \
-        ulimit -v ${mem_limit} \
-        python finetune_ecreact.py $config \
+    # Create a subshell to set the memory limit
+    (
+        # Set memory limit
+        ulimit -v ${mem_limit}
+
+        # Run the process with CPU affinity
+        taskset -c ${start_core}-${end_core} python finetune_ecreact.py $config \
             --tasks_on_gpu $GPU_MEMORY_FRACTION \
             2>&1 | tee "process_logs/process_${process_num}.log"
-    } &
+    ) &
 
     # Store PID for monitoring
     echo $! > "process_logs/pid_${process_num}"
