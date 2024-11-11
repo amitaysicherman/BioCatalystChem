@@ -3,6 +3,7 @@
 #SBATCH --mem=512G
 #SBATCH --requeue
 #SBATCH --gres=gpu:A100:1
+#SBATCH -c 40
 
 # Define the configurations as a long string with a delimiter (| in this case)
 configs="--ec_type 0 --mix 1 |\
