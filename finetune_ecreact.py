@@ -219,6 +219,14 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         batch_size = 16
     else:
         gradient_accumulation_steps = 1
+
+    dirs_in_output = os.listdir(output_dir)
+    # check if there is a checkpoint to resume from
+    resume_from_checkpoint = False
+    for dir in dirs_in_output:
+        if "checkpoint" in dir:
+            resume_from_checkpoint = True
+            break
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=num_train_epochs,
@@ -245,6 +253,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         gradient_accumulation_steps=gradient_accumulation_steps,
         save_safetensors=False,
         group_by_length=True,
+        resume_from_checkpoint=resume_from_checkpoint
     )
 
     # Initialize Trainer
@@ -258,7 +267,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         compute_metrics=lambda x: compute_metrics(x, tokenizer)
     )
 
-    trainer.train(resume_from_checkpoint=True)
+    trainer.train()
 
 
 if __name__ == '__main__':
