@@ -19,7 +19,7 @@ configs="--ec_type 0 --mix 1 |\
   --ec_type 3 --mix 1"
 
 # Set the GPU memory fraction (adjust as needed)
-memory_fraction=0.1
+tasks_on_gpu=10
 
 # Split the long config string into an array using | as a delimiter
 IFS='|' read -ra config_array <<< "$configs"
@@ -28,7 +28,7 @@ IFS='|' read -ra config_array <<< "$configs"
 for config in "${config_array[@]}"; do
   {
     # Set the GPU memory limit within each process and run the Python script
-    python finetune_ecreact.py $config --tasks_on_gpu $memory_fraction
+    python finetune_ecreact.py $config --tasks_on_gpu ${tasks_on_gpu}
   } &
 done
 
