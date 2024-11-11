@@ -66,30 +66,5 @@ for i in "${!config_array[@]}"; do
     sleep 2
 done
 
-# Monitor processes
-while true; do
-    active_processes=0
-    for i in "${!config_array[@]}"; do
-        if [ -f "process_logs/pid_${i}" ]; then
-            pid=$(cat "process_logs/pid_${i}")
-            if kill -0 "$pid" 2>/dev/null; then
-                active_processes=$((active_processes + 1))
-                # Log resource usage
-                ps -p "$pid" -o pid,ppid,%cpu,%mem,cmd >> "process_logs/monitor.log"
-            fi
-        fi
-    done
+wait # Wait for all processes to finish
 
-    # Exit if all processes are done
-    if [ "$active_processes" -eq 0 ]; then
-        break
-    fi
-
-    # Wait before next check
-    sleep 60
-done
-
-# Clean up monitoring files
-rm -rf process_logs
-
-echo "All processes completed"
