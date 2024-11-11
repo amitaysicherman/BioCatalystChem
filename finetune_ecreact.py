@@ -214,11 +214,11 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         num_train_epochs = 100
     else:
         num_train_epochs = 5
-    # if batch_size > 64:
-    #     gradient_accumulation_steps = batch_size // 64
-    #     batch_size = 64
-    # else:
-    #     gradient_accumulation_steps = 1
+    if batch_size > 64:
+        gradient_accumulation_steps = batch_size // 64
+        batch_size = 64
+    else:
+        gradient_accumulation_steps = 1
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=num_train_epochs,
@@ -242,7 +242,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
         run_name=run_name,
         learning_rate=learning_rate,
-        # gradient_accumulation_steps=gradient_accumulation_steps,
+        gradient_accumulation_steps=gradient_accumulation_steps,
         save_safetensors=False,
         resume_from_checkpoint=True,
         group_by_length=True,
