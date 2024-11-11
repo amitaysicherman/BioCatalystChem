@@ -4,7 +4,6 @@
 #SBATCH --requeue
 #SBATCH --gres=gpu:A40:1
 #SBATCH -c 10
-#SBATCH -w newton3,newton4
 #SBATCH -p newton
 #SBATCH --array=1-2
 
