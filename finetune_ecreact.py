@@ -214,9 +214,9 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         num_train_epochs = 100
     else:
         num_train_epochs = 5
-    if batch_size > 64:
-        gradient_accumulation_steps = batch_size // 64
-        batch_size = 64
+    if batch_size > 16:
+        gradient_accumulation_steps = batch_size // 16
+        batch_size = 16
     else:
         gradient_accumulation_steps = 1
     training_args = TrainingArguments(
@@ -283,8 +283,8 @@ if __name__ == '__main__':
     parser.add_argument("--learning_rate", type=float, default=0.001)
     parser.add_argument("--tasks_on_gpu", type=int, default=1)
     args = parser.parse_args()
-    if args.tasks_on_gpu>1:
-        torch.cuda.set_per_process_memory_fraction(1/args.tasks_on_gpu)
+    if args.tasks_on_gpu > 1:
+        torch.cuda.set_per_process_memory_fraction(1 / args.tasks_on_gpu)
 
     total_vram = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)  # in GB
     allocated_vram = torch.cuda.memory_allocated(0) / (1024 ** 3)  # in GB
