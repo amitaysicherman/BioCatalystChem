@@ -191,7 +191,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
     test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, alpha=alpha, addec=addec)
+                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
 
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset,
                      "uspto": test_uspto_dataset}
