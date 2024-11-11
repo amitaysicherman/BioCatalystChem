@@ -3,7 +3,7 @@
 #SBATCH --mem=512G
 #SBATCH --requeue
 #SBATCH --gres=gpu:A40:2
-#SBATCH -c 20
+#SBATCH -c 10
 #SBATCH -w newton3
 
 # Define the configurations as a long string with a delimiter (| in this case)
