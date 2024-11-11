@@ -27,8 +27,7 @@ IFS='|' read -ra config_array <<< "$configs"
 for config in "${config_array[@]}"; do
   {
     # Set the GPU memory limit within each process and run the Python script
-    python -c "import torch; torch.cuda.set_per_process_memory_fraction($memory_fraction, 0)" && \
-    python finetune_ecreact.py $config
+    python finetune_ecreact.py $config --tasks_on_gpu $memory_fraction
   } &
 done
 

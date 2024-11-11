@@ -282,6 +282,10 @@ if __name__ == '__main__':
     parser.add_argument("--lora_d", type=int, default=64)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--learning_rate", type=float, default=0.001)
+    parser.add_argument("--tasks_on_gpu", type=int, default=1)
+    args = parser.parse_args()
+    if args.tasks_on_gpu>1:
+        torch.cuda.set_per_process_memory_fraction(1/args.tasks_on_gpu, 0)
 
     total_vram = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)  # in GB
     allocated_vram = torch.cuda.memory_allocated(0) / (1024 ** 3)  # in GB
@@ -290,7 +294,6 @@ if __name__ == '__main__':
     print(f"Allocated VRAM by this process: {allocated_vram:.2f} GB")
     print(f"Reserved VRAM by this process: {reserved_vram:.2f} GB")
 
-    args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
     DEBUG = args.debug
     main(ec_type=args.ec_type, lookup_len=args.lookup_len, prequantization=args.prequantization,
