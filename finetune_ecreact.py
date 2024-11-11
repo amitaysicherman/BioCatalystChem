@@ -283,6 +283,13 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--learning_rate", type=float, default=0.001)
 
+    total_vram = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)  # in GB
+    allocated_vram = torch.cuda.memory_allocated(0) / (1024 ** 3)  # in GB
+    reserved_vram = torch.cuda.memory_reserved(0) / (1024 ** 3)  # in GB
+    print(f"Total VRAM: {total_vram:.2f} GB")
+    print(f"Allocated VRAM by this process: {allocated_vram:.2f} GB")
+    print(f"Reserved VRAM by this process: {reserved_vram:.2f} GB")
+
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
     DEBUG = args.debug
