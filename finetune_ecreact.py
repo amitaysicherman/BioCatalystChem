@@ -244,7 +244,6 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         learning_rate=learning_rate,
         gradient_accumulation_steps=gradient_accumulation_steps,
         save_safetensors=False,
-        resume_from_checkpoint=True,
         group_by_length=True,
     )
 
@@ -259,7 +258,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         compute_metrics=lambda x: compute_metrics(x, tokenizer)
     )
 
-    trainer.train(resume_from_checkpoint=False)
+    trainer.train(resume_from_checkpoint=True)
 
 
 if __name__ == '__main__':
@@ -285,7 +284,7 @@ if __name__ == '__main__':
     parser.add_argument("--tasks_on_gpu", type=int, default=1)
     args = parser.parse_args()
     if args.tasks_on_gpu>1:
-        torch.cuda.set_per_process_memory_fraction(1/args.tasks_on_gpu, 0)
+        torch.cuda.set_per_process_memory_fraction(1/args.tasks_on_gpu)
 
     total_vram = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)  # in GB
     allocated_vram = torch.cuda.memory_allocated(0) / (1024 ** 3)  # in GB
