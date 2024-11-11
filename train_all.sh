@@ -2,8 +2,8 @@
 #SBATCH --time=7-00
 #SBATCH --mem=512G
 #SBATCH --requeue
-#SBATCH --gres=gpu:A100:1
-#SBATCH -c 10
+#SBATCH --gres=gpu:A40:2
+#SBATCH -c 20
 
 # Define the configurations as a long string with a delimiter (| in this case)
 configs="--ec_type 0 --mix 1 |\
@@ -18,18 +18,35 @@ configs="--ec_type 0 --mix 1 |\
   --ec_type 3 --mix 1"
 
 # Set the GPU memory fraction (adjust as needed)
-tasks_on_gpu=10
+tasks_on_gpu=5  # Reduced from 10 since we're splitting across 2 GPUs
 
 # Split the long config string into an array using | as a delimiter
 IFS='|' read -ra config_array <<< "$configs"
 
-# Loop through each configuration and run it in the background
-for config in "${config_array[@]}"; do
-  {
-    # Set the GPU memory limit within each process and run the Python script
-    python finetune_ecreact.py $config --tasks_on_gpu $tasks_on_gpu
-  } &
-done
+# Calculate the midpoint to split tasks between GPUs
+total_configs=${#config_array[@]}
+midpoint=$((total_configs / 2))
+
+# Function to run tasks on a specific GPU
+run_on_gpu() {
+    local gpu_id=$1
+    local start_idx=$2
+    local end_idx=$3
+
+    for ((i=start_idx; i<end_idx; i++)); do
+        config="${config_array[$i]}"
+        {
+            # Set specific GPU and run the Python script
+            CUDA_VISIBLE_DEVICES=$gpu_id python finetune_ecreact.py $config --tasks_on_gpu $tasks_on_gpu
+        } &
+    done
+}
+
+# Run first half of configs on GPU 0
+run_on_gpu 0 0 $midpoint
+
+# Run second half of configs on GPU 1
+run_on_gpu 1 $midpoint $total_configs
 
 # Wait for all background jobs to finish before exiting
 wait
