@@ -56,6 +56,7 @@ class SeqToSeqDataset(Dataset):
                  ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False, save_ec=False,
                  retro=False):
         self.max_length = max_length
+        self.sample_size = sample_size
         self.tokenizer = tokenizer
         self.retro = retro
         self.addec = addec
@@ -91,8 +92,8 @@ class SeqToSeqDataset(Dataset):
                 have_ec = False  # TODO : there is EC , but like paper, not like pretrained
             self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec)
         if not DEBUG:
-            if sample_size is not None:
-                self.data = random.sample(self.data, sample_size)
+            # if sample_size is not None:
+            #     self.data = random.sample(self.data, sample_size)
             if shuffle:
                 random.seed(42)
                 random.shuffle(self.data)
@@ -111,6 +112,14 @@ class SeqToSeqDataset(Dataset):
         assert len(src_lines) == len(tgt_lines)
 
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
+
+        if self.sample_size is not None:
+            samples_idx = random.sample(range(len(src_lines)), self.sample_size)
+            src_lines = [src_lines[i] for i in samples_idx]
+            tgt_lines = [tgt_lines[i] for i in samples_idx]
+            emb_lines = [emb_lines[i] for i in samples_idx]
+            
+
         if self.ec_map is not None:
             save_ec_lines = [self.ec_map[(src.split("|")[0], tgt)] for src, tgt in zip(src_lines, tgt_lines)]
         else:
