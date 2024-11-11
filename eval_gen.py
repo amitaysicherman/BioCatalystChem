@@ -187,7 +187,7 @@ def args_to_lens(args):
     return length
 
 
-def load_model_tokenizer_dataest(run_name, splits, same_length=False):
+def load_model_tokenizer_dataest(run_name, splits, same_length=False,samples=None):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
@@ -233,12 +233,18 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False):
         max_length = args_to_lens(run_args)
     else:
         max_length = 200
+
     if type(splits) == str:
+        assert samples is not None or type(samples) == int
         gen_dataset = SeqToSeqDataset([ecreact_dataset], splits, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
-                                      save_ec=True, addec=addec, alpha=alpha, max_length=max_length)
+                                      save_ec=True, addec=addec, alpha=alpha, max_length=max_length, sample_size=samples)
     else:
+        assert samples is None or type(samples) == list
+        if samples is None:
+            samples = [None]*len(splits)
+        samples = {split: sample for split, sample in zip(splits, samples)}
         gen_dataset = [SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
-                                       save_ec=True, addec=addec, alpha=alpha, max_length=max_length) for split in
+                                       save_ec=True, addec=addec, alpha=alpha, max_length=max_length,sample_size=samples[split]) for split in
                        splits]
     model.to(device)
     model.eval()

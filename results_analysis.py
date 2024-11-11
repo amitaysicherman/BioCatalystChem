@@ -16,7 +16,7 @@ if __name__ == "__main__":
     print("---" * 10)
     splits = ["train", "valid", "test"]
     res = dict()
-    model, tokenizer, [train_df, valid_ds, test_df] = load_model_tokenizer_dataest(run_name, splits)
+    model, tokenizer, [train_df, valid_ds, test_df] = load_model_tokenizer_dataest(run_name, splits,samples=[None, None, 1000])
     for split, dataset in zip(splits, [train_df, valid_ds, test_df]):
         split_ec = get_ec_from_df(dataset, per_level)
         gen_dataloader = DataLoader(dataset, batch_size=1, num_workers=0)
