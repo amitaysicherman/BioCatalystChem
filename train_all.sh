@@ -3,7 +3,6 @@
 #SBATCH --mem=128G
 #SBATCH --requeue
 #SBATCH --gres=gpu:A100:1
-#SBATCH --nodelist=newton3,newton4,newton5,chuck2
 
 # Define the configurations as a long string with a delimiter (| in this case)
 configs="--ec_type 0 --mix 1 |\
