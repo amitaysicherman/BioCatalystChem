@@ -5,6 +5,7 @@
 #SBATCH --gres=gpu:A40:2
 #SBATCH -c 20
 #SBATCH -w newton3
+#SBATCH -p cslab
 
 # Define the configurations as a long string with a delimiter (| in this case)
 configs="--ec_type 0 --mix 1 |\
