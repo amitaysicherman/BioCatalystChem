@@ -220,10 +220,11 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         gradient_accumulation_steps = 1
 
-    dirs_in_output = os.listdir(output_dir)
     # check if there is a checkpoint to resume from
     resume_from_checkpoint = False
     if os.path.exists(output_dir):
+        dirs_in_output = os.listdir(output_dir)
+
         for dir in dirs_in_output:
             if "checkpoint" in dir:
                 resume_from_checkpoint = True
