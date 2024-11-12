@@ -99,8 +99,9 @@ class ResidualPCATokenizer:
         return tokens
 
 
-def args_to_quant_model_file(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca):
-    return f"datasets/ecreact/vec_quant_{ec_type.value}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}.pkl"
+def args_to_quant_model_file(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
+    ec_type = ec_type.value if ec_type != ECType.DAE else f"{ec_type.value}-{alpha}"
+    return f"datasets/ecreact/vec_quant_{ec_type}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}.pkl"
 
 
 def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
@@ -167,12 +168,14 @@ def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_cl
     print(vecs.shape)
     tokenizer = ResidualPCATokenizer(n_hierarchical_clusters, n_pca_components, n_clusters_pca)
     tokenizer.fit(vecs)
-    with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca), "wb") as f:
+    with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha),
+              "wb") as f:
         pickle.dump(tokenizer, f)
 
 
 def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
-    with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca), "rb") as f:
+    with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha),
+              "rb") as f:
         tokenizer: ResidualPCATokenizer = pickle.load(f)
     src_lines, tgt_lines, emb_lines = read_dataset_split(ec_type, split, alpha=alpha)
     tokenized_lines = [
