@@ -240,7 +240,7 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
         max_length = 200
 
     if type(splits) == str:
-        assert samples is not None or type(samples) == int
+        assert samples is None or type(samples) == int
         gen_dataset = SeqToSeqDataset([ecreact_dataset], splits, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
                                       save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
                                       sample_size=samples)
