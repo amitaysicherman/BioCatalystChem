@@ -3,7 +3,7 @@ import os
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-from typing import List, Sequence
+from typing import List
 from tqdm import tqdm
 from preprocessing.build_tokenizer import redo_ec_split
 from preprocessing.ec_to_vec import EC2Vec
@@ -14,43 +14,29 @@ from dataset import ECType
 import pickle
 
 
-# from multiprocessing import Pool
-
-
-class HierarchicalPCATokenizer:
-    def __init__(self, n_hierarchical_clusters: int = 5,
+class ResidualPCATokenizer:
+    def __init__(self, n_residual_clusters: int = 5,
                  n_pca_components: int = 6, n_clusters_pca: int = 10):
         """
-        Initialize tokenizer with hierarchical K-means and PCA-based clustering
+        Initialize tokenizer with residual K-means and PCA-based clustering
 
         Args:
-            n_hierarchical_levels: Number of hierarchical clustering levels
-            clusters_per_level: Number of clusters at each hierarchical level
+            n_residual_clusters: Number of residual clustering levels
             n_pca_components: Number of PCA components to use
             n_clusters_pca: Number of clusters for each PCA dimension
         """
-        n_to_val_hierarchy = {
-            0: [],
-            1: [10],
-            2: [10, 50],
-            3: [10, 50, 100],
-            4: [10, 50, 100, 250],
-            5: [10, 50, 100, 250, 500],
-            6: [10, 50, 100, 250, 500, 1000],
-            7: [10, 50, 100, 250, 500, 1000, 1500],
-        }
-        self.vals_hierarchical_clusters = n_to_val_hierarchy[n_hierarchical_clusters]
+        self.n_residual_clusters = n_residual_clusters
         self.n_pca_components = n_pca_components
         self.n_clusters_pca = n_clusters_pca
 
         # Initialize models
-        self.hierarchical_models = []
+        self.residual_models = []
         self.pca_model = None
         self.pca_clusterers = []
 
     def fit(self, vectors: np.ndarray):
         """
-        Fit the tokenizer to the vector dataset
+        Fit the tokenizer to the vector dataset using residual clustering
         """
         # Fit PCA
         self.pca_model = PCA(n_components=self.n_pca_components)
@@ -64,36 +50,46 @@ class HierarchicalPCATokenizer:
             clusters.fit(dim_values)
             self.pca_clusters.append(clusters)
 
-        # Fit hierarchical clusterers
-        current_data = vectors
-        self.hierarchical_models = []
+        # Fit residual clusterers
+        current_data = vectors.copy()
+        self.residual_models = []
 
-        for k in self.vals_hierarchical_clusters:
-            kmeans = KMeans(n_clusters=k, random_state=42)
+        for _ in range(self.n_residual_clusters):
+            kmeans = KMeans(n_clusters=self.n_clusters_pca, random_state=42)
             kmeans.fit(current_data)
-            self.hierarchical_models.append(kmeans)
+            self.residual_models.append(kmeans)
+            closest_centroids = kmeans.cluster_centers_[kmeans.labels_]
+            current_data = current_data - closest_centroids
 
     def tokenize_vector(self, vector: np.ndarray) -> List[str]:
         """
-        Convert a single vector into a sequence of tokens
+        Convert a single vector into a sequence of tokens using residual clustering
         """
         tokens = []
-        current_vector = vector.reshape(1, -1)
-        for level, model in enumerate(self.hierarchical_models):
+        current_vector = vector.copy().reshape(1, -1)
+
+        # Get residual cluster tokens
+        for level, model in enumerate(self.residual_models):
             cluster = model.predict(current_vector)[0]
-            tokens.append(f"H{level}-{cluster}")
-        pca_vector = self.pca_model.transform(current_vector)
+            tokens.append(f"R{level}-{cluster}")
+            # Calculate residual for next iteration
+            centroid = model.cluster_centers_[cluster]
+            current_vector = current_vector - centroid.reshape(1, -1)
+
+        # Get PCA tokens
+        pca_vector = self.pca_model.transform(vector.reshape(1, -1))
         for dim, clusterer in enumerate(self.pca_clusters):
             dim_value = pca_vector[:, dim].reshape(-1, 1)
             cluster = clusterer.predict(dim_value)[0]
             tokens.append(f"P{dim}-{cluster}")
+
         return tokens
 
     def get_all_tokens(self):
         tokens = []
-        for level, k in enumerate(self.vals_hierarchical_clusters):
+        for level, k in enumerate(self.vals_residual_clusters):
             for cluster in range(k):
-                tokens.append(f"H{level}-{cluster}")
+                tokens.append(f"R{level}-{cluster}")
         for dim in range(self.n_pca_components):
             for cluster in range(self.n_clusters_pca):
                 tokens.append(f"P{dim}-{cluster}")
@@ -162,7 +158,7 @@ def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_cl
     _, _, emb_lines = read_dataset_split(ec_type, split, alpha)
     vecs = np.array(emb_lines)
     print(vecs.shape)
-    tokenizer = HierarchicalPCATokenizer(n_hierarchical_clusters, n_pca_components, n_clusters_pca)
+    tokenizer = ResidualPCATokenizer(n_hierarchical_clusters, n_pca_components, n_clusters_pca)
     tokenizer.fit(vecs)
     with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca), "wb") as f:
         pickle.dump(tokenizer, f)
@@ -170,7 +166,7 @@ def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_cl
 
 def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
     with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca), "rb") as f:
-        tokenizer: HierarchicalPCATokenizer = pickle.load(f)
+        tokenizer: ResidualPCATokenizer = pickle.load(f)
     src_lines, tgt_lines, emb_lines = read_dataset_split(ec_type, split, alpha=alpha)
     tokenized_lines = [
         tokenizer.tokenize_vector(e) for e in emb_lines
