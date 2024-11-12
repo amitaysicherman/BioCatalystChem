@@ -160,7 +160,7 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora, lora_d, regpre, mix, batch_size=256, learning_rate=1e-3):
+         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate,max_length):
     if DEBUG:
         batch_size = 8
     ec_type = ECType(ec_type)
@@ -180,16 +180,16 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
     if mix:
         train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[20, 1], tokenizer=tokenizer,
-                                        ec_type=ec_type, DEBUG=DEBUG, alpha=alpha, addec=addec)
+                                        ec_type=ec_type, DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length)
     else:
         train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, alpha=alpha, addec=addec)
+                                        DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length)
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
+                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec, max_length=max_length)
     val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, alpha=alpha, addec=addec)
+                                        DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length)
     test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
+                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec, max_length=max_length)
     test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
 
@@ -286,12 +286,13 @@ if __name__ == '__main__':
     parser.add_argument("--addec", type=int, default=0)
     parser.add_argument("--nopre", type=int, default=0)
     parser.add_argument("--regpre", type=int, default=0)
-    parser.add_argument("--mix", type=int, default=0)
+    parser.add_argument("--mix", type=int, default=1)
     parser.add_argument("--lora", type=int, default=0)
     parser.add_argument("--lora_d", type=int, default=64)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--learning_rate", type=float, default=0.001)
     parser.add_argument("--tasks_on_gpu", type=int, default=1)
+    parser.add_argument("--max_length", type=int, default=200)
     args = parser.parse_args()
     if args.tasks_on_gpu > 1:
         torch.cuda.set_per_process_memory_fraction(1 / args.tasks_on_gpu)
@@ -309,4 +310,4 @@ if __name__ == '__main__':
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
          n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,
          lora_d=args.lora_d, regpre=args.regpre, mix=args.mix, batch_size=args.batch_size,
-         learning_rate=args.learning_rate)
+         learning_rate=args.learning_rate,max_length=args.max_length)
