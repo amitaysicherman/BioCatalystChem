@@ -63,6 +63,7 @@ if __name__ == "__main__":
         all_target_dataset = [x for x in all_dirs if os.path.isdir(x) and x != "level4" and "quant" in x]
 
     for target_dataset in all_target_dataset:
+        print(f"Merging {ec_dataset} with {target_dataset}")
         output_dataset = target_dataset + "_plus"
         os.makedirs(output_dataset, exist_ok=True)
         for split in ["train", "test", "valid"]:
