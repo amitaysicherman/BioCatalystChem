@@ -15,7 +15,7 @@ from rdkit import RDLogger
 import json
 from dataset import ECType
 from preprocessing.build_tokenizer import get_ec_tokens
-
+from finetune_ecreact import CustomDataCollatorForSeq2Seq
 RDLogger.DisableLog('rdApp.*')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -288,7 +288,7 @@ if __name__ == "__main__":
     model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
                                                                  base_results_dir=args.res_base)
     all_ec = get_ec_from_df(gen_dataset, per_level)
-    gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
+    gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0,collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model))
 
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
