@@ -1,7 +1,5 @@
-import numpy as np
 import torch
 from torch.utils.data import Dataset
-from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast
 from preprocessing.build_tokenizer import redo_ec_split, encode_eos_pad
 from utils import remove_ec
@@ -11,7 +9,12 @@ from enum import Enum
 from collections import defaultdict
 import pandas as pd
 import random
+from tqdm import tqdm
+from concurrent.futures import ProcessPoolExecutor
+
 import os
+
+n_cpu = os.cpu_count()
 
 
 def get_ec_map(split):
@@ -98,6 +101,9 @@ class SeqToSeqDataset(Dataset):
                 random.seed(42)
                 random.shuffle(self.data)
 
+    def process_reaction(self, text, ec):
+        return get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
+
     def load_dataset(self, input_base, split, w, have_ec=True):
         if not os.path.exists(input_base):
             print(f"Dataset {input_base} not found")
@@ -119,7 +125,6 @@ class SeqToSeqDataset(Dataset):
             tgt_lines = [tgt_lines[i] for i in samples_idx]
             emb_lines = [emb_lines[i] for i in samples_idx]
 
-
         if self.ec_map is not None:
             save_ec_lines = [self.ec_map[(src.split("|")[0], tgt)] for src, tgt in zip(src_lines, tgt_lines)]
         else:
@@ -138,10 +143,14 @@ class SeqToSeqDataset(Dataset):
                 if self.ec_type == ECType.PRETRAINED:
                     emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
                 else:
-                    emb_lines = [
-                        get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
-                        for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
-                    ]
+                    # emb_lines = [
+                    #     get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
+                    #     for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
+                    # ]
+                    with ProcessPoolExecutor(max_workers=n_cpu) as executor:
+                        emb_lines = list(
+                            tqdm(executor.map(self.process_reaction, src_lines, ec_lines), total=len(src_lines)))
+
                 if self.addec:
                     src_lines = first_src_lines
                 not_none_mask = [x is not None for x in emb_lines]
@@ -163,8 +172,8 @@ class SeqToSeqDataset(Dataset):
         data = []
         ec_final = []
         for i in tqdm(range(len(src_lines))):
-            input_id = encode_eos_pad(self.tokenizer, src_lines[i], self.max_length,no_pad=True)
-            label = encode_eos_pad(self.tokenizer, tgt_lines[i], self.max_length,no_pad=True)
+            input_id = encode_eos_pad(self.tokenizer, src_lines[i], self.max_length, no_pad=True)
+            label = encode_eos_pad(self.tokenizer, tgt_lines[i], self.max_length, no_pad=True)
             if input_id is None or label is None:
                 skip_count += 1
                 continue
@@ -173,7 +182,7 @@ class SeqToSeqDataset(Dataset):
             emb = emb_lines[i]
             if isinstance(emb, torch.Tensor):
                 emb = emb.float()
-            else:#numpy array
+            else:  # numpy array
                 emb = torch.tensor(emb).float()
             data.append((input_id, label, emb))
             ec_final.append(save_ec_lines[i])

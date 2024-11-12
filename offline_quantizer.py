@@ -12,6 +12,9 @@ from collections import defaultdict
 import pandas as pd
 from dataset import ECType
 import pickle
+from concurrent.futures import ProcessPoolExecutor
+
+n_cpu = os.cpu_count()
 
 
 class ResidualPCATokenizer:
@@ -105,9 +108,9 @@ def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_compon
     return f"datasets/ecreact/quant_{ec_type}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}"
 
 
-# def get_reaction_attention_emb_wrapper(args):
-#     text, ec, ec_to_uniprot, smiles_to_id, alpha = args
-#     return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha)
+def get_reaction_attention_emb_wrapper(args):
+    text, ec, ec_to_uniprot, smiles_to_id, alpha = args
+    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha)
 
 
 def read_dataset_split(ec_type: ECType, split: str, alpha):
@@ -137,10 +140,14 @@ def read_dataset_split(ec_type: ECType, split: str, alpha):
     if ec_type == ECType.PRETRAINED:
         emb_lines = [ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
     else:
-        emb_lines = [
-            get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha)
-            for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
-        ]
+        args = [(src, ec, ec_to_uniprot, smiles_to_id, alpha) for src, ec in zip(src_lines, ec_lines)]
+        with ProcessPoolExecutor(max_workers=n_cpu) as executor:
+            emb_lines = list(tqdm(executor.map(get_reaction_attention_emb_wrapper, args), total=len(src_lines)))
+
+        # emb_lines = [
+        #     get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha)
+        #     for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
+        # ]
 
     not_none_mask = [x is not None for x in emb_lines]
     src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
