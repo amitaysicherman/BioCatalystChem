@@ -4,20 +4,17 @@
 #SBATCH --requeue
 #SBATCH --gres=gpu:A40:1
 #SBATCH -c 10
-#SBATCH --array=1-2
+#SBATCH --array=1-1
 
 # Define the configurations as a long string with a delimiter (| in this case)
-configs_1="--ec_type 0 --mix 1 |\
-  --ec_type 1 --mix 1 |\
-  --ec_type 2 --mix 1 |\
-  --ec_type 2 --mix 1 --addec 1 |\
-  --ec_type 3 --mix 1 --addec 1"
+configs_1="--ec_type 3 --mix 1 --alpha 10 |\
+  --ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --mix 1 --alpha 10|\
+  --ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --addec 1 --mix 1 --alpha 10|\
+  --ec_type 3 --mix 1 --addec 1 --alpha 10"
 
-configs_2="--ec_type 2 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --mix 1 |\
-  --ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --mix 1 |\
-  --ec_type 2 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --addec 1 --mix 1 |\
-  --ec_type 3 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --addec 1 --mix 1 |\
-  --ec_type 3 --mix 1"
+#configs_2="--ec_type 2 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --mix 1 |\
+#  --ec_type 2 --prequantization 1 --n_hierarchical_clusters 0 --n_pca_components 10 --n_clusters_pca 10 --addec 1 --mix 1 |\
+#  "
 
 # Set the GPU memory fraction
 tasks_on_gpu=5
