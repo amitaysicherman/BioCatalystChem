@@ -159,7 +159,7 @@ def read_dataset_split(ec_type: ECType, split: str, alpha):
 
 def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
     split = "train"
-    outputfile = args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca)
+    outputfile = args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha)
     if os.path.exists(outputfile):
         print("Model already exists")
         return
