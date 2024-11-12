@@ -206,7 +206,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         run_name += f"_lora_{lora_d}"
     if mix:
         run_name += f"_mix"
-    run_name += f"_bs-{batch_size}_lr-{learning_rate}"
+    # run_name += f"_bs-{batch_size}_lr-{learning_rate}"
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"

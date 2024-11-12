@@ -16,7 +16,6 @@ def is_valid_smiles(smiles):
     return Chem.MolFromSmiles(smiles) is not None
 
 
-
 def predict_batch(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokenizerFast, batch):
     batch = {k: v.to(model.device) for k, v in batch.items()}
     labels = batch['labels']
@@ -31,13 +30,13 @@ def predict_batch(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeni
     return pred, label
 
 
-def slice_batch(batch,slice_token=237):
+def slice_batch(batch, slice_token=237, step=0):
     input_ids = batch['input_ids'].squeeze(0)  # Shape: (seq_len,)
     attention_mask = batch['attention_mask'].squeeze(0)  # Shape: (seq_len,)
 
     # Find the index of the token "237" in the sequence
     try:
-        token_position = (input_ids == slice_token).nonzero()[0][0].item()
+        token_position = (input_ids == slice_token).nonzero()[0][0].item() + step
     except IndexError:
         # If token "237" is not found, you can handle it here
         token_position = input_ids.size(0)  # Set to end of sequence if "237" not found
@@ -54,21 +53,26 @@ def slice_batch(batch,slice_token=237):
     return batch_sliced
 
 
-
 def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokenizerFast, gen_dataloader: DataLoader,
                  all_ec):
     counts = {ec: 0 for ec in all_ec}
     correct_count = {ec: 0 for ec in all_ec}
     valid_smiles = {ec: 0 for ec in all_ec}
-    correct_no_ec={ec: 0 for ec in all_ec}
+    correct_ec_0 = {ec: 0 for ec in all_ec}
+    correct_ec_1 = {ec: 0 for ec in all_ec}
+    correct_ec_2 = {ec: 0 for ec in all_ec}
+    correct_ec_3 = {ec: 0 for ec in all_ec}
+
+    no_ec_list = [correct_ec_0, correct_ec_1, correct_ec_2, correct_ec_3]
     for i, batch in tqdm(enumerate(gen_dataloader), total=len(gen_dataloader)):
         pred, label = predict_batch(model, tokenizer, batch)
         counts[all_ec[i]] += 1
         correct_count[all_ec[i]] += int(pred == label)
         valid_smiles[all_ec[i]] += int(is_valid_smiles(pred))
-        no_ec_batch = slice_batch(batch)
-        pred_no_ec, label_no_ec = predict_batch(model, tokenizer, no_ec_batch)
-        correct_no_ec[all_ec[i]] += int(pred_no_ec == label_no_ec)
+        for step, correct_ec in enumerate(no_ec_list):
+            sliced_batch = slice_batch(batch, step=step)
+            pred_sliced, label_sliced = predict_batch(model, tokenizer, sliced_batch)
+            correct_ec[all_ec[i]] += int(pred_sliced == label_sliced)
         # if pred != label and is_valid_smiles(pred):
         #     print(f"Real: {label} VS Predicted: {pred}")
         #     real_mol = Chem.MolFromSmiles(label)
@@ -80,7 +84,8 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
         #     ax2.set_title("Predicted Molecule")
         #     plt.show()
 
-    return correct_count, counts,valid_smiles,correct_no_ec
+    return correct_count, counts, valid_smiles, *no_ec_list
+
 
 if __name__ == "__main__":
     import argparse
@@ -96,12 +101,14 @@ if __name__ == "__main__":
     print(f"Run: {run_name}")
     print("---" * 10)
     splits = ["train", "valid", "test"]
-    res = dict()
-    scores_types=["correct_count","counts","valid_smiles","correct_no_ec"]
-    multi_level_columns = pd.MultiIndex.from_product([splits, scores_types], names=["Split", "Scores"])
-    results=pd.DataFrame(columns=multi_level_columns,index=ALL_EC)
     model, tokenizer, [train_df, valid_ds, test_df] = load_model_tokenizer_dataest(run_name, splits,
                                                                                    samples=[1000, None, None])
+    res = dict()
+    scores_types = ["correct_count", "counts", "valid_smiles", "correct_no_ec_0", "correct_no_ec_1", "correct_no_ec_2",
+                    "correct_no_ec_3"]
+    multi_level_columns = pd.MultiIndex.from_product([splits, scores_types], names=["Split", "Scores"])
+    results = pd.DataFrame(columns=multi_level_columns, index=ALL_EC)
+
     for split, dataset in zip(splits, [train_df, valid_ds, test_df]):
         split_ec = get_ec_from_df(dataset, per_level)
         gen_dataloader = DataLoader(dataset, batch_size=1, num_workers=0,
@@ -109,20 +116,22 @@ if __name__ == "__main__":
 
         print(f"Split: {split}")
         with torch.no_grad():
-            correct_count, counts,valid_smiles,correct_no_ec= eval_dataset(model, tokenizer, gen_dataloader, all_ec=split_ec)
+            correct_count, counts, valid_smiles, *no_ec_list = eval_dataset(model, tokenizer, gen_dataloader,
+                                                                            all_ec=split_ec)
         res[split] = {i: correct_count[i] / counts[i] for i in correct_count}
         smiles_res = {i: valid_smiles[i] / counts[i] for i in valid_smiles}
-        correct_no_ec_res={i: correct_no_ec[i] / counts[i] for i in correct_no_ec}
+        for i, correct_no_ec in enumerate(no_ec_list):
+            no_ec_list[i] = {i: correct_no_ec[i] / counts[i] for i in correct_no_ec}
         for ec in ALL_EC:
-            if split=="test" and ec == "[v7]":
+            if split == "test" and ec == "[v7]":
                 continue
-            results.loc[ec,(split,"correct_count")]=res[split][ec]
-            results.loc[ec,(split,"counts")]=counts[ec]
-            results.loc[ec,(split,"valid_smiles")]=smiles_res[ec]
-            results.loc[ec,(split,"correct_no_ec")]=correct_no_ec_res[ec]
-        print(smiles_res)
-        print(res[split])
-        print(correct_no_ec_res)
-
-    for key in res["test"]:
-        print(f"{key}: Train: {res['train'][key]:.2f}, Valid: {res['valid'][key]:.2f}, Test: {res['test'][key]:.2f}")
+            results.loc[ec, (split, "correct_count")] = res[split][ec]
+            results.loc[ec, (split, "counts")] = counts[ec]
+            results.loc[ec, (split, "valid_smiles")] = smiles_res[ec]
+            results.loc[ec, (split, "correct_no_ec_0")] = no_ec_list[0][ec]
+            results.loc[ec, (split, "correct_no_ec_1")] = no_ec_list[1][ec]
+            results.loc[ec, (split, "correct_no_ec_2")] = no_ec_list[2][ec]
+            results.loc[ec, (split, "correct_no_ec_3")] = no_ec_list[3][ec]
+        print(results)
+        print("---" * 10)
+        print(results.to_csv())
