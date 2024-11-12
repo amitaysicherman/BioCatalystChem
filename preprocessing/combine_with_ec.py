@@ -44,18 +44,28 @@ def write_data_dict(data_dict, output_base, split):
                 f.write(" | ".join(s) + "\n")
                 g.write(tgt + "\n")
 
+
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--ec_dataset", type=str, default="datasets/ecreact/level4")
-    parser.add_argument("--target_dataset", type=str, default="datasets/ecreact/quant_2_5_6_10")
+    parser.add_argument("--target_dataset", type=str, default="all")
+
     args = parser.parse_args()
     ec_dataset = args.ec_dataset
     target_dataset = args.target_dataset
-    output_dataset = target_dataset + "_plus"
-    os.makedirs(output_dataset, exist_ok=True)
-    for split in ["train", "test", "valid"]:
-        ec_dict = dataset_to_dict(ec_dataset, split)
-        target_dict = dataset_to_dict(target_dataset, split)
-        output_dict = merge_dicts(target_dict, ec_dict)
-        write_data_dict(output_dict, output_dataset, split)
+    if target_dataset != "all":
+        all_target_dataset = [target_dataset]
+    else:
+        all_dirs = os.listdir("datasets/ecreact")
+        all_target_dataset = [x for x in all_dirs if os.path.isdir(x) and x != "level4"]
+
+    for target_dataset in all_target_dataset:
+        output_dataset = target_dataset + "_plus"
+        os.makedirs(output_dataset, exist_ok=True)
+        for split in ["train", "test", "valid"]:
+            ec_dict = dataset_to_dict(ec_dataset, split)
+            target_dict = dataset_to_dict(target_dataset, split)
+            output_dict = merge_dicts(target_dict, ec_dict)
+            write_data_dict(output_dict, output_dataset, split)
