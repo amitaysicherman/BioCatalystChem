@@ -90,8 +90,8 @@ class ResidualPCATokenizer:
 
     def get_all_tokens(self):
         tokens = []
-        for level, k in enumerate(self.vals_residual_clusters):
-            for cluster in range(k):
+        for level in range(self.n_residual_clusters):
+            for cluster in range(self.n_clusters_pca):
                 tokens.append(f"R{level}-{cluster}")
         for dim in range(self.n_pca_components):
             for cluster in range(self.n_clusters_pca):
