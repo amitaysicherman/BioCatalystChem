@@ -191,7 +191,7 @@ def args_to_lens(args):
     return length
 
 
-def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=None,base_results_dir="results",dups=0):
+def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=None, base_results_dir="results", dups=0):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
@@ -213,16 +213,16 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
     else:
         ecreact_dataset = "ecreact/level4"
     if dups:
-        ecreact_dataset=ecreact_dataset.replace("level4","level4_duplicates")
+        ecreact_dataset = ecreact_dataset.replace("level4", "level4_duplicates")
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
 
     if prequantization:
         from offline_quantizer import ResidualPCATokenizer
 
         new_tokens = ResidualPCATokenizer(n_residual_clusters=n_hierarchical_clusters,
-                                              n_pca_components=n_pca_components,
-                                              n_clusters_pca=n_clusters_pca,
-                                              ).get_all_tokens()
+                                          n_pca_components=n_pca_components,
+                                          n_clusters_pca=n_clusters_pca,
+                                          ).get_all_tokens()
         tokenizer.add_tokens(new_tokens)
     if ec_type == ECType.PAPER or addec:
         new_tokens = get_ec_tokens()
@@ -275,6 +275,7 @@ if __name__ == "__main__":
     parser.add_argument("--k", default=5, type=int)
     parser.add_argument("--per_level", default=1, type=int)
     parser.add_argument("--dups", default=0, type=int)
+    parser.add_argument("--res_base", default="results", type=str)
 
     args = parser.parse_args()
     run_name = args.run_name
@@ -284,7 +285,8 @@ if __name__ == "__main__":
     print(f"Run: {run_name}")
     print("---" * 10)
 
-    model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split,dups=args.dups)
+    model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
+                                                                 base_results_dir=args.res_base)
     all_ec = get_ec_from_df(gen_dataset, per_level)
     gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0)
 
@@ -302,7 +304,8 @@ if __name__ == "__main__":
         print(f"{ec}: {ec_count[ec]:.2f}")
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
-    config_cols = run_name + "," + args.split + "," + str(args.k) + "," + str(args.fast) + "," + str(args.per_level)+","+str(args.dups)
+    config_cols = run_name + "," + args.split + "," + str(args.k) + "," + str(args.fast) + "," + str(
+        args.per_level) + "," + str(args.dups)
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
         for ec in correct_count:
             for i in range(1, args.k + 1):
