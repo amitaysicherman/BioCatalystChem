@@ -60,7 +60,7 @@ if __name__ == "__main__":
     else:
         all_dirs = os.listdir("datasets/ecreact")
         all_dirs= [pjoin("datasets/ecreact", x) for x in all_dirs]
-        all_target_dataset = [x for x in all_dirs if os.path.isdir(x) and x != "level4"]
+        all_target_dataset = [x for x in all_dirs if os.path.isdir(x) and x != "level4" and "quant" in x]
 
     for target_dataset in all_target_dataset:
         output_dataset = target_dataset + "_plus"
