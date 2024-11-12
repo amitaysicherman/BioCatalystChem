@@ -102,8 +102,8 @@ def get_tokenizer_and_model(ec_type, lookup_len, DEBUG, prequantization, n_hiera
                             n_clusters_pca, addec, nopre, lora, lora_d, regpre):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if prequantization:
-        from offline_quantizer import HierarchicalPCATokenizer
-        new_tokens = HierarchicalPCATokenizer(n_hierarchical_clusters=n_hierarchical_clusters,
+        from offline_quantizer import ResidualPCATokenizer
+        new_tokens = ResidualPCATokenizer(n_hierarchical_clusters=n_hierarchical_clusters,
                                               n_pca_components=n_pca_components,
                                               n_clusters_pca=n_clusters_pca,
                                               ).get_all_tokens()

@@ -85,8 +85,8 @@ def get_tokenizer_and_model(ec_split, lookup_len, DEBUG=False, costum_t5=False, 
                             n_hierarchical_clusters=5, n_pca_components=6, n_clusters_pca=10):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if prequantization:
-        from offline_quantizer import HierarchicalPCATokenizer
-        new_tokens = HierarchicalPCATokenizer(n_hierarchical_clusters=n_hierarchical_clusters,
+        from offline_quantizer import ResidualPCATokenizer
+        new_tokens = ResidualPCATokenizer(n_hierarchical_clusters=n_hierarchical_clusters,
                                               n_pca_components=n_pca_components,
                                               n_clusters_pca=n_clusters_pca,
                                               ).get_all_tokens()

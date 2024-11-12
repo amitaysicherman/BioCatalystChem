@@ -216,9 +216,9 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
 
     if prequantization:
-        from offline_quantizer import HierarchicalPCATokenizer
+        from offline_quantizer import ResidualPCATokenizer
 
-        new_tokens = HierarchicalPCATokenizer(n_hierarchical_clusters=n_hierarchical_clusters,
+        new_tokens = ResidualPCATokenizer(n_hierarchical_clusters=n_hierarchical_clusters,
                                               n_pca_components=n_pca_components,
                                               n_clusters_pca=n_clusters_pca,
                                               ).get_all_tokens()
