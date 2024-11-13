@@ -160,7 +160,7 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate,max_length,dups):
+         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate,max_length,dups,tasks_on_gpu):
     if DEBUG:
         batch_size = 8
     ec_type = ECType(ec_type)
@@ -217,9 +217,10 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         num_train_epochs = 5
     gradient_accumulation_steps = 1
-    # if batch_size > 16:
-    #     gradient_accumulation_steps = batch_size // 16
-    #     batch_size = 16
+    if tasks_on_gpu>1:
+        if batch_size > 16:
+            gradient_accumulation_steps = batch_size // 16
+            batch_size = 16
 
     # check if there is a checkpoint to resume from
     resume_from_checkpoint = False
@@ -313,4 +314,4 @@ if __name__ == '__main__':
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
          n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,
          lora_d=args.lora_d, regpre=args.regpre, mix=args.mix, batch_size=args.batch_size,
-         learning_rate=args.learning_rate,max_length=args.max_length,dups=args.dups)
+         learning_rate=args.learning_rate,max_length=args.max_length,dups=args.dups,tasks_on_gpu=args.tasks_on_gpu)
