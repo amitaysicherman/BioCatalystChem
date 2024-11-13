@@ -1,9 +1,7 @@
-# sbatch --gres=gpu:1 --mem=16G --time=1-00:00:00 --account=def-bengioy --cpus-per-task=4 train.sh
 from transformers import (
     T5Config,
     T5ForConditionalGeneration,
 )
-import os
 from transformers import PreTrainedTokenizerFast
 from transformers import Trainer, TrainingArguments
 from transformers import DataCollatorForSeq2Seq
@@ -14,12 +12,10 @@ from peft import (
     get_peft_model,
     LoraConfig,
     TaskType,
-    PeftModel,
-    PeftConfig
 )
 import torch
 
-from dataset import SeqToSeqDataset
+from dataset import SeqToSeqDataset, combine_datasets, ECType
 from preprocessing.build_tokenizer import get_tokenizer_file_path, get_ec_tokens
 from model import CustomT5Model
 import rdkit.rdBase as rkrb
@@ -177,30 +173,31 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
             ecreact_dataset += "_plus"
     else:
         ecreact_dataset = "ecreact/level4"
-
-    if mix:
-        if dups == 2:
-            w = [40, 1]
-        else:
-            w = [20, 1]
-        train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=w, tokenizer=tokenizer,
-                                        ec_type=ec_type, DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length,
-                                        duplicated_source_mode=dups)
+    common_ds_args = {"tokenizer": tokenizer, "ec_type": ec_type, "DEBUG": DEBUG, "alpha": alpha, "addec": addec,
+                      "max_length": max_length}
+    dup_args = {"duplicated_source_mode": 0 if dups == 3 else dups}
+    if dups == 3:
+        uspto_dataset = SeqToSeqDataset(["uspto"], "train", **common_ds_args)
+        ecreact_train_all_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args,
+                                                    duplicated_source_mode=0, weights=[15])
+        ecreact_train_dup_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args,
+                                                    duplicated_source_mode=2, weights=[15], ec_type=ECType.NO_EC)
+        train_dataset = combine_datasets([uspto_dataset, ecreact_train_all_dataset, ecreact_train_dup_dataset])
     else:
-        train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length,
-                                        duplicated_source_mode=dups)
-    train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec,
-                                          max_length=max_length, duplicated_source_mode=dups)
-    val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length,
-                                        duplicated_source_mode=dups)
-    test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec, max_length=max_length,
-                                         duplicated_source_mode=dups)
-    test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
+        if mix:
+            if dups == 2:
+                w = [40, 1]
+            else:
+                w = [20, 1]
+            train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=w, **common_ds_args,
+                                            **dup_args)
+        else:
+            train_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args, **dup_args)
+
+    train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args, sample_size=1000, **dup_args)
+    val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", **common_ds_args, **dup_args)
+    test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", **common_ds_args, sample_size=1000, **dup_args)
+    test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", **common_ds_args, sample_size=1000)
 
     eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset,
                      "uspto": test_uspto_dataset}
@@ -267,7 +264,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         gradient_accumulation_steps=gradient_accumulation_steps,
         save_safetensors=False,
         group_by_length=True,
-        resume_from_checkpoint=resume_from_checkpoint
+
     )
 
     # Initialize Trainer
@@ -281,7 +278,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         compute_metrics=lambda x: compute_metrics(x, tokenizer)
     )
 
-    trainer.train()
+    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
 
 if __name__ == '__main__':

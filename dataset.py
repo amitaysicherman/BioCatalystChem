@@ -19,7 +19,6 @@ n_cpu = os.cpu_count()
 IGNORE_DUPLICATES = 0
 SAVE_DUPLICATES = 1
 DROP_DUPLICATES = 2
-DROP_AND_IGNORE_DUPLICATES = 3
 
 
 def get_ec_map(split):
@@ -128,14 +127,8 @@ class SeqToSeqDataset(Dataset):
                 have_ec = False  # TODO : there is EC , but like paper, not like pretrained
             if "uspto" in ds:
                 dups = IGNORE_DUPLICATES
-            if dups == DROP_AND_IGNORE_DUPLICATES:
-                self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
-                                  duplicated_source_mode=DROP_DUPLICATES)
-                self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
-                                  duplicated_source_mode=IGNORE_DUPLICATES)
-            else:
-                self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
-                                  duplicated_source_mode=dups)
+            self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
+                              duplicated_source_mode=dups)
         if not DEBUG:
             # if sample_size is not None:
             #     self.data = random.sample(self.data, sample_size)
