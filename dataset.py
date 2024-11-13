@@ -11,11 +11,13 @@ import pandas as pd
 import random
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor
-
+from collections import Counter
 import os
 
 n_cpu = os.cpu_count()
-
+IGNORE_DUPLICATES = 0
+SAVE_DUPLICATES = 1
+DROP_DUPLICATES = 2
 
 def get_ec_map(split):
     with open(f"datasets/ecreact/level4/src-{split}.txt") as f:
@@ -54,10 +56,37 @@ def get_ec_type(use_ec, ec_split, dae):
     return ECType.PRETRAINED
 
 
+class DuplicateSrcManager:
+
+    def __init__(self, base_dataset="datasets/ecreact/level4", threshold=1):
+        self.base_dataset = base_dataset
+        self.threshold = threshold
+        self.duplicates = self.get_duplicates()
+
+    def remove_ec(self, text):
+        return text.split("|")[0]
+
+    def get_duplicates(self):
+        srcs_counter = Counter()
+        for split in ["train", "valid", "test"]:
+            with open(f"{self.base_dataset}/src-{split}.txt") as f:
+                src_lines = f.read().splitlines()
+                src = [self.remove_ec(x) for x in src_lines]
+                srcs_counter.update(src)
+        print(len(srcs_counter))
+        return srcs_counter
+
+    def is_duplicate(self, src):
+        return self.duplicates[self.remove_ec(src)] > self.threshold
+
+    def mask_list_duplicate(self, src_list):
+        return [self.is_duplicate(src) for src in src_list]
+
+
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
                  ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False, save_ec=False,
-                 retro=False):
+                 retro=False, duplicated_source_mode=IGNORE_DUPLICATES):
         self.max_length = max_length
         self.sample_size = sample_size
         self.tokenizer = tokenizer
@@ -68,6 +97,7 @@ class SeqToSeqDataset(Dataset):
         self.ec_type = ec_type
         self.lookup_embeddings = []
         self.alpha = alpha
+        self.duplicated_source_manager = DuplicateSrcManager()
         if save_ec:
             self.ec_map = get_ec_map(split)
             self.all_ecs = []
@@ -93,7 +123,10 @@ class SeqToSeqDataset(Dataset):
             have_ec = "ec" in ds
             if "quant" in ds:
                 have_ec = False  # TODO : there is EC , but like paper, not like pretrained
-            self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec)
+                if "uspto" in ds:
+                    duplicated_source_mode = IGNORE_DUPLICATES
+            self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
+                              duplicated_source_mode=duplicated_source_mode)
         if not DEBUG:
             # if sample_size is not None:
             #     self.data = random.sample(self.data, sample_size)
@@ -104,7 +137,7 @@ class SeqToSeqDataset(Dataset):
     def process_reaction(self, text, ec):
         return get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
 
-    def load_dataset(self, input_base, split, w, have_ec=True):
+    def load_dataset(self, input_base, split, w, have_ec=True, duplicated_source_mode=0):
         if not os.path.exists(input_base):
             print(f"Dataset {input_base} not found")
             input_base = input_base.replace("-0.5", "")
@@ -113,11 +146,21 @@ class SeqToSeqDataset(Dataset):
 
         with open(f"{input_base}/tgt-{split}.txt") as f:
             tgt_lines = f.read().splitlines()
+
+        emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
+
+        if duplicated_source_mode != IGNORE_DUPLICATES:
+            mask = self.duplicated_source_manager.mask_list_duplicate(src_lines)
+            if duplicated_source_mode == DROP_DUPLICATES:
+                mask = [not x for x in mask]
+            src_lines = [src for src, m in zip(src_lines, mask) if m]
+            tgt_lines = [tgt for tgt, m in zip(tgt_lines, mask) if m]
+            emb_lines = [emb for emb, m in zip(emb_lines, mask) if m]
+
         if self.retro:
             src_lines, tgt_lines = tgt_lines, src_lines
         assert len(src_lines) == len(tgt_lines)
 
-        emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
 
         if self.sample_size is not None:
             samples_idx = random.sample(range(len(src_lines)), self.sample_size)

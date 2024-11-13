@@ -212,8 +212,6 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
 
     else:
         ecreact_dataset = "ecreact/level4"
-    if dups:
-        ecreact_dataset = ecreact_dataset.replace("level4", "level4_duplicates")
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
 
     if prequantization:
@@ -243,7 +241,7 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
         assert samples is None or type(samples) == int
         gen_dataset = SeqToSeqDataset([ecreact_dataset], splits, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
                                       save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
-                                      sample_size=samples)
+                                      sample_size=samples,duplicated_source_mode=dups)
     else:
         assert samples is None or type(samples) == list
         if samples is None:
@@ -251,7 +249,7 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
         samples = {split: sample for split, sample in zip(splits, samples)}
         gen_dataset = [SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
                                        save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
-                                       sample_size=samples[split]) for split in
+                                       sample_size=samples[split],duplicated_source_mode=dups) for split in
                        splits]
     model.to(device)
     model.eval()
