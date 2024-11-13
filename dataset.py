@@ -19,6 +19,7 @@ IGNORE_DUPLICATES = 0
 SAVE_DUPLICATES = 1
 DROP_DUPLICATES = 2
 
+
 def get_ec_map(split):
     with open(f"datasets/ecreact/level4/src-{split}.txt") as f:
         src_lines = f.read().splitlines()
@@ -150,12 +151,14 @@ class SeqToSeqDataset(Dataset):
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
 
         if duplicated_source_mode != IGNORE_DUPLICATES:
+            print("Removing duplicates mode ", duplicated_source_mode,". len before", len(src_lines), end=" ")
             mask = self.duplicated_source_manager.mask_list_duplicate(src_lines)
             if duplicated_source_mode == DROP_DUPLICATES:
                 mask = [not x for x in mask]
             src_lines = [src for src, m in zip(src_lines, mask) if m]
             tgt_lines = [tgt for tgt, m in zip(tgt_lines, mask) if m]
             emb_lines = [emb for emb, m in zip(emb_lines, mask) if m]
+            print("len after", len(src_lines))
 
         if self.retro:
             src_lines, tgt_lines = tgt_lines, src_lines
