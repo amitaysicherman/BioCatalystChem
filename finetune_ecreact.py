@@ -58,7 +58,7 @@ def compute_metrics(eval_pred, tokenizer):
 
 
 def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca,
-                 alpha, addec,dups):
+                 alpha, addec):
     if ec_type == ECType.PAPER:
         return "paper"
     elif ec_type == ECType.NO_EC:
