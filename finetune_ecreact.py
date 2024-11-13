@@ -80,7 +80,7 @@ def load_pretrained_model(regpre):
     if not regpre:
         base_dir = "results/uspto"
     else:
-        base_dir = "results/regular"
+        base_dir = "results/regular_mix_dups2"
 
     cp_dirs = os.listdir(base_dir)
     cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
