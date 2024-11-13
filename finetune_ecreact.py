@@ -58,7 +58,7 @@ def compute_metrics(eval_pred, tokenizer):
 
 
 def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca,
-                 alpha, addec):
+                 alpha, addec,dups):
     if ec_type == ECType.PAPER:
         return "paper"
     elif ec_type == ECType.NO_EC:
@@ -160,7 +160,7 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate,max_length):
+         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate,max_length,dups):
     if DEBUG:
         batch_size = 8
     ec_type = ECType(ec_type)
@@ -180,16 +180,16 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
     if mix:
         train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[20, 1], tokenizer=tokenizer,
-                                        ec_type=ec_type, DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length)
+                                        ec_type=ec_type, DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length,duplicated_source_mode=dups)
     else:
         train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length)
+                                        DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length,duplicated_source_mode=dups)
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec, max_length=max_length)
+                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec, max_length=max_length,duplicated_source_mode=dups)
     val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                        DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length)
+                                        DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length,duplicated_source_mode=dups)
     test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
-                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec, max_length=max_length)
+                                         DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec, max_length=max_length,duplicated_source_mode=dups)
     test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", weights=[1], tokenizer=tokenizer, ec_type=ec_type,
                                          DEBUG=DEBUG, sample_size=1000, alpha=alpha, addec=addec)
 
@@ -206,6 +206,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         run_name += f"_lora_{lora_d}"
     if mix:
         run_name += f"_mix"
+    if dups:
+        run_name += f"_dups{dups}"
     # run_name += f"_bs-{batch_size}_lr-{learning_rate}"
     print(f"Run name: {run_name}")
     # Training arguments
@@ -214,11 +216,10 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         num_train_epochs = 100
     else:
         num_train_epochs = 5
-    if batch_size > 16:
-        gradient_accumulation_steps = batch_size // 16
-        batch_size = 16
-    else:
-        gradient_accumulation_steps = 1
+    gradient_accumulation_steps = 1
+    # if batch_size > 16:
+    #     gradient_accumulation_steps = batch_size // 16
+    #     batch_size = 16
 
     # check if there is a checkpoint to resume from
     resume_from_checkpoint = False
@@ -294,6 +295,7 @@ if __name__ == '__main__':
     parser.add_argument("--learning_rate", type=float, default=0.001)
     parser.add_argument("--tasks_on_gpu", type=int, default=1)
     parser.add_argument("--max_length", type=int, default=200)
+    parser.add_argument("--dups", default=0, type=int)
     args = parser.parse_args()
     if args.tasks_on_gpu > 1:
         torch.cuda.set_per_process_memory_fraction(1 / args.tasks_on_gpu)
@@ -311,4 +313,4 @@ if __name__ == '__main__':
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
          n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,
          lora_d=args.lora_d, regpre=args.regpre, mix=args.mix, batch_size=args.batch_size,
-         learning_rate=args.learning_rate,max_length=args.max_length)
+         learning_rate=args.learning_rate,max_length=args.max_length,dups=args.dups)
