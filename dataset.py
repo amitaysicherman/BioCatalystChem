@@ -18,6 +18,7 @@ n_cpu = os.cpu_count()
 IGNORE_DUPLICATES = 0
 SAVE_DUPLICATES = 1
 DROP_DUPLICATES = 2
+DROP_AND_IGNORE_DUPLICATES = 3
 
 
 def get_ec_map(split):
@@ -121,13 +122,20 @@ class SeqToSeqDataset(Dataset):
         else:
             assert len(weights) == len(datasets)
         for ds, w in zip(datasets, weights):
+            dups = duplicated_source_mode
             have_ec = "ec" in ds
             if "quant" in ds:
                 have_ec = False  # TODO : there is EC , but like paper, not like pretrained
-                if "uspto" in ds:
-                    duplicated_source_mode = IGNORE_DUPLICATES
-            self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
-                              duplicated_source_mode=duplicated_source_mode)
+            if "uspto" in ds:
+                dups = IGNORE_DUPLICATES
+            if dups == DROP_AND_IGNORE_DUPLICATES:
+                self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
+                                  duplicated_source_mode=DROP_DUPLICATES)
+                self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
+                                  duplicated_source_mode=IGNORE_DUPLICATES)
+            else:
+                self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
+                                  duplicated_source_mode=dups)
         if not DEBUG:
             # if sample_size is not None:
             #     self.data = random.sample(self.data, sample_size)
@@ -151,7 +159,7 @@ class SeqToSeqDataset(Dataset):
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
 
         if duplicated_source_mode != IGNORE_DUPLICATES:
-            print("Removing duplicates mode ", duplicated_source_mode,". len before", len(src_lines), end=" ")
+            print("Removing duplicates mode ", duplicated_source_mode, ". len before", len(src_lines), end=" ")
             mask = self.duplicated_source_manager.mask_list_duplicate(src_lines)
             if duplicated_source_mode == DROP_DUPLICATES:
                 mask = [not x for x in mask]
@@ -163,7 +171,6 @@ class SeqToSeqDataset(Dataset):
         if self.retro:
             src_lines, tgt_lines = tgt_lines, src_lines
         assert len(src_lines) == len(tgt_lines)
-
 
         if self.sample_size is not None:
             samples_idx = random.sample(range(len(src_lines)), self.sample_size)
