@@ -179,7 +179,11 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         ecreact_dataset = "ecreact/level4"
 
     if mix:
-        train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[20, 1], tokenizer=tokenizer,
+        if dups == 2:
+            w = [40, 1]
+        else:
+            w = [20, 1]
+        train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=w, tokenizer=tokenizer,
                                         ec_type=ec_type, DEBUG=DEBUG, alpha=alpha, addec=addec, max_length=max_length,
                                         duplicated_source_mode=dups)
     else:
