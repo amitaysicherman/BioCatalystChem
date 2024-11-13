@@ -136,8 +136,8 @@ class SeqToSeqDataset(Dataset):
                 random.seed(42)
                 random.shuffle(self.data)
 
-    def process_reaction(self, text, ec):
-        return get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
+    # def process_reaction(self, text, ec):
+    #     return get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
 
     def load_dataset(self, input_base, split, w, have_ec=True, duplicated_source_mode=0):
         if not os.path.exists(input_base):
@@ -189,13 +189,13 @@ class SeqToSeqDataset(Dataset):
                 if self.ec_type == ECType.PRETRAINED:
                     emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
                 else:
-                    # emb_lines = [
-                    #     get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
-                    #     for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
-                    # ]
-                    with ProcessPoolExecutor(max_workers=n_cpu) as executor:
-                        emb_lines = list(
-                            tqdm(executor.map(self.process_reaction, src_lines, ec_lines), total=len(src_lines)))
+                    emb_lines = [
+                        get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
+                        for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
+                    ]
+                    # with ProcessPoolExecutor(max_workers=n_cpu) as executor:
+                    #     emb_lines = list(
+                    #         tqdm(executor.map(self.process_reaction, src_lines, ec_lines), total=len(src_lines)))
 
                 if self.addec:
                     src_lines = first_src_lines
