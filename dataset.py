@@ -13,6 +13,7 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor
 from collections import Counter
 import os
+from typing import List
 
 n_cpu = os.cpu_count()
 IGNORE_DUPLICATES = 0
@@ -97,7 +98,6 @@ class SeqToSeqDataset(Dataset):
         self.data = []
         self.DEBUG = DEBUG
         self.ec_type = ec_type
-        self.lookup_embeddings = []
         self.alpha = alpha
         self.duplicated_source_manager = DuplicateSrcManager()
         if save_ec:
@@ -251,3 +251,36 @@ class SeqToSeqDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.data_to_dict(self.data[idx])
+
+
+def combine_datasets(datasets: List[SeqToSeqDataset], shuffle=True) -> SeqToSeqDataset:
+    combined_data = []
+    combined_ecs = []
+    for dataset in datasets:
+        combined_data.extend(dataset.data)
+        combined_ecs.extend(dataset.all_ecs)
+
+    combined_dataset = SeqToSeqDataset(
+        datasets=[],
+        split=None,
+        tokenizer=None,
+        max_length=None,
+        DEBUG=None,
+        ec_type=None,
+        sample_size=None,
+        shuffle=shuffle,
+        alpha=None,
+        addec=None,
+        save_ec=None,
+        retro=None,
+        duplicated_source_mode=None
+    )
+    if shuffle:
+        random.seed(42)
+        indexes = list(range(len(combined_data)))
+        random.shuffle(indexes)
+        combined_data = [combined_data[i] for i in indexes]
+        combined_ecs = [combined_ecs[i] for i in indexes]
+    combined_dataset.data = combined_data
+    combined_dataset.all_ecs = combined_ecs
+    return combined_dataset
