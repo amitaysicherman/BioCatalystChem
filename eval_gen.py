@@ -139,15 +139,6 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
                 if labels in preds_list[:j]:
                     correct_count[ec][j] += 1
             ec_count[ec] += 1
-        msg = ""
-        for ec in correct_count:
-            msg += f"[{ec}: "
-            for i in range(1, k + 1):
-                if ec_count[ec] == 0:
-                    continue
-                msg += f"{i}:{correct_count[ec][i] / ec_count[ec]:.2f} "
-            msg += f"|{ec_count[ec]:.2f}] "
-        pbar.set_description(msg)
     if return_all:
         return correct_count, ec_count, all_scores
     return correct_count, ec_count
