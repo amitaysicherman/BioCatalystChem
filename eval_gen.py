@@ -16,6 +16,7 @@ import json
 from dataset import ECType
 from preprocessing.build_tokenizer import get_ec_tokens
 from finetune_ecreact import CustomDataCollatorForSeq2Seq
+from collections import Counter
 RDLogger.DisableLog('rdApp.*')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -265,6 +266,14 @@ def get_ec_from_df(dataset, per_level):
     return all_ec
 
 
+def get_training_ec_count(level):
+    with open("datasets/ecreact/level4/src-train.txt") as f:
+        src_lines = f.read().splitlines()
+    all_ec= [x.split("|")[1] for x in src_lines]
+    all_ec = [" ".join(ec.strip().split(" ")[:level]) for ec in all_ec]
+    return Counter(all_ec)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", default="pretrained_5", type=str)
@@ -293,6 +302,8 @@ if __name__ == "__main__":
     with torch.no_grad():
         correct_count, ec_count = eval_dataset(model, tokenizer, gen_dataloader, k=args.k, fast=args.fast,
                                                save_file=f"results/full/{run_name}.csv", all_ec=all_ec)
+    ec_training_count = get_training_ec_count(per_level)
+
     print(f"Run: {run_name}")
     for ec in correct_count:
         for i in range(1, args.k + 1):
@@ -310,4 +321,5 @@ if __name__ == "__main__":
                 if ec_count[ec] == 0:
                     continue
                 f.write(
-                    config_cols + "," + ec + f",{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]}\n")
+                    config_cols + "," + ec + f",{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]},{ec_training_count[ec]}\n")
+
