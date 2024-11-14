@@ -59,7 +59,7 @@ class EC2Vec:
 
         elif self.name == "esm3":
             vec = None
-            for i in range(3):
+            for i in range(2):
                 try:
                     protein = ESMProtein(sequence=seq)
                     protein = self.model.encode(protein)
