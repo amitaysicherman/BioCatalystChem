@@ -45,7 +45,7 @@ class EC2Vec:
             if device == torch.device("cpu"):
                 self.model.to(torch.float32)
         elif name == "esm3":
-            self.model = client("esm3-medium-2024-08", token="3hn8PHelb0F4FdWgrLxXKR")
+            self.model = client("esm3-medium-multimer-2024-09", token="3hn8PHelb0F4FdWgrLxXKR")
         else:
             raise ValueError(f"Invalid model name: {name}")
 
