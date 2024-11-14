@@ -64,7 +64,7 @@ for i, row in results_df.iterrows():
 scripts_dir = "../DiffDock/scripts"
 os.makedirs(scripts_dir, exist_ok=True)
 
-n_splits = 20
+n_splits = 200
 for i in range(n_splits):
     with open(f"{scripts_dir}/run_{i+1}.sh", 'w') as f:
         for cmd in cmds[i::n_splits]:
