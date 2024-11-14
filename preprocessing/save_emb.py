@@ -9,6 +9,7 @@ from tqdm import tqdm
 from esm.sdk import client
 from esm.sdk.api import LogitsConfig, ESMProtein
 import time
+
 MAX_LEN = 510
 PROTEIN_MAX_LEN = 1023
 
@@ -55,21 +56,23 @@ class EC2Vec:
             inputs = clip_to_max_len(inputs)
             with torch.no_grad():
                 vec = self.model(inputs)['last_hidden_state'][0]
+
         elif self.name == "esm3":
-            try:
-                protein = ESMProtein(sequence=seq)
-                protein = self.model.encode(protein)
-                conf = LogitsConfig(return_embeddings=True, sequence=True)
-                vec = self.model.logits(protein, conf).embeddings[0]
-            except Exception as e:
-                print(f"Error: {e}")
-                print(f"Sequence: {seq}")
-                print("Sleeping for 60 seconds")
-                time.sleep(60)
-                protein = ESMProtein(sequence=seq)
-                protein = self.model.encode(protein)
-                conf = LogitsConfig(return_embeddings=True, sequence=True)
-                vec = self.model.logits(protein, conf).embeddings[0].mean(dim=0)
+            vec = None
+            for i in range(3):
+                try:
+                    protein = ESMProtein(sequence=seq)
+                    protein = self.model.encode(protein)
+                    conf = LogitsConfig(return_embeddings=True, sequence=True)
+                    vec = self.model.logits(protein, conf).embeddings[0]
+                    break
+                except Exception as e:
+                    print(f"Error: {e}")
+                    print(f"Sequence: {seq}")
+                    print("Sleeping for 60 seconds")
+                    time.sleep(60)
+            if vec is None:
+                return np.zeros((len(seq), self.prot_dim))
 
         else:
             raise ValueError(f"Invalid model name: {self.name}")
@@ -87,13 +90,10 @@ if __name__ == "__main__":
     all_dirs = os.listdir(base_dir)
     all_dirs = [x for x in all_dirs if os.path.isdir(f"{base_dir}/{x}")]
     for uniprot_id in tqdm(all_dirs):
+
+        outputfile = f"{base_dir}/{uniprot_id}/protein.npy" if name == "esm2" else f"{base_dir}/{uniprot_id}/ems3_protein.npy"
+        if os.path.exists(outputfile):
+            continue
         fasta = uniprot_to_fasta[uniprot_id]
         vec = ec2vec.fasta_to_vec(fasta)
-        if name == "esm2":
-            np.save(f"{base_dir}/{uniprot_id}/protein.npy", vec)
-        elif name == "esm3":
-            np.save(f"{base_dir}/{uniprot_id}/ems3_protein.npy", vec)
-        else:
-            raise ValueError(f"Invalid model name: {name}")
-
-
+        np.save(outputfile, vec)
