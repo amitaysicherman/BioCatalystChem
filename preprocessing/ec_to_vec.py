@@ -6,6 +6,10 @@ from bioservices import UniProt
 import os
 from tqdm import tqdm
 
+from esm.sdk import client
+from esm.sdk.api import LogitsConfig,ESMProtein
+
+
 MAX_LEN = 510
 PROTEIN_MAX_LEN = 1023
 
@@ -13,6 +17,7 @@ P_BFD = "bfd"
 P_T5_XL = "t5"
 ESM_1B = "ems1"
 ESM_2 = "esm2"
+ESM_3 = "esm3"
 
 protein_name_to_cp = {
     P_BFD: 'Rostlab/prot_bert_bfd',
@@ -91,6 +96,8 @@ class EC2Vec:
         elif self.name == P_T5_XL:
             self.tokenizer = T5Tokenizer.from_pretrained(self.cp_name, do_lower_case=False)
             self.model = T5EncoderModel.from_pretrained(self.cp_name).eval().to(device)
+        elif self.name == ESM_3:
+            self.model = client("esm3-medium-2024-08", token="3hn8PHelb0F4FdWgrLxXKR")
         else:
             raise ValueError(f"Unknown protein embedding: {self.name}")
         if device == torch.device("cpu"):
@@ -103,6 +110,11 @@ class EC2Vec:
             inputs = clip_to_max_len(inputs)
             with torch.no_grad():
                 vec = self.model(inputs)['pooler_output'][0]
+        elif self.name == ESM_3:
+            protein = ESMProtein(sequence=seq)
+            protein = self.model.encode(protein)
+            conf = LogitsConfig(return_embeddings=True, sequence=True)
+            vec = self.model.logits(protein, conf).embeddings[0].mean(dim=0)
         else:
             seq = [" ".join(list(re.sub(r"[UZOB]", "X", seq)))]
             ids = self.tokenizer(seq, add_special_tokens=True, padding="longest")
