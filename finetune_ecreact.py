@@ -180,8 +180,10 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         uspto_dataset = SeqToSeqDataset(["uspto"], "train", **common_ds_args)
         ecreact_train_all_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args,
                                                     duplicated_source_mode=0, weights=[15])
+        args={**common_ds_args}
+        args['ec_type'] = ECType.NO_EC
         ecreact_train_dup_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args,
-                                                    duplicated_source_mode=2, weights=[15], ec_type=ECType.NO_EC)
+                                                    duplicated_source_mode=2, weights=[15])
         train_dataset = combine_datasets([uspto_dataset, ecreact_train_all_dataset, ecreact_train_dup_dataset])
     else:
         if mix:
