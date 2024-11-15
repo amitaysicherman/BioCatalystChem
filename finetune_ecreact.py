@@ -180,7 +180,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         uspto_dataset = SeqToSeqDataset(["uspto"], "train", **common_ds_args)
         ecreact_train_all_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args,
                                                     duplicated_source_mode=0, weights=[15])
-        train_dup_args={**common_ds_args}
+        train_dup_args = {**common_ds_args}
         train_dup_args['ec_type'] = ECType.NO_EC
         ecreact_train_dup_dataset = SeqToSeqDataset([ecreact_dataset], "train", **train_dup_args,
                                                     duplicated_source_mode=2, weights=[15])
@@ -224,6 +224,9 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         num_train_epochs = 100
     else:
         num_train_epochs = 5
+
+    if regpre:
+        num_train_epochs = num_train_epochs // 2
     gradient_accumulation_steps = 1
 
     if use_bs != 0:
