@@ -152,8 +152,6 @@ class SeqToSeqDataset(Dataset):
         self.duplicated_source_manager = DuplicateSrcManager()
         self.reaction_to_source = ReactionToSource()
         self.sources = []
-        if ec_source != None:
-            save_ec = True
         if save_ec:
             self.ec_map = get_ec_map(split)
             self.all_ecs = []
@@ -234,10 +232,12 @@ class SeqToSeqDataset(Dataset):
 
         if self.ec_map is not None:
             save_ec_lines = [self.ec_map[(src.split("|")[0], tgt)] for src, tgt in zip(src_lines, tgt_lines)]
-            source_lines = [self.reaction_to_source.get_source(src, tgt) for src, tgt in zip(src_lines, tgt_lines)]
-
         else:
             save_ec_lines = [0] * len(src_lines)
+
+        if self.ec_source is not None:
+            source_lines = [self.reaction_to_source.get_source(src, tgt) for src, tgt in zip(src_lines, tgt_lines)]
+        else:
             source_lines = [0] * len(src_lines)
 
         if have_ec:
