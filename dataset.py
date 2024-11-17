@@ -41,55 +41,6 @@ class ECType(Enum):
     DAE = 3
 
 
-class ReactionToSource:
-
-    def __init__(self, csv_file="datasets/ecreact/ecreact-1.0.csv"):
-        self.csv = pd.read_csv(csv_file)
-        self.reaction_to_source = {}
-        for i, row in self.csv.iterrows():
-            src_ec, tgt = row["rxn_smiles"].split(">>")
-            src, ec = src_ec.split("|")
-            src = src.strip().replace(" ", "")
-            src = self.organize_mols(src)
-            tgt = tgt.strip().replace(" ", "")
-            tgt = self.organize_mols(tgt)
-            reaction = f"{src}|{ec}>>{tgt}"
-            if reaction in self.reaction_to_source:
-                print(f"Duplicate reaction {reaction}")
-            self.reaction_to_source[reaction] = row["source"]
-
-    def to_canonical(self, s):
-        from rdkit import Chem
-        m = Chem.MolFromSmiles(s)
-        if m is None:
-            return s
-        return Chem.MolToSmiles(m)
-
-    def organize_mols(self, s):
-        s = s.split(".")
-        s = sorted(s)
-
-        s = ".".join([self.to_canonical(x) for x in s])
-        return s
-
-    def get_source(self, src, tgt, ec=None):
-        if ec is None:
-            if "|" not in src:
-                print("No ec in src")
-                return ""
-            src, *ec = src.split("|")
-            ec = ec[0]
-        src = src.strip().replace(" ", "")
-        src = self.organize_mols(src)
-        tgt = tgt.strip().replace(" ", "")
-        tgt = self.organize_mols(tgt)
-        ec = ".".join([x.replace("[", "").replace("]", "")[1:] for x in ec.strip().split(" ")])
-        reaction = f"{src}|{ec}>>{tgt}"
-        if reaction not in self.reaction_to_source:
-            print(f"Reaction {reaction} not found in csv")
-            return ""
-        return self.reaction_to_source[reaction]
-
 
 def get_ec_type_from_num(num):
     return ECType(num)
