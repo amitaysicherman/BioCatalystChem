@@ -78,7 +78,7 @@ class ReactionToSource:
                 print("No ec in src")
                 return ""
             src, *ec = src.split("|")
-            ec=ec[0]
+            ec = ec[0]
         src = src.strip().replace(" ", "")
         src = self.organize_mols(src)
         tgt = tgt.strip().replace(" ", "")
@@ -138,9 +138,10 @@ class DuplicateSrcManager:
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
                  ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False, save_ec=False,
-                 retro=False, duplicated_source_mode=IGNORE_DUPLICATES):
+                 retro=False, duplicated_source_mode=IGNORE_DUPLICATES, ec_source=None):
         self.max_length = max_length
         self.sample_size = sample_size
+        self.ec_source = ec_source
         self.tokenizer = tokenizer
         self.retro = retro
         self.addec = addec
@@ -151,6 +152,8 @@ class SeqToSeqDataset(Dataset):
         self.duplicated_source_manager = DuplicateSrcManager()
         self.reaction_to_source = ReactionToSource()
         self.sources = []
+        if ec_source != None:
+            save_ec = True
         if save_ec:
             self.ec_map = get_ec_map(split)
             self.all_ecs = []
@@ -181,12 +184,18 @@ class SeqToSeqDataset(Dataset):
                 dups = IGNORE_DUPLICATES
             self.load_dataset(f"datasets/{ds}", split, w, have_ec=have_ec,
                               duplicated_source_mode=dups)
-        if not DEBUG:
+        if DEBUG:
+            return
             # if sample_size is not None:
             #     self.data = random.sample(self.data, sample_size)
-            if shuffle:
-                random.seed(42)
-                random.shuffle(self.data)
+        if shuffle:
+            random.seed(42)
+            random.shuffle(self.data)
+        if self.ec_source is not None:
+            mask = [x == self.ec_source for x in self.sources]
+            self.data = [self.data[i] for i in range(len(self.data)) if mask[i]]
+            self.all_ecs = [self.all_ecs[i] for i in range(len(self.all_ecs)) if mask[i]]
+            self.sources = [self.sources[i] for i in range(len(self.sources)) if mask[i]]
 
     # def process_reaction(self, text, ec):
     #     return get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
@@ -292,6 +301,7 @@ class SeqToSeqDataset(Dataset):
             data.append((input_id, label, emb))
             ec_final.append(save_ec_lines[i])
             source_final.append(source_lines[i])
+
         for _ in range(w):
             self.data.extend(data)
             self.all_ecs.extend(ec_final)
@@ -359,7 +369,8 @@ if "__main__" == __name__:
     t = tok()
     mapping = ReactionToSource()
     ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED,
-                         save_ec=True)
+                         ec_source="pathbank_reaction_smiles")
     import numpy as np
 
     print(np.unique(ds.sources, return_counts=True))
+    print(len(ds))

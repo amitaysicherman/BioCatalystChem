@@ -156,7 +156,7 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate, max_length, dups, use_bs):
+         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate, max_length, dups, use_bs, ec_source):
     if DEBUG:
         batch_size = 8
     ec_type = ECType(ec_type)
@@ -174,17 +174,20 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         ecreact_dataset = "ecreact/level4"
     common_ds_args = {"tokenizer": tokenizer, "ec_type": ec_type, "DEBUG": DEBUG, "alpha": alpha, "addec": addec,
-                      "max_length": max_length}
+                      "max_length": max_length, "ec_source": ec_source}
     dup_args = {"duplicated_source_mode": 0 if dups == 3 else dups}
     if dups == 3:
-        uspto_dataset = SeqToSeqDataset(["uspto"], "train", **common_ds_args)
-        ecreact_train_all_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args,
-                                                    duplicated_source_mode=0, weights=[15])
-        train_dup_args = {**common_ds_args}
-        train_dup_args['ec_type'] = ECType.NO_EC
-        ecreact_train_dup_dataset = SeqToSeqDataset([ecreact_dataset], "train", **train_dup_args,
-                                                    duplicated_source_mode=2, weights=[15])
-        train_dataset = combine_datasets([uspto_dataset, ecreact_train_all_dataset, ecreact_train_dup_dataset])
+        if mix:
+            uspto_dataset = SeqToSeqDataset(["uspto"], "train", **common_ds_args)
+            ecreact_train_all_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args,
+                                                        duplicated_source_mode=0, weights=[15])
+            train_dup_args = {**common_ds_args}
+            train_dup_args['ec_type'] = ECType.NO_EC
+            ecreact_train_dup_dataset = SeqToSeqDataset([ecreact_dataset], "train", **train_dup_args,
+                                                        duplicated_source_mode=2, weights=[15])
+            train_dataset = combine_datasets([uspto_dataset, ecreact_train_all_dataset, ecreact_train_dup_dataset])
+        else:
+            train_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args, duplicated_source_mode=0)
     else:
         if mix:
             if dups == 2:
@@ -221,12 +224,12 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     # Training arguments
     output_dir = f"results/{run_name}"
     if not mix:
-        num_train_epochs = 200
+        num_train_epochs = 20
     else:
         num_train_epochs = 10
 
-    if regpre:
-        num_train_epochs = num_train_epochs // 2
+    # if regpre:
+    #     num_train_epochs = num_train_epochs // 2
     gradient_accumulation_steps = 1
 
     if use_bs != 0:
@@ -310,7 +313,12 @@ if __name__ == '__main__':
     parser.add_argument("--max_length", type=int, default=200)
     parser.add_argument("--dups", default=0, type=int)
     parser.add_argument("--use_bs", type=int, default=16)
+    parser.add_argument("--ec_source", type=str, default="",
+                        choices=["", 'brenda_reaction_smiles', 'rhea_reaction_smiles', 'metanetx_reaction_smiles',
+                                 'pathbank_reaction_smiles'])
     args = parser.parse_args()
+    if args.ec_source == "":
+        args.ec_source = None
     if args.tasks_on_gpu > 1:
         torch.cuda.set_per_process_memory_fraction(1 / args.tasks_on_gpu)
 
@@ -327,4 +335,5 @@ if __name__ == '__main__':
          n_hierarchical_clusters=args.n_hierarchical_clusters, n_pca_components=args.n_pca_components,
          n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,
          lora_d=args.lora_d, regpre=args.regpre, mix=args.mix, batch_size=args.batch_size,
-         learning_rate=args.learning_rate, max_length=args.max_length, dups=args.dups, use_bs=args.use_bs)
+         learning_rate=args.learning_rate, max_length=args.max_length, dups=args.dups, use_bs=args.use_bs,
+         ec_source=args.ec_source)
