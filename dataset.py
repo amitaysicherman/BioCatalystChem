@@ -174,6 +174,7 @@ class SeqToSeqDataset(Dataset):
             src_lines = [src for src, m in zip(src_lines, mask) if m]
             tgt_lines = [tgt for tgt, m in zip(tgt_lines, mask) if m]
             emb_lines = [emb for emb, m in zip(emb_lines, mask) if m]
+            source_lines = [source for source, m in zip(source_lines, mask) if m]
             print("len after", len(src_lines))
 
         if self.retro:
@@ -184,6 +185,7 @@ class SeqToSeqDataset(Dataset):
             samples_idx = random.sample(range(len(src_lines)), self.sample_size)
             src_lines = [src_lines[i] for i in samples_idx]
             tgt_lines = [tgt_lines[i] for i in samples_idx]
+            source_lines = [source_lines[i] for i in samples_idx]
             emb_lines = [emb_lines[i] for i in samples_idx]
 
         if self.ec_map is not None:
