@@ -99,7 +99,7 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
     pbar = tqdm(enumerate(gen_dataloader), total=len(gen_dataloader))
 
     for i, batch in pbar:
-        ec = all_ec[i]
+        batch_ec = all_ec[i * len(batch['input_ids']):(i + 1) * len(batch['input_ids'])]
         input_ids = batch['input_ids'].to(model.device)
         attention_mask = batch['attention_mask'].to(model.device).bool()
         labels = batch['labels'].to(model.device)
@@ -108,37 +108,47 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
             emb_args = {}
         else:
             emb_args = {"emb": emb}
-        if fast:  # predicnt and not generate
+
+        if fast:  # predict and not generate
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels, **emb_args)
             predictions = outputs.logits.argmax(dim=-1)
             mask = (labels != tokenizer.pad_token_id) & (labels != -100)
-            pred = predictions[mask]
-            label = labels[mask]
-            pred = tokenizer.decode(pred, skip_special_tokens=True)
-            label = tokenizer.decode(label, skip_special_tokens=True)
-            correct_count[ec][1] += (pred == label)
-            if return_all:
-                all_scores.append((pred == label))
-            ec_count[ec] += 1
-            if save_file:
-                y = tokenizer.decode(labels[labels != -100], skip_special_tokens=True)
-                x = tokenizer.decode(input_ids[0], skip_special_tokens=True)
-                with open(save_file, "a") as f:
-                    f.write(f"{x},{y},{label == pred}\n")
 
-        else:
+            for j in range(len(batch_ec)):  # Iterate over each example in the batch
+                pred = predictions[j][mask[j]]
+                label = labels[j][mask[j]]
+
+                pred_decoded = tokenizer.decode(pred, skip_special_tokens=True)
+                label_decoded = tokenizer.decode(label, skip_special_tokens=True)
+
+                correct_count[batch_ec[j]][1] += (pred_decoded == label_decoded)
+                if return_all:
+                    all_scores.append((pred_decoded == label_decoded))
+                ec_count[batch_ec[j]] += 1
+
+                if save_file:
+                    y = tokenizer.decode(labels[j][labels[j] != -100], skip_special_tokens=True)
+                    x = tokenizer.decode(input_ids[j], skip_special_tokens=True)
+                    with open(save_file, "a") as f:
+                        f.write(f"{x},{y},{label_decoded == pred_decoded}\n")
+
+        else:  # Generation with beam search
             outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
                                      max_length=200, do_sample=False, num_beams=k,
                                      num_return_sequences=k, **emb_args)
-            mask = (labels != tokenizer.pad_token_id) & (labels != -100)
-            labels = labels[mask]
 
-            labels = tokens_to_canonical_smiles(tokenizer, labels)
-            preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs]
-            for j in range(1, k + 1):
-                if labels in preds_list[:j]:
-                    correct_count[ec][j] += 1
-            ec_count[ec] += 1
+            for j in range(len(batch_ec)):  # Iterate over each example in the batch
+                mask = (labels[j] != tokenizer.pad_token_id) & (labels[j] != -100)
+                label = labels[j][mask]
+
+                label_smiles = tokens_to_canonical_smiles(tokenizer, label)
+                preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs[j * k:(j + 1) * k]]
+
+                for rank in range(1, k + 1):
+                    if label_smiles in preds_list[:rank]:
+                        correct_count[batch_ec[j]][rank] += 1
+                ec_count[batch_ec[j]] += 1
+
     if return_all:
         return correct_count, ec_count, all_scores
     return correct_count, ec_count
@@ -286,7 +296,7 @@ if __name__ == "__main__":
     model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
                                                                  base_results_dir=args.res_base)
     all_ec = get_ec_from_df(gen_dataset, per_level)
-    gen_dataloader = DataLoader(gen_dataset, batch_size=1, num_workers=0,collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model))
+    gen_dataloader = DataLoader(gen_dataset, batch_size=64, num_workers=0,collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model))
 
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
