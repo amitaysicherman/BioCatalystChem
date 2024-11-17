@@ -219,6 +219,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         run_name += f"_mix"
     if dups:
         run_name += f"_dups{dups}"
+    if ec_source:
+        run_name += f"_ecs-{ec_source}"
     # run_name += f"_bs-{batch_size}_lr-{learning_rate}"
     print(f"Run name: {run_name}")
     # Training arguments
