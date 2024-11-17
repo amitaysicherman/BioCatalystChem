@@ -41,6 +41,55 @@ class ECType(Enum):
     DAE = 3
 
 
+class ReactionToSource:
+
+    def __init__(self, csv_file="datasets/ecreact/ecreact-1.0.csv"):
+        self.csv = pd.read_csv(csv_file)
+        self.reaction_to_source = {}
+        for i, row in self.csv.iterrows():
+            src_ec, tgt = row["rxn_smiles"].split(">>")
+            src, ec = src_ec.split("|")
+            src = src.strip().replace(" ", "")
+            src = self.organize_mols(src)
+            tgt = tgt.strip().replace(" ", "")
+            tgt = self.organize_mols(tgt)
+            reaction = f"{src}|{ec}>>{tgt}"
+            if reaction in self.reaction_to_source:
+                print(f"Duplicate reaction {reaction}")
+            self.reaction_to_source[reaction] = row["source"]
+
+    def to_canonical(self, s):
+        from rdkit import Chem
+        m = Chem.MolFromSmiles(s)
+        if m is None:
+            return s
+        return Chem.MolToSmiles(m)
+
+    def organize_mols(self, s):
+        s = s.split(".")
+        s = sorted(s)
+
+        s = ".".join([self.to_canonical(x) for x in s])
+        return s
+
+    def get_source(self, src, tgt, ec=None):
+        if ec is None:
+            if "|" not in src:
+                print("No ec in src")
+                return ""
+            src, ec = src.split("|")
+        src = src.strip().replace(" ", "")
+        src = self.organize_mols(src)
+        tgt = tgt.strip().replace(" ", "")
+        tgt = self.organize_mols(tgt)
+        ec = ".".join([x.replace("[", "").replace("]", "")[1:] for x in ec.strip().split(" ")])
+        reaction = f"{src}|{ec}>>{tgt}"
+        if reaction not in self.reaction_to_source:
+            print(f"Reaction {reaction} not found in csv")
+            return ""
+        return self.reaction_to_source[reaction]
+
+
 def get_ec_type_from_num(num):
     return ECType(num)
 
@@ -99,6 +148,8 @@ class SeqToSeqDataset(Dataset):
         self.ec_type = ec_type
         self.alpha = alpha
         self.duplicated_source_manager = DuplicateSrcManager()
+        self.reaction_to_source = ReactionToSource()
+        self.sources = []
         if save_ec:
             self.ec_map = get_ec_map(split)
             self.all_ecs = []
@@ -173,10 +224,14 @@ class SeqToSeqDataset(Dataset):
 
         if self.ec_map is not None:
             save_ec_lines = [self.ec_map[(src.split("|")[0], tgt)] for src, tgt in zip(src_lines, tgt_lines)]
+            source_lines = [self.reaction_to_source.get_source(src, tgt) for src, tgt in zip(src_lines, tgt_lines)]
+
         else:
             save_ec_lines = [0] * len(src_lines)
+            source_lines = [0] * len(src_lines)
 
         if have_ec:
+
             if self.ec_type == ECType.NO_EC:
                 src_lines = [remove_ec(text) for text in src_lines]
                 tgt_lines = [remove_ec(text) for text in tgt_lines]
@@ -205,6 +260,7 @@ class SeqToSeqDataset(Dataset):
                 tgt_lines = [tgt_lines[i] for i in range(len(tgt_lines)) if not_none_mask[i]]
                 emb_lines = [emb_lines[i] for i in range(len(emb_lines)) if not_none_mask[i]]
                 save_ec_lines = [save_ec_lines[i] for i in range(len(save_ec_lines)) if not_none_mask[i]]
+                source_lines = [source_lines[i] for i in range(len(source_lines)) if not_none_mask[i]]
                 len_after = len(src_lines)
                 print(f"Removed {len_before - len_after} samples, total: {len_after}, {len_before}")
 
@@ -213,10 +269,12 @@ class SeqToSeqDataset(Dataset):
             tgt_lines = tgt_lines[:100]
             emb_lines = emb_lines[:100]
             save_ec_lines = save_ec_lines[:100]
-        assert len(src_lines) == len(tgt_lines) == len(emb_lines) == len(save_ec_lines)
+            source_lines = source_lines[:100]
+        assert len(src_lines) == len(tgt_lines) == len(emb_lines) == len(save_ec_lines) == len(source_lines)
         skip_count = 0
         data = []
         ec_final = []
+        source_final = []
         for i in tqdm(range(len(src_lines))):
             input_id = encode_eos_pad(self.tokenizer, src_lines[i], self.max_length, no_pad=True)
             label = encode_eos_pad(self.tokenizer, tgt_lines[i], self.max_length, no_pad=True)
@@ -232,9 +290,11 @@ class SeqToSeqDataset(Dataset):
                 emb = torch.tensor(emb).float()
             data.append((input_id, label, emb))
             ec_final.append(save_ec_lines[i])
+            source_final.append(source_lines[i])
         for _ in range(w):
             self.data.extend(data)
             self.all_ecs.extend(ec_final)
+            self.sources.extend(source_final)
 
     def __len__(self):
         return len(self.data)
@@ -249,9 +309,11 @@ class SeqToSeqDataset(Dataset):
 def combine_datasets(datasets: List[SeqToSeqDataset], shuffle=True) -> SeqToSeqDataset:
     combined_data = []
     combined_ecs = []
+    combined_sources = []
     for dataset in datasets:
         combined_data.extend(dataset.data)
         combined_ecs.extend(dataset.all_ecs)
+        combined_sources.extend(dataset.sources)
 
     combined_dataset = SeqToSeqDataset(
         datasets=[],
@@ -274,6 +336,29 @@ def combine_datasets(datasets: List[SeqToSeqDataset], shuffle=True) -> SeqToSeqD
         random.shuffle(indexes)
         combined_data = [combined_data[i] for i in indexes]
         combined_ecs = [combined_ecs[i] for i in indexes]
+        combined_sources = [combined_sources[i] for i in indexes]
+
     combined_dataset.data = combined_data
     combined_dataset.all_ecs = combined_ecs
+    combined_dataset.sources = combined_sources
     return combined_dataset
+
+
+if "__main__" == __name__:
+    class tok:
+        def __init__(self):
+            self.eos_token_id = 12
+            self.pad_token_id = 0
+            self.eos_token_id = 12
+
+        def encode(self, x, **kwargs):
+            return [12]
+
+
+    t = tok()
+    mapping = ReactionToSource()
+    ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED,
+                         save_ec=True)
+    import numpy as np
+
+    print(np.unique(ds.sources, return_counts=True))
