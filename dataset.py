@@ -77,7 +77,8 @@ class ReactionToSource:
             if "|" not in src:
                 print("No ec in src")
                 return ""
-            src, ec = src.split("|")
+            src, *ec = src.split("|")
+            ec=ec[0]
         src = src.strip().replace(" ", "")
         src = self.organize_mols(src)
         tgt = tgt.strip().replace(" ", "")
