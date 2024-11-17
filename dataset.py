@@ -144,7 +144,7 @@ class SeqToSeqDataset(Dataset):
             self.data = [self.data[i] for i in range(len(self.data)) if mask[i]]
             self.all_ecs = [self.all_ecs[i] for i in range(len(self.all_ecs)) if mask[i]]
             self.sources = [self.sources[i] for i in range(len(self.sources)) if mask[i]]
-
+        print(f"Dataset {split} loaded, len: {len(self.data)}")
     # def process_reaction(self, text, ec):
     #     return get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
 
