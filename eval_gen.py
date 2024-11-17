@@ -45,7 +45,7 @@ def name_to_args(name):
         args["lr"] = float(name.split("_lr")[1].split("_")[0])
         name = name.replace(f"_lr{args['lr']}", "")
     name = name.replace("_mix", "").replace("_nopre", "").replace("_regpre", "").replace("_plus", "")
-
+    name = name.replace("_dups3", "")
     if name == "uspto":
         args["ec_type"] = ECType.NO_EC
         return args
