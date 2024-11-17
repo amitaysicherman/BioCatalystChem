@@ -226,7 +226,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     # Training arguments
     output_dir = f"results/{run_name}"
     if not mix:
-        num_train_epochs = 20
+        num_train_epochs = 25
     else:
         num_train_epochs = 10
 
