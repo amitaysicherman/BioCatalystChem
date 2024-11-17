@@ -130,8 +130,12 @@ def read_dataset_split(ec_type: ECType, split: str, alpha):
 
     with open(f"{input_base}/tgt-{split}.txt") as f:
         tgt_lines = f.read().splitlines()
-
-    assert len(src_lines) == len(tgt_lines)
+    if os.path.exists(f"{input_base}/{split}_sources.txt"):
+        with open(f"{input_base}/{split}_sources.txt") as f:
+            source_lines = f.read().splitlines()
+    else:
+        source_lines = [0] * len(src_lines)
+    assert len(src_lines) == len(tgt_lines) == len(source_lines)
 
     assert ec_type == ECType.PRETRAINED or ec_type == ECType.DAE
     src_ec = [redo_ec_split(text, True) for text in src_lines]
@@ -154,7 +158,8 @@ def read_dataset_split(ec_type: ECType, split: str, alpha):
     src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
     tgt_lines = [tgt_lines[i] for i in range(len(tgt_lines)) if not_none_mask[i]]
     emb_lines = [emb_lines[i] for i in range(len(emb_lines)) if not_none_mask[i]]
-    return src_lines, tgt_lines, emb_lines
+    source_lines= [source_lines[i] for i in range(len(source_lines)) if not_none_mask[i]]
+    return src_lines, tgt_lines, emb_lines, source_lines
 
 
 def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
@@ -177,7 +182,7 @@ def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pc
     with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha),
               "rb") as f:
         tokenizer: ResidualPCATokenizer = pickle.load(f)
-    src_lines, tgt_lines, emb_lines = read_dataset_split(ec_type, split, alpha=alpha)
+    src_lines, tgt_lines, emb_lines,source_lines = read_dataset_split(ec_type, split, alpha=alpha)
     tokenized_lines = [
         tokenizer.tokenize_vector(e) for e in emb_lines
     ]
@@ -194,6 +199,9 @@ def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pc
         tgt_out.write(t + "\n")
     src_out.close()
     tgt_out.close()
+    with open(f"{output_base}/{split}_sources.txt", "w") as f:
+        for source in source_lines:
+            f.write(f"{source}\n")
 
 
 if __name__ == "__main__":

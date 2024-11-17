@@ -101,7 +101,6 @@ class SeqToSeqDataset(Dataset):
         self.ec_type = ec_type
         self.alpha = alpha
         self.duplicated_source_manager = DuplicateSrcManager()
-        self.reaction_to_source = ReactionToSource()
         self.sources = []
         if save_ec:
             self.ec_map = get_ec_map(split)
@@ -159,6 +158,12 @@ class SeqToSeqDataset(Dataset):
         with open(f"{input_base}/tgt-{split}.txt") as f:
             tgt_lines = f.read().splitlines()
 
+        if os.path.exists(f"{input_base}/{split}_sources.txt"):
+            with open(f"{input_base}/{split}_sources.txt") as f:
+                source_lines = f.read().splitlines()
+            assert len(source_lines) == len(src_lines)
+        else:
+            source_lines = [0] * len(src_lines)
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
 
         if duplicated_source_mode != IGNORE_DUPLICATES:
@@ -186,13 +191,7 @@ class SeqToSeqDataset(Dataset):
         else:
             save_ec_lines = [0] * len(src_lines)
 
-        if self.ec_source is not None:
-            source_lines = [self.reaction_to_source.get_source(src, tgt) for src, tgt in zip(src_lines, tgt_lines)]
-        else:
-            source_lines = [0] * len(src_lines)
-
         if have_ec:
-
             if self.ec_type == ECType.NO_EC:
                 src_lines = [remove_ec(text) for text in src_lines]
                 tgt_lines = [remove_ec(text) for text in tgt_lines]
@@ -318,7 +317,6 @@ if "__main__" == __name__:
 
 
     t = tok()
-    mapping = ReactionToSource()
     ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED,
                          ec_source="pathbank_reaction_smiles")
     import numpy as np

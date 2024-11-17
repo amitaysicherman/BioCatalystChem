@@ -1,13 +1,18 @@
 import os
 from os.path import join as pjoin
 import pandas as pd
+from tqdm import tqdm
+from rdkit import RDLogger
+
+RDLogger.DisableLog('rdApp.*')
+
 
 class ReactionToSource:
 
     def __init__(self, csv_file="datasets/ecreact/ecreact-1.0.csv"):
         self.csv = pd.read_csv(csv_file)
         self.reaction_to_source = {}
-        for i, row in self.csv.iterrows():
+        for i, row in tqdm(self.csv.iterrows()):
             src_ec, tgt = row["rxn_smiles"].split(">>")
             src, ec = src_ec.split("|")
             src = src.strip().replace(" ", "")
@@ -74,14 +79,15 @@ reaction_to_source = ReactionToSource()
 base_dir = pjoin('datasets', 'ecreact')
 # get all subdirectories
 subdirs = [pjoin(base_dir, x) for x in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, x))]
-for subdir in subdirs:
-    train_src, valid_src, test_src = reaction_to_source.get_source_to_ds(subdir)
-    with open(pjoin(subdir, "train_sources.txt"), "w") as f:
-        for src in train_src:
-            f.write(f"{src}\n")
-    with open(pjoin(subdir, "valid_sources.txt"), "w") as f:
-        for src in valid_src:
-            f.write(f"{src}\n")
-    with open(pjoin(subdir, "test_sources.txt"), "w") as f:
-        for src in test_src:
-            f.write(f"{src}\n")
+for subdir in tqdm(subdirs):
+    if "level4" in subdir or "quant" in subdir:
+        train_src, valid_src, test_src = reaction_to_source.get_source_to_ds(subdir)
+        with open(pjoin(subdir, "train_sources.txt"), "w") as f:
+            for src in train_src:
+                f.write(f"{src}\n")
+        with open(pjoin(subdir, "valid_sources.txt"), "w") as f:
+            for src in valid_src:
+                f.write(f"{src}\n")
+        with open(pjoin(subdir, "test_sources.txt"), "w") as f:
+            for src in test_src:
+                f.write(f"{src}\n")
