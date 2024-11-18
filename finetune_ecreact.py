@@ -201,8 +201,8 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
 
     train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args, sample_size=1000, **dup_args)
     val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", **common_ds_args, **dup_args)
-    test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", **common_ds_args, sample_size=1000, **dup_args)
-    uspto_args= {**common_ds_args}
+    test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", **common_ds_args, **dup_args)
+    uspto_args = {**common_ds_args}
     uspto_args['ec_source'] = None
     test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", **uspto_args, sample_size=1000)
 
