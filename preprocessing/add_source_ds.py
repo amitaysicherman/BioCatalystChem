@@ -12,7 +12,7 @@ class ReactionToSource:
     def __init__(self, csv_file="datasets/ecreact/ecreact-1.0.csv"):
         self.csv = pd.read_csv(csv_file)
         self.reaction_to_source = {}
-        for i, row in tqdm(self.csv.iterrows()):
+        for i, row in tqdm(self.csv.iterrows(),total=len(self.csv)):
             src_ec, tgt = row["rxn_smiles"].split(">>")
             src, ec = src_ec.split("|")
             src = src.strip().replace(" ", "")

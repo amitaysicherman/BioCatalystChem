@@ -41,7 +41,6 @@ class ECType(Enum):
     DAE = 3
 
 
-
 def get_ec_type_from_num(num):
     return ECType(num)
 
@@ -139,12 +138,13 @@ class SeqToSeqDataset(Dataset):
         if shuffle:
             random.seed(42)
             random.shuffle(self.data)
-        if self.ec_source is not None:
+        if self.ec_source is not None and self.ec_source != "all":
             mask = [x == self.ec_source for x in self.sources]
             self.data = [self.data[i] for i in range(len(self.data)) if mask[i]]
             self.all_ecs = [self.all_ecs[i] for i in range(len(self.all_ecs)) if mask[i]]
             self.sources = [self.sources[i] for i in range(len(self.sources)) if mask[i]]
         print(f"Dataset {split} loaded, len: {len(self.data)}")
+
     # def process_reaction(self, text, ec):
     #     return get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
 
@@ -319,7 +319,8 @@ if "__main__" == __name__:
 
 
     t = tok()
-    ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED)
+    ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED,
+                         ec_source="all")
     import numpy as np
 
     print(np.unique(ds.sources, return_counts=True))
