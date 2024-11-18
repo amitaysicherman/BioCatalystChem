@@ -7,7 +7,7 @@
 #SBATCH --requeue
 
 # Get the list of directories in results/
-RESULTS_DIR="results/"
+RESULTS_DIR="results_work_version/"
 RUN_NAMES=($(ls -d $RESULTS_DIR*/ | xargs -n 1 basename))
 
 # Check if the SLURM_ARRAY_TASK_ID is within the bounds of the available run names
