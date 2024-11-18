@@ -319,8 +319,7 @@ if "__main__" == __name__:
 
 
     t = tok()
-    ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED,
-                         ec_source="pathbank_reaction_smiles")
+    ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED)
     import numpy as np
 
     print(np.unique(ds.sources, return_counts=True))
