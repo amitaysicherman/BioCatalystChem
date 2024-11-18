@@ -53,19 +53,26 @@ with open(f"{output_pdb_dir}/smiles_to_id.txt", 'w') as f:
 
 cmds = []
 base_cmd = "python -m inference --config default_inference_args.yaml"
+skip_count = 0
 for i, row in results_df.iterrows():
     name = row["complex_name"]
     pdb_file = row["protein_path"]
     ligand = row["ligand_description"]
     output_dir = output_pdb_dir + name
+    if os.path.exists(output_dir):
+        files_in_dir = os.listdir(output_dir)
+        if any(f.startswith("rank10") for f in files_in_dir):
+            skip_count += 1
+            continue
+
     cmds.append(
         f"{base_cmd} --protein_path '{pdb_file}' --ligand '{ligand}' --out_dir '{output_dir}'")
-
+print(f"Skipping {skip_count} docking runs {len(cmds)} remaining {skip_count / len(results_df):.2%}")
 scripts_dir = "../DiffDock/scripts"
 os.makedirs(scripts_dir, exist_ok=True)
 
 n_splits = 200
 for i in range(n_splits):
-    with open(f"{scripts_dir}/run_{i+1}.sh", 'w') as f:
+    with open(f"{scripts_dir}/run_{i + 1}.sh", 'w') as f:
         for cmd in cmds[i::n_splits]:
             f.write(f"{cmd}\n")
