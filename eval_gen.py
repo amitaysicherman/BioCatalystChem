@@ -42,7 +42,7 @@ def name_to_args(name):
     #     run_name += f"_ecs-{ec_source}"
 
     if "_ecs-" in name:
-        args["ec_source"] = name.split("_ecs-")[1].split("_")[0]
+        args["ec_source"] = name.split("_ecs-")[1]
         name = name.replace(f"_ecs-{args['ec_source']}", "")
 
     if "plus" in name:
