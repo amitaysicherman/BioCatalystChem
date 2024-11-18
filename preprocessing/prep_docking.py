@@ -61,6 +61,7 @@ for i, row in pbar:
     pdb_file = row["protein_path"]
     ligand = row["ligand_description"]
     output_dir = output_pdb_dir + name
+    final_output = output_dir + "/complex_0"
     if os.path.exists(output_dir):
         files_in_dir = os.listdir(output_dir)
         if any(f.startswith("rank10") for f in files_in_dir):
