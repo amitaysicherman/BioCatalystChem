@@ -35,7 +35,16 @@ def name_to_args(name):
         'addec': False,
         'batch_size': 64,
         'lr': 1e-4,
+        'ec_source': None
     }
+
+    # if ec_source:
+    #     run_name += f"_ecs-{ec_source}"
+
+    if "_ecs-" in name:
+        args["ec_source"] = name.split("_ecs-")[1].split("_")[0]
+        name = name.replace(f"_ecs-{args['ec_source']}", "")
+
     if "plus" in name:
         args["addec"] = True
     if "_bs" in name:
@@ -203,6 +212,7 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
     n_clusters_pca = run_args["n_clusters_pca"]
     addec = run_args["addec"]
     alpha = run_args["alpha"]
+    ec_source = run_args["ec_source"]
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
 
@@ -243,7 +253,7 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
         assert samples is None or type(samples) == int
         gen_dataset = SeqToSeqDataset([ecreact_dataset], splits, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
                                       save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
-                                      sample_size=samples,duplicated_source_mode=dups)
+                                      sample_size=samples,duplicated_source_mode=dups,ec_source=ec_source)
     else:
         assert samples is None or type(samples) == list
         if samples is None:
@@ -251,7 +261,7 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
         samples = {split: sample for split, sample in zip(splits, samples)}
         gen_dataset = [SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
                                        save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
-                                       sample_size=samples[split],duplicated_source_mode=dups) for split in
+                                       sample_size=samples[split],duplicated_source_mode=dups,ec_source=ec_source) for split in
                        splits]
     model.to(device)
     model.eval()
