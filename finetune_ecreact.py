@@ -228,9 +228,9 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     # Training arguments
     output_dir = f"results/{run_name}"
     if not mix:
-        num_train_epochs = 25
+        num_train_epochs = 120
     else:
-        num_train_epochs = 10
+        num_train_epochs = 5
 
     # if regpre:
     #     num_train_epochs = num_train_epochs // 2
