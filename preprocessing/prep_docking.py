@@ -55,7 +55,8 @@ cmds = []
 base_cmd = "python -m inference --config default_inference_args.yaml"
 skip_1 = 0
 skip_2 = 0
-for i, row in tqdm(results_df.iterrows(), total=len(results_df)):
+pbar = tqdm(results_df.iterrows(), total=len(results_df))
+for i, row in pbar
     name = row["complex_name"]
     pdb_file = row["protein_path"]
     ligand = row["ligand_description"]
@@ -70,6 +71,7 @@ for i, row in tqdm(results_df.iterrows(), total=len(results_df)):
 
     cmds.append(
         f"{base_cmd} --protein_path '{pdb_file}' --ligand '{ligand}' --out_dir '{output_dir}'")
+    pbar.set_description(f"s1: {skip_1}, s2: {skip_2}, r: {len(cmds)}")
 print(f"Skipped {skip_1} docking runs")
 print(f"Skipped {skip_2} docking runs")
 print(f"Running {len(cmds)} docking runs")
