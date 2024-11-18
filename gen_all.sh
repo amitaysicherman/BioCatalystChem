@@ -18,7 +18,7 @@ if [ $SLURM_ARRAY_TASK_ID -le ${#RUN_NAMES[@]} ]; then
     python eval_gen.py --run_name $RUN_NAME --fast 0 --split test --dups 2 --per_level 1 --per_ds 1
     python eval_gen.py --run_name $RUN_NAME --fast 0 --split valid --dups 0 --per_level 1 --per_ds 1
     python eval_gen.py --run_name $RUN_NAME --fast 0 --split train --dups 0 --per_level 1 --per_ds 1
-    
+
 else
     echo "Error: SLURM_ARRAY_TASK_ID is out of bounds."
 fi

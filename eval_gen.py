@@ -295,6 +295,7 @@ if __name__ == "__main__":
     parser.add_argument("--per_ds", default=1, type=int)
     parser.add_argument("--dups", default=0, type=int)
     parser.add_argument("--res_base", default="results", type=str)
+    parser.add_argument("--bs", default=1, type=int)
 
     args = parser.parse_args()
     run_name = args.run_name
@@ -312,7 +313,7 @@ if __name__ == "__main__":
     else:
         all_ec = get_ec_from_df(gen_dataset, per_level)
 
-    gen_dataloader = DataLoader(gen_dataset, batch_size=16, num_workers=0,collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model))
+    gen_dataloader = DataLoader(gen_dataset, batch_size=args.bs, num_workers=0,collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model))
 
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
