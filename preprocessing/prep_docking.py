@@ -55,7 +55,7 @@ cmds = []
 base_cmd = "python -m inference --config default_inference_args.yaml"
 skip_1 = 0
 skip_2 = 0
-for i, row in results_df.iterrows():
+for i, row in tqdm(results_df.iterrows(), total=len(results_df)):
     name = row["complex_name"]
     pdb_file = row["protein_path"]
     ligand = row["ligand_description"]
