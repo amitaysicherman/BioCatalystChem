@@ -67,6 +67,9 @@ for i, row in pbar:
         if any(f.startswith("rank10") for f in files_in_dir):
             skip_1 += 1
             continue
+        if not files_in_dir or not any(f.startswith("rank1") for f in files_in_dir):
+            skip_2 += 1
+            continue
     else:
         skip_2 += 1
 
