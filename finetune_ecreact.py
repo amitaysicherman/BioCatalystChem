@@ -230,7 +230,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     if not mix:
         num_train_epochs = 200
     else:
-        num_train_epochs = 10
+        num_train_epochs = 7
 
     # if regpre:
     #     num_train_epochs = num_train_epochs // 2
@@ -254,10 +254,10 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         output_dir=output_dir,
         num_train_epochs=num_train_epochs,
         warmup_ratio=0.05,
-        eval_steps=0.05,
-        logging_steps=0.05,
-        save_steps=0.05,
-        save_total_limit=2,
+        eval_steps=1/7,
+        logging_steps=1/49,
+        save_steps=1/7,
+        save_total_limit=4,
         save_strategy="steps",
         eval_strategy="steps",
 
