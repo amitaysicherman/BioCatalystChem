@@ -4,7 +4,7 @@
 #SBATCH --requeue
 #SBATCH --gres=gpu:1
 #SBATCH -c 8
-#SBATCH -w bruno1,bruno2,euler1,dym-lab,dym-lab2,galileo1,galileo2,newton3,newton4,nlp-A40-1,newton2,newton5,nlp-L40-1,nlp-L40-2,tdk-bm4,bruno3
+#SBATCH -w bruno1,bruno2,euler1,dym-lab,dym-lab2,galileo1,galileo2,newton3,newton4,nlp-a40-1,newton2,newton5,nlp-l40-1,nlp-l40-2,tdk-bm4,bruno3
 #SBATCH --array=1-14
 
 configs="--ec_type 0  --max_length 200 |\
