@@ -281,7 +281,7 @@ def get_ec_from_df(dataset, per_level):
     if per_level != 0:
         all_ec = [" ".join(ec.strip().split(" ")[:per_level]) for ec in all_ec]
     else:
-        all_ec = [0] * len(all_ec)
+        all_ec = ["0"] * len(all_ec)
     return all_ec
 
 
