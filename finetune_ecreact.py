@@ -301,9 +301,9 @@ if __name__ == '__main__':
     parser.add_argument("--ec_type", default=1, type=int)
     parser.add_argument("--lookup_len", default=5, type=int)
     parser.add_argument("--prequantization", default=0, type=int)
-    parser.add_argument("--n_hierarchical_clusters", type=int, default=5)
-    parser.add_argument("--n_pca_components", type=int, default=6)
-    parser.add_argument("--n_clusters_pca", type=int, default=10)
+    parser.add_argument("--n_hierarchical_clusters", type=int, default=0)
+    parser.add_argument("--n_pca_components", type=int, default=7)
+    parser.add_argument("--n_clusters_pca", type=int, default=7)
     parser.add_argument("--alpha", type=int, default=50)
     parser.add_argument("--addec", type=int, default=0)
     parser.add_argument("--nopre", type=int, default=0)
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     parser.add_argument("--tasks_on_gpu", type=int, default=1)
     parser.add_argument("--max_length", type=int, default=200)
     parser.add_argument("--dups", default=0, type=int)
-    parser.add_argument("--use_bs", type=int, default=16)
+    parser.add_argument("--use_bs", type=int, default=128)
     parser.add_argument("--ec_source", type=str, default="",
                         choices=["", 'brenda_reaction_smiles', 'rhea_reaction_smiles', 'metanetx_reaction_smiles',
                                  'pathbank_reaction_smiles'])
