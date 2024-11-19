@@ -17,6 +17,7 @@ from dataset import ECType
 from preprocessing.build_tokenizer import get_ec_tokens
 from finetune_ecreact import CustomDataCollatorForSeq2Seq
 from collections import Counter
+
 RDLogger.DisableLog('rdApp.*')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -202,7 +203,22 @@ def args_to_lens(args):
     return length
 
 
-def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=None, base_results_dir="results", dups=0):
+def get_only_new_ecs(eval_dataset: SeqToSeqDataset):
+    with open("datasets/ecreact/level4/src-train.txt") as f:
+        src_lines = f.read().splitlines()
+    train_ec = [x.split("|")[1].strip() for x in src_lines]
+    eval_ecs = [x.strip() for x in eval_dataset.all_ecs]
+    eval_mask = [x not in train_ec for x in eval_ecs]
+    if eval_dataset.sources is not None:
+        eval_dataset.sources = [x for i, x in enumerate(eval_dataset.sources) if eval_mask[i]]
+    if eval_dataset.all_ecs is not None:
+        eval_dataset.all_ecs = [x for i, x in enumerate(eval_dataset.all_ecs) if eval_mask[i]]
+    eval_dataset.data = [x for i, x in enumerate(eval_dataset.data) if eval_mask[i]]
+    return eval_dataset
+
+
+def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=None, base_results_dir="results", dups=0,
+                                 only_new=False):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
@@ -249,20 +265,12 @@ def load_model_tokenizer_dataest(run_name, splits, same_length=False, samples=No
     else:
         max_length = 200
 
-    if type(splits) == str:
-        assert samples is None or type(samples) == int
-        gen_dataset = SeqToSeqDataset([ecreact_dataset], splits, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
-                                      save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
-                                      sample_size=samples,duplicated_source_mode=dups,ec_source=ec_source)
-    else:
-        assert samples is None or type(samples) == list
-        if samples is None:
-            samples = [None] * len(splits)
-        samples = {split: sample for split, sample in zip(splits, samples)}
-        gen_dataset = [SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
-                                       save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
-                                       sample_size=samples[split],duplicated_source_mode=dups,ec_source=ec_source) for split in
-                       splits]
+    gen_dataset = SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
+                                  save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
+                                  sample_size=samples, duplicated_source_mode=dups, ec_source=ec_source)
+    if only_new:
+        gen_dataset = get_only_new_ecs(gen_dataset)
+
     model.to(device)
     model.eval()
     return model, tokenizer, gen_dataset
@@ -280,7 +288,7 @@ def get_ec_from_df(dataset, per_level):
 def get_training_ec_count(level):
     with open("datasets/ecreact/level4/src-train.txt") as f:
         src_lines = f.read().splitlines()
-    all_ec= [x.split("|")[1] for x in src_lines]
+    all_ec = [x.split("|")[1] for x in src_lines]
     all_ec = [" ".join(ec.strip().split(" ")[:level]) for ec in all_ec]
     return Counter(all_ec)
 
@@ -296,6 +304,7 @@ if __name__ == "__main__":
     parser.add_argument("--dups", default=0, type=int)
     parser.add_argument("--res_base", default="results", type=str)
     parser.add_argument("--bs", default=1, type=int)
+    parser.add_argument("--only_new", default=0, type=int)
 
     args = parser.parse_args()
     run_name = args.run_name
@@ -306,14 +315,15 @@ if __name__ == "__main__":
     print("---" * 10)
 
     model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
-                                                                 base_results_dir=args.res_base)
+                                                                 base_results_dir=args.res_base, only_new=args.only_new)
 
     if args.per_ds:
         all_ec = gen_dataset.sources
     else:
         all_ec = get_ec_from_df(gen_dataset, per_level)
 
-    gen_dataloader = DataLoader(gen_dataset, batch_size=args.bs, num_workers=0,collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model))
+    gen_dataloader = DataLoader(gen_dataset, batch_size=args.bs, num_workers=0,
+                                collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model))
 
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
@@ -332,7 +342,7 @@ if __name__ == "__main__":
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
     config_cols = run_name + "," + args.split + "," + str(args.k) + "," + str(args.fast) + "," + str(
-        args.per_level) + "," + str(args.dups)
+        args.per_level) + "," + str(args.dups) + "," + str(args.only_new)
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
         for ec in correct_count:
             for i in range(1, args.k + 1):
@@ -340,4 +350,3 @@ if __name__ == "__main__":
                     continue
                 f.write(
                     config_cols + "," + ec + f",{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]},{ec_training_count[ec]}\n")
-
