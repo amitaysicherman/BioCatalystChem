@@ -300,7 +300,7 @@ if __name__ == "__main__":
     parser.add_argument("--fast", default=0, type=int)
     parser.add_argument("--k", default=5, type=int)
     parser.add_argument("--per_level", default=1, type=int)
-    parser.add_argument("--per_ds", default=1, type=int)
+    parser.add_argument("--per_ds", default=0, type=int)
     parser.add_argument("--dups", default=0, type=int)
     parser.add_argument("--res_base", default="results", type=str)
     parser.add_argument("--bs", default=1, type=int)
