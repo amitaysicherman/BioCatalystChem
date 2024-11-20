@@ -361,7 +361,7 @@ if __name__ == "__main__":
     if not os.path.exists(output_file):
         with open(output_file, "w") as f:
             f.write(
-                "run_name,split,k,fast,per_level,dups,only_new,per_ds,cp_step,rank,accuracy,ec_count,training_count\n")
+                "run_name,split,k,fast,per_level,dups,only_new,per_ds,cp_step,ec,rank,accuracy,ec_count,training_count\n")
 
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
         for ec in correct_count:
