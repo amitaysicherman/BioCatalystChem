@@ -54,7 +54,14 @@ def line_to_mol_id(line: str, smiles_to_id: dict):
 
 if __name__ == "__main__":
     skip_count = 0
+    with open("datasets/docking/smiles_to_id.txt") as f:
+        lines= f.readlines()
     smiles_to_id = dict()
+
+    for line in lines:
+        s, i = line.strip().split(" ")
+        smiles_to_id[s] = int(i)
+
     all_names = set()
     uniprot = UniProt()
     base_dataset = "datasets/ecreact/ecreact-1.0.txt"
@@ -69,7 +76,7 @@ if __name__ == "__main__":
         smiles, ids = line_to_mol_id(line, smiles_to_id)
         for i, s in zip(ids, smiles):
             name = f"../BioCatalystChem/datasets/docking2/{uniprot_id}/{i}/complex_0"
-            prev_run_name = "datasets/docking/{uniprot_id}/{i}/complex_0"
+            prev_run_name = f"datasets/docking/{uniprot_id}/{i}/complex_0"
             if not os.path.exists(prev_run_name) or len(os.listdir(prev_run_name)) == 0:
                 skip_count += 1
                 continue
