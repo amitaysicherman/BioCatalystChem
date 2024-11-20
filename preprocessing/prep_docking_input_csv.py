@@ -1,7 +1,5 @@
 from tqdm import tqdm
-from bioservices import UniProt
 import pandas as pd
-import torch
 from rdkit import Chem
 from collections import defaultdict
 import rdkit.rdBase as rkrb
@@ -18,20 +16,6 @@ for i, row in ec_mapping.iterrows():
     ec_to_uniport[row["EC_full"]] = row["Uniprot_id"]
     ec_to_fasta[row["EC_full"]] = row["Sequence"]
 
-
-def ec_to_id_fasta(ec: str):
-    while "." in ec:
-        results = uniprot.search(f"ec:{ec}", limit=1, frmt='fasta', size=1)
-        results = results.splitlines()
-        if len(results) < 2:
-            ec = ".".join(ec.split(".")[:-1])
-        else:
-            break
-    if len(results) < 2:
-        return "", "", ""
-    id_ = results[0].split("|")[1]
-    fasta = "".join(results[1:])
-    return id_, fasta, ec
 
 
 def line_to_mol_id(line: str, smiles_to_id: dict):
@@ -63,7 +47,6 @@ if __name__ == "__main__":
         smiles_to_id[s] = int(i)
 
     all_names = set()
-    uniprot = UniProt()
     base_dataset = "datasets/ecreact/ecreact-1.0.txt"
     with open(base_dataset) as f:
         lines = f.readlines()
@@ -73,7 +56,7 @@ if __name__ == "__main__":
         ec = line.split("|")[1].split(">>")[0]
         uniprot_id = ec_to_uniport[ec]
         pdb_file = f"../BioCatalystChem/datasets/pdb_files/{uniprot_id}/{uniprot_id}_esmfold.pdb"
-        smiles, ids = line_to_mol_id(line, smiles_to_id)
+        ids, smiles = line_to_mol_id(line, smiles_to_id)
         for i, s in zip(ids, smiles):
             name = f"../BioCatalystChem/datasets/docking2/{uniprot_id}/{i}/complex_0"
             prev_run_name = f"datasets/docking/{uniprot_id}/{i}/complex_0"
