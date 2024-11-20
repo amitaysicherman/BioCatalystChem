@@ -238,7 +238,7 @@ def get_only_new_ecs(eval_dataset: SeqToSeqDataset):
 
 
 def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=None, base_results_dir="results", dups=0,
-                                 only_new=False, cp_step=None):
+                                 only_new=False, cp_step=None, drop_short=0):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
@@ -287,7 +287,8 @@ def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=Non
 
     gen_dataset = SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
                                   save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
-                                  sample_size=samples, duplicated_source_mode=dups, ec_source=ec_source)
+                                  sample_size=samples, duplicated_source_mode=dups, ec_source=ec_source,
+                                  drop_short=drop_short)
     if only_new:
         gen_dataset = get_only_new_ecs(gen_dataset)
 
@@ -326,6 +327,7 @@ if __name__ == "__main__":
     parser.add_argument("--bs", default=1, type=int)
     parser.add_argument("--only_new", default=0, type=int)
     parser.add_argument("--cp_step", default=0, type=int)
+    parser.add_argument("--drop_short", default=0, type=int)
 
     args = parser.parse_args()
     if args.cp_step == 0:
@@ -339,7 +341,7 @@ if __name__ == "__main__":
 
     model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
                                                                  base_results_dir=args.res_base, only_new=args.only_new,
-                                                                 cp_step=args.cp_step)
+                                                                 cp_step=args.cp_step, drop_short=args.drop_short)
 
     if args.per_ds:
         all_ec = gen_dataset.sources
@@ -365,11 +367,11 @@ if __name__ == "__main__":
         print(f"{ec}: {ec_count[ec]:.2f}")
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
-    config_cols = f"{run_name},{args.split},{args.k},{args.fast},{args.per_level},{args.dups},{args.only_new},{args.per_ds},{args.cp_step}"
+    config_cols = f"{run_name},{args.split},{args.k},{args.fast},{args.per_level},{args.dups},{args.only_new},{args.per_ds},{args.cp_step},{args.drop_short}"
     if not os.path.exists(output_file):
         with open(output_file, "w") as f:
             f.write(
-                "run_name,split,k,fast,per_level,dups,only_new,per_ds,cp_step,ec,rank,accuracy,ec_count,training_count\n")
+                "run_name,split,k,fast,per_level,dups,only_new,per_ds,cp_step,drop_short,ec,rank,accuracy,ec_count,training_count\n")
 
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
         for ec in correct_count:

@@ -88,7 +88,7 @@ class DuplicateSrcManager:
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
                  ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False, save_ec=False,
-                 retro=False, duplicated_source_mode=IGNORE_DUPLICATES, ec_source=None):
+                 retro=False, duplicated_source_mode=IGNORE_DUPLICATES, ec_source=None, drop_short=False):
         self.max_length = max_length
         self.sample_size = sample_size
         self.ec_source = ec_source
@@ -99,6 +99,7 @@ class SeqToSeqDataset(Dataset):
         self.DEBUG = DEBUG
         self.ec_type = ec_type
         self.alpha = alpha
+        self.drop_short = drop_short
         self.duplicated_source_manager = DuplicateSrcManager()
         self.sources = []
         if save_ec:
@@ -164,6 +165,17 @@ class SeqToSeqDataset(Dataset):
             assert len(source_lines) == len(src_lines)
         else:
             source_lines = [0] * len(src_lines)
+
+        if self.drop_short:
+            src_count = [x.split("|")[0] for x in src_lines]
+            src_count = [x.split(".") for x in src_lines]
+            src_count = [len([y for y in x if y.strip() not in ["O", "O = O", "[H+]"]]) for x in src_lines]
+            src_count_mask = [x > 1 for x in src_count]
+            src_lines = [src for src, m in zip(src_lines, src_count_mask) if m]
+            tgt_lines = [tgt for tgt, m in zip(tgt_lines, src_count_mask) if m]
+            source_lines = [source for source, m in zip(source_lines, src_count_mask) if m]
+            print(
+                f"Removed {len(src_count) - sum(src_count_mask)} samples, total: {sum(src_count_mask)}, {len(src_count)}")
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
 
         if duplicated_source_mode != IGNORE_DUPLICATES:
@@ -329,14 +341,23 @@ if "__main__" == __name__:
 
     sources = np.array(ds.sources)
     ecs = np.array(ds.all_ecs)
-    src_lines = [t.decode(x[0]) for x in ds.data]
-    src_lines = [x.split(".")[0] for x in src_lines]
 
-    tgt_lines = np.array([t.decode(x[1]) for x in ds.data])
-    # print most frequent sources (top 10)
-    counter = Counter(src_lines)
-    for s, c in counter.most_common(10):
-        print(f"Source {s} : {c}")
+    l2_ec = ["".join(x.split(" ")[:3]) for x in ecs]
+    src_lines = [t.decode(x[0]) for x in ds.data]
+    src_lines = [x.split(" . ") for x in src_lines]
+    src_lines = [" . ".join([y for y in x if y.strip() not in ["O", "O = O", "[H+]"]]) for x in src_lines]
+
+    src_lines = np.array(src_lines)
+
+    filter_ec = [x == "[v1][u13]" for x in l2_ec]
+    filter_ec = np.array(filter_ec)
+    sources_filter = sources[filter_ec]
+    print(np.unique(sources_filter, return_counts=True))
+    source_lines_filter = src_lines[filter_ec]
+    for s in source_lines_filter:
+        print(len(s.split(".")), s)
+    print(sum(filter_ec))
+
     for s in np.unique(sources):
         print(f"Source {s} : {len(np.unique(ecs[sources == s]))}")
         if s == "":
