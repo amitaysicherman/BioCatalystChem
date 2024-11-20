@@ -177,7 +177,19 @@ def get_last_cp(base_dir):
     return f"{base_dir}/{cp_dirs[-1]}"
 
 
-def get_best_val_cp(run_name, base_results_dir="results"):
+def get_closest_cp(base_dir, cp_step):
+    cp_dirs = os.listdir(base_dir)
+    cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
+    cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
+    cp_steps = [int(cp.split("-")[1]) for cp in cp_dirs]
+    cp_diffs = [abs(cp_step - cp) for cp in cp_steps]
+    closest_cp = cp_dirs[cp_diffs.index(min(cp_diffs))]
+    return f"{base_dir}/{closest_cp}"
+
+
+def get_best_val_cp(run_name, base_results_dir="results", cp_step=None):
+    if cp_step is not None:
+        return get_closest_cp(f"{base_results_dir}/{run_name}", cp_step)
     base_dir = f"{base_results_dir}/{run_name}"
     last_cp = get_last_cp(base_dir)
     trainer_state_file = f"{last_cp}/trainer_state.json"
@@ -218,7 +230,7 @@ def get_only_new_ecs(eval_dataset: SeqToSeqDataset):
 
 
 def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=None, base_results_dir="results", dups=0,
-                                 only_new=False):
+                                 only_new=False, cp_step=None):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     lookup_len = run_args["lookup_len"]
@@ -253,7 +265,7 @@ def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=Non
     if ec_type == ECType.PAPER or addec:
         new_tokens = get_ec_tokens()
         tokenizer.add_tokens(new_tokens)
-    best_val_cp = get_best_val_cp(run_name, base_results_dir)
+    best_val_cp = get_best_val_cp(run_name, base_results_dir, cp_step)
     print("Loading model", best_val_cp)
     if (ec_type == ECType.PAPER or ec_type == ECType.NO_EC) or prequantization:
         model = T5ForConditionalGeneration.from_pretrained(best_val_cp)
@@ -305,8 +317,11 @@ if __name__ == "__main__":
     parser.add_argument("--res_base", default="results", type=str)
     parser.add_argument("--bs", default=1, type=int)
     parser.add_argument("--only_new", default=0, type=int)
+    parser.add_argument("--cp_step", default=0, type=int)
 
     args = parser.parse_args()
+    if args.cp_step == 0:
+        args.cp_step = None
     run_name = args.run_name
     per_level = args.per_level
 
@@ -315,7 +330,8 @@ if __name__ == "__main__":
     print("---" * 10)
 
     model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
-                                                                 base_results_dir=args.res_base, only_new=args.only_new)
+                                                                 base_results_dir=args.res_base, only_new=args.only_new,
+                                                                 cp_step=args.cp_step)
 
     if args.per_ds:
         all_ec = gen_dataset.sources
@@ -342,7 +358,12 @@ if __name__ == "__main__":
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
     config_cols = run_name + "," + args.split + "," + str(args.k) + "," + str(args.fast) + "," + str(
-        args.per_level) + "," + str(args.dups) + "," + str(args.only_new)
+        args.per_level) + "," + str(args.dups) + "," + str(args.only_new), str(args.per_ds), str(args.cp_step)
+    if not os.path.exists(output_file):
+        with open(output_file, "w") as f:
+            f.write(
+                "run_name,split,k,fast,per_level,dups,only_new,per_ds,cp_step,rank,accuracy,ec_count,training_count\n")
+
     with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
         for ec in correct_count:
             for i in range(1, args.k + 1):
