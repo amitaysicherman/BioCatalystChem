@@ -168,8 +168,8 @@ class SeqToSeqDataset(Dataset):
 
         if self.drop_short:
             src_count = [x.split("|")[0] for x in src_lines]
-            src_count = [x.split(".") for x in src_lines]
-            src_count = [len([y for y in x if y.strip() not in ["O", "O = O", "[H+]"]]) for x in src_lines]
+            src_count = [x.split(".") for x in src_count]
+            src_count = [len([y for y in x if len(y.strip().split(" ")) > 2]) for x in src_count]
             src_count_mask = [x > 1 for x in src_count]
             src_lines = [src for src, m in zip(src_lines, src_count_mask) if m]
             tgt_lines = [tgt for tgt, m in zip(tgt_lines, src_count_mask) if m]
