@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     n_splits = 10
     split_size = len(df) // n_splits
-    output_base = "input_csvs"
+    output_base = "../DiffDock/input_csvs"
     for i in range(n_splits):
         df.iloc[i * split_size:(i + 1) * split_size].to_csv(f"{output_base}/protein_ligand_{i}.csv", index=False)
 
