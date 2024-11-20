@@ -139,8 +139,9 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
                 if save_file:
                     y = tokenizer.decode(labels[j][labels[j] != -100], skip_special_tokens=True)
                     x = tokenizer.decode(input_ids[j], skip_special_tokens=True)
+                    ec = batch_ec[j]
                     with open(save_file, "a") as f:
-                        f.write(f"{x},{y},{label_decoded == pred_decoded}\n")
+                        f.write(f"{x},{ec},{y},{label_decoded == pred_decoded}\n")
 
         else:  # Generation with beam search
             outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
@@ -155,6 +156,13 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
                 preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs[j * k:(j + 1) * k]]
 
                 for rank in range(1, k + 1):
+                    if rank == 0:
+                        if save_file:
+                            x = tokenizer.decode(input_ids[j], skip_special_tokens=True)
+                            ec = batch_ec[j]
+                            with open(save_file, "a") as f:
+                                f.write(f"{x},{ec},{label_smiles},{label_smiles in preds_list[:rank]}\n")
+
                     if label_smiles in preds_list[:rank]:
                         correct_count[batch_ec[j]][rank] += 1
                 ec_count[batch_ec[j]] += 1
@@ -357,7 +365,7 @@ if __name__ == "__main__":
         print(f"{ec}: {ec_count[ec]:.2f}")
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
-    config_cols=f"{run_name},{args.split},{args.k},{args.fast},{args.per_level},{args.dups},{args.only_new},{args.per_ds},{args.cp_step}"
+    config_cols = f"{run_name},{args.split},{args.k},{args.fast},{args.per_level},{args.dups},{args.only_new},{args.per_ds},{args.cp_step}"
     if not os.path.exists(output_file):
         with open(output_file, "w") as f:
             f.write(
@@ -368,5 +376,5 @@ if __name__ == "__main__":
             for i in range(1, args.k + 1):
                 if ec_count[ec] == 0:
                     continue
-                f.write(f"{config_cols},{ec},{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]},{ec_training_count[ec]}\n")
-                
+                f.write(
+                    f"{config_cols},{ec},{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]},{ec_training_count[ec]}\n")

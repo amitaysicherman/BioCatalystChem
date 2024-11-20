@@ -320,8 +320,29 @@ if "__main__" == __name__:
 
     t = tok()
     ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED,
-                         ec_source="all")
+                         ec_source="all", save_ec=True)
     import numpy as np
+    import matplotlib.pyplot as plt
 
-    print(np.unique(ds.sources, return_counts=True))
-    print(len(ds))
+    sources = np.array(ds.sources)
+    ecs = np.array(ds.all_ecs)
+    for s in np.unique(sources):
+        print(f"Source {s} : {len(np.unique(ecs[sources == s]))}")
+        if s=="":
+            continue
+        mask = sources == s
+        ec_in_sources = ecs[mask]
+        for level in range(2, 4):
+            ec_level = ["".join(x.split(" ")[:level]) for x in ec_in_sources]
+            ec_level = np.array(ec_level)
+            print(f"Level {level} {s} : {len(np.unique(ec_level))}")
+            # Create pie chart
+            data = Counter(ec_level)
+            labels = data.keys()
+            sizes = data.values()
+            fig1, ax1 = plt.subplots()
+            ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+            plt.title(f"Source {s} Level {level}")
+            ax1.axis('equal')
+            plt.show()
+
