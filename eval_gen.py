@@ -357,8 +357,7 @@ if __name__ == "__main__":
         print(f"{ec}: {ec_count[ec]:.2f}")
     # Save the evaluation results
     output_file = f"results/eval_gen.csv"
-    config_cols = run_name + "," + str(args.split) + "," + str(args.k) + "," + str(args.fast) + "," + str(
-        args.per_level) + "," + str(args.dups) + "," + str(args.only_new), str(args.per_ds), str(args.cp_step)
+    config_cols=f"{run_name},{args.split},{args.k},{args.fast},{args.per_level},{args.dups},{args.only_new},{args.per_ds},{args.cp_step}"
     if not os.path.exists(output_file):
         with open(output_file, "w") as f:
             f.write(
@@ -369,5 +368,5 @@ if __name__ == "__main__":
             for i in range(1, args.k + 1):
                 if ec_count[ec] == 0:
                     continue
-                f.write(
-                    config_cols + "," + str(ec) + f",{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]},{ec_training_count[ec]}\n")
+                f.write(f"{config_cols},{ec},{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]},{ec_training_count[ec]}\n")
+                
