@@ -69,7 +69,7 @@ if __name__ == "__main__":
         smiles, ids = line_to_mol_id(line, smiles_to_id)
         for i, s in zip(ids, smiles):
             name = f"../BioCatalystChem/datasets/docking2/{uniprot_id}/{i}/complex_0"
-            prev_run_name = name.replace("docking2", "docking")
+            prev_run_name = "datasets/docking/{uniprot_id}/{i}/complex_0"
             if not os.path.exists(prev_run_name) or len(os.listdir(prev_run_name)) == 0:
                 skip_count += 1
                 continue
