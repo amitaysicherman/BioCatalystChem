@@ -314,21 +314,32 @@ if "__main__" == __name__:
             self.pad_token_id = 0
             self.eos_token_id = 12
 
-        def encode(self, x, **kwargs):
-            return [12]
+        def encode(self, s, **kwargs):
+            return [ord(c) for c in s]
+
+        def decode(self, s, **kwargs):
+            return "".join([chr(c) for c in s])
 
 
     t = tok()
     ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED,
-                         ec_source="all", save_ec=True)
+                         ec_source="all", save_ec=True, max_length=500)
     import numpy as np
     import matplotlib.pyplot as plt
 
     sources = np.array(ds.sources)
     ecs = np.array(ds.all_ecs)
+    src_lines = [t.decode(x[0]) for x in ds.data]
+    src_lines = [x.split(".")[0] for x in src_lines]
+
+    tgt_lines = np.array([t.decode(x[1]) for x in ds.data])
+    # print most frequent sources (top 10)
+    counter = Counter(src_lines)
+    for s, c in counter.most_common(10):
+        print(f"Source {s} : {c}")
     for s in np.unique(sources):
         print(f"Source {s} : {len(np.unique(ecs[sources == s]))}")
-        if s=="":
+        if s == "":
             continue
         mask = sources == s
         ec_in_sources = ecs[mask]
@@ -345,4 +356,3 @@ if "__main__" == __name__:
             plt.title(f"Source {s} Level {level}")
             ax1.axis('equal')
             plt.show()
-
