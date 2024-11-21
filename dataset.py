@@ -335,28 +335,21 @@ if "__main__" == __name__:
 
     t = tok()
     ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED,
-                         ec_source="all", save_ec=True, max_length=500)
+                         ec_source="all", save_ec=True, max_length=500,drop_short=True)
+
+
+
     import numpy as np
     import matplotlib.pyplot as plt
 
     sources = np.array(ds.sources)
+    print(f"Unique sources {len(np.unique(sources,return_counts=True))}")
     ecs = np.array(ds.all_ecs)
 
     l2_ec = ["".join(x.split(" ")[:3]) for x in ecs]
     src_lines = [t.decode(x[0]) for x in ds.data]
-    src_lines = [x.split(" . ") for x in src_lines]
-    src_lines = [" . ".join([y for y in x if y.strip() not in ["O", "O = O", "[H+]"]]) for x in src_lines]
 
     src_lines = np.array(src_lines)
-
-    filter_ec = [x == "[v1][u13]" for x in l2_ec]
-    filter_ec = np.array(filter_ec)
-    sources_filter = sources[filter_ec]
-    print(np.unique(sources_filter, return_counts=True))
-    source_lines_filter = src_lines[filter_ec]
-    for s in source_lines_filter:
-        print(len(s.split(".")), s)
-    print(sum(filter_ec))
 
     for s in np.unique(sources):
         print(f"Source {s} : {len(np.unique(ecs[sources == s]))}")
@@ -377,3 +370,4 @@ if "__main__" == __name__:
             plt.title(f"Source {s} Level {level}")
             ax1.axis('equal')
             plt.show()
+

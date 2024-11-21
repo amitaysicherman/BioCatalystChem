@@ -38,6 +38,7 @@ def line_to_mol_id(line: str, smiles_to_id: dict):
 
 if __name__ == "__main__":
     skip_count = 0
+    skip_count2 = 0
     with open("datasets/docking/smiles_to_id.txt") as f:
         lines= f.readlines()
     smiles_to_id = dict()
@@ -59,6 +60,8 @@ if __name__ == "__main__":
         ids, smiles = line_to_mol_id(line, smiles_to_id)
         for i, s in zip(ids, smiles):
             name = f"../BioCatalystChem/datasets/docking2/{uniprot_id}/{i}/complex_0"
+            if os.path.exists(name) and len(os.listdir(name)) > 0:
+                skip_count2 += 1
             prev_run_name = f"datasets/docking/{uniprot_id}/{i}/complex_0"
             if not os.path.exists(prev_run_name) or len(os.listdir(prev_run_name)) == 0:
                 skip_count += 1
@@ -67,7 +70,7 @@ if __name__ == "__main__":
                 continue
             all_names.add(name)
             results.append([name, pdb_file, s, ""])
-        pbar.set_description(f"Skipped {skip_count} entries / {len(all_names)} entries / {len(results)} total entries")
+        pbar.set_description(f"Skipped {skip_count} entries / {skip_count2} entries, {len(results)} entries found")
     df = pd.DataFrame(results, columns=["complex_name", "protein_path", "ligand_description", "protein_sequence"])
     df = df.sort_values(by="complex_name")
 
