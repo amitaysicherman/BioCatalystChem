@@ -74,7 +74,7 @@ if __name__ == "__main__":
     df = pd.DataFrame(results, columns=["complex_name", "protein_path", "ligand_description", "protein_sequence"])
     df = df.sort_values(by="complex_name")
 
-    n_splits = 10
+    n_splits = 15
     split_size = len(df) // n_splits
     output_base = "../DiffDock/input_csvs"
     os.makedirs(output_base, exist_ok=True)
