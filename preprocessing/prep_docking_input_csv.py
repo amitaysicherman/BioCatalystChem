@@ -29,8 +29,7 @@ def line_to_mol_id(line: str, smiles_to_id: dict):
             continue
         Chem.RemoveStereochemistry(mol)
         s = Chem.MolToSmiles(mol)
-        if s not in smiles_to_id:
-            smiles_to_id[s] = len(smiles_to_id)
+        assert s in smiles_to_id
         ids.append(smiles_to_id[s])
         smiles.append(s)
     return ids, smiles
