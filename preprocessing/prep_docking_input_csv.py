@@ -62,6 +62,7 @@ if __name__ == "__main__":
             name = f"../BioCatalystChem/datasets/docking2/{uniprot_id}/{i}/complex_0"
             if os.path.exists(name) and len(os.listdir(name)) > 0:
                 skip_count2 += 1
+                continue
             prev_run_name = f"datasets/docking/{uniprot_id}/{i}/complex_0"
             if not os.path.exists(prev_run_name) or len(os.listdir(prev_run_name)) == 0:
                 skip_count += 1
