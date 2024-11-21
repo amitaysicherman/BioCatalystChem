@@ -9,6 +9,7 @@ import pandas as pd
 from preprocessing.build_tokenizer import ec_tokens_to_seq
 import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
+import glob  # Import glob to handle file matching
 
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
@@ -69,22 +70,31 @@ def get_protein_mol_att(protein_id, molecule_id, alpha):
     protein_file = f'datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb'
     protein_seq, protein_cords = get_protein_cords(protein_file)
     protein_cords = np.array(protein_cords)
-    ligand_file = f'datasets/docking/{protein_id}/{molecule_id}/complex_0/rank1.sdf'
-    lig_coords = get_mol_cords(ligand_file)
-    ligand_locs = np.array(lig_coords)
-    if len(ligand_locs) == 0:
-        return None
+
+    ligand_dir = f'datasets/docking/{protein_id}/{molecule_id}/complex_0/'
+    sdf_files = glob.glob(f"{ligand_dir}*.sdf")
+
+    all_ligand_coords = []  # Store coordinates from all .sdf files
+
+    for sdf_file in sdf_files:
+        lig_coords = get_mol_cords(sdf_file)
+        if len(lig_coords) > 0:
+            all_ligand_coords.extend(lig_coords)  # Append all coordinates
+    if not all_ligand_coords:
+        return None  # If no coordinates were found, return None
+    ligand_locs = np.array(all_ligand_coords)
     dist = euclidean_distances(protein_cords, ligand_locs)
     weights = np.exp(-dist)
-    weights = weights / weights.sum(axis=0)
-    weights = weights.sum(axis=1)
-    weights = weights / weights.sum()
-    weights = weights * alpha + (1 - alpha) / len(weights)
+    weights = weights / weights.sum(axis=0)  # Normalize across molecule locations
+    weights = weights.sum(axis=1)  # Aggregate weights per protein coordinate
+    weights = weights / weights.sum()  # Normalize again
+    weights = weights * alpha + (1 - alpha) / len(weights)  # Scale weights with alpha
 
     protein_emd_file = f'datasets/docking/{protein_id}/protein.npy'
     emb = np.load(protein_emd_file)[1:-1]  # remove cls and eos tokens
     if len(emb) != len(weights):
-        return None
+        return None  # If embedding length does not match weights, return None
+
     docking_attention_emd = np.average(emb, axis=0, weights=weights)
     return docking_attention_emd
 

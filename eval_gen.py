@@ -156,7 +156,7 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
                 preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs[j * k:(j + 1) * k]]
 
                 for rank in range(1, k + 1):
-                    if rank == 0:
+                    if rank == 5:
                         if save_file:
                             x = tokenizer.decode(input_ids[j], skip_special_tokens=True)
                             ec = batch_ec[j]
