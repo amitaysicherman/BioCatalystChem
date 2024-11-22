@@ -79,7 +79,7 @@ def get_protein_mol_att(protein_id, molecule_id, alpha,v2=False):
             lig_coords = get_mol_cords(sdf_file)
             if len(lig_coords) > 0:
                 dist = euclidean_distances(protein_cords, lig_coords)
-                weights = np.exp(-dist)
+                weights = np.exp(-dist)+EPSILON
                 weights = weights / weights.sum(axis=0)
                 weights = weights.sum(axis=1)
                 weights = weights / weights.sum()
