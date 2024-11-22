@@ -88,8 +88,9 @@ class DuplicateSrcManager:
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
                  ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False, save_ec=False,
-                 retro=False, duplicated_source_mode=IGNORE_DUPLICATES, ec_source=None, drop_short=False):
+                 retro=False, duplicated_source_mode=IGNORE_DUPLICATES, ec_source=None, drop_short=False,daev2=False):
         self.max_length = max_length
+        self.daev2=daev2
         self.sample_size = sample_size
         self.ec_source = ec_source
         self.tokenizer = tokenizer
@@ -146,8 +147,6 @@ class SeqToSeqDataset(Dataset):
             self.sources = [self.sources[i] for i in range(len(self.sources)) if mask[i]]
         print(f"Dataset {split} loaded, len: {len(self.data)}")
 
-    # def process_reaction(self, text, ec):
-    #     return get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
 
     def load_dataset(self, input_base, split, w, have_ec=True, duplicated_source_mode=0):
         if not os.path.exists(input_base):
@@ -219,7 +218,8 @@ class SeqToSeqDataset(Dataset):
                     emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
                 else:
                     emb_lines = [
-                        get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha)
+                        get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha,
+                                                   v2=self.daev2)
                         for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
                     ]
                     # with ProcessPoolExecutor(max_workers=n_cpu) as executor:

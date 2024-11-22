@@ -36,7 +36,8 @@ def name_to_args(name):
         'addec': False,
         'batch_size': 64,
         'lr': 1e-4,
-        'ec_source': None
+        'ec_source': None,
+        'daev2': False
     }
 
     # if ec_source:
@@ -70,6 +71,9 @@ def name_to_args(name):
         args["ec_type"] = ECType.PRETRAINED
     elif name.startswith("dae"):
         args["ec_type"] = ECType.DAE
+        if "-v2" in name:
+            args["daev2"] = True
+            name = name.replace("-v2", "")
         ec_alpha = name.split("_")[0]
         if "-" in ec_alpha:
             args["alpha"] = float(ec_alpha.split("-")[1])
@@ -249,11 +253,12 @@ def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=Non
     addec = run_args["addec"]
     alpha = run_args["alpha"]
     ec_source = run_args["ec_source"]
+    daev2 = run_args["daev2"]
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
 
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
-                                                n_pca_components, n_clusters_pca, alpha)
+                                                n_pca_components, n_clusters_pca, alpha, daev2)
         ecreact_dataset = ecreact_dataset.replace("datasets/", "")
         if addec:
             ecreact_dataset += "_plus"
@@ -288,7 +293,7 @@ def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=Non
     gen_dataset = SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
                                   save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
                                   sample_size=samples, duplicated_source_mode=dups, ec_source=ec_source,
-                                  drop_short=drop_short)
+                                  drop_short=drop_short, daev2=daev2)
     if only_new:
         gen_dataset = get_only_new_ecs(gen_dataset)
 

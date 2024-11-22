@@ -54,7 +54,7 @@ def compute_metrics(eval_pred, tokenizer):
 
 
 def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca,
-                 alpha, addec):
+                 alpha, addec,daev2):
     if ec_type == ECType.PAPER:
         return "paper"
     elif ec_type == ECType.NO_EC:
@@ -63,6 +63,8 @@ def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, 
         run_name = f"pretrained"
     elif ec_type == ECType.DAE:
         run_name = f"dae-{alpha}"
+        if daev2:
+            run_name += "-v2"
     else:
         raise ValueError(f"Invalid ec_type: {ec_type}")
 
@@ -156,7 +158,7 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate, max_length, dups, use_bs, ec_source):
+         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate, max_length, dups, use_bs, ec_source,daev2):
     if DEBUG:
         batch_size = 8
     ec_type = ECType(ec_type)
@@ -174,7 +176,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     else:
         ecreact_dataset = "ecreact/level4"
     common_ds_args = {"tokenizer": tokenizer, "ec_type": ec_type, "DEBUG": DEBUG, "alpha": alpha, "addec": addec,
-                      "max_length": max_length, "ec_source": ec_source}
+                      "max_length": max_length, "ec_source": ec_source, "daev2": daev2}
     dup_args = {"duplicated_source_mode": 0 if dups == 3 else dups}
     if dups == 3:
         if mix:
@@ -210,7 +212,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
                      "uspto": test_uspto_dataset}
 
     run_name = args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca, alpha, addec)
+                            n_clusters_pca, alpha, addec,daev2)
     if nopre:
         run_name += f"_nopre"
     if regpre:
@@ -320,6 +322,8 @@ if __name__ == '__main__':
     parser.add_argument("--ec_source", type=str, default="",
                         choices=["", 'brenda_reaction_smiles', 'rhea_reaction_smiles', 'metanetx_reaction_smiles',
                                  'pathbank_reaction_smiles'])
+    parser.add_argument("--daev2", type=int, default=0)
+
     args = parser.parse_args()
     if args.ec_source == "":
         args.ec_source = None
@@ -333,4 +337,4 @@ if __name__ == '__main__':
          n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,
          lora_d=args.lora_d, regpre=args.regpre, mix=args.mix, batch_size=args.batch_size,
          learning_rate=args.learning_rate, max_length=args.max_length, dups=args.dups, use_bs=args.use_bs,
-         ec_source=args.ec_source)
+         ec_source=args.ec_source,daev2=args.daev2)

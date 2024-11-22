@@ -99,22 +99,34 @@ class ResidualPCATokenizer:
         return tokens
 
 
-def args_to_quant_model_file(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
-    ec_type = ec_type.value if ec_type != ECType.DAE else f"{ec_type.value}-{alpha}"
-    return f"datasets/ecreact/vec_quant_{ec_type}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}.pkl"
+def get_args_name(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, daev2):
+    if ec_type == ECType.PRETRAINED:
+        ec_type = ec_type.value
+    elif ec_type == ECType.DAE:
+        ec_type = f"{ec_type.value}-{alpha}"
+        if daev2:
+            ec_type += "-v2"
+    else:
+        raise ValueError("Invalid ec_type", ec_type)
+    return f"{ec_type}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}"
 
 
-def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
-    ec_type = ec_type.value if ec_type != ECType.DAE else f"{ec_type.value}-{alpha}"
-    return f"datasets/ecreact/quant_{ec_type}_{n_hierarchical_clusters}_{n_pca_components}_{n_clusters_pca}"
+def args_to_quant_model_file(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, daev2):
+    name = get_args_name(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, daev2)
+    return f"datasets/ecreact/vec_quant_{name}.pkl"
+
+
+def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, daev2):
+    name = get_args_name(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, daev2)
+    return f"datasets/ecreact/quant_{name}"
 
 
 def get_reaction_attention_emb_wrapper(args):
-    text, ec, ec_to_uniprot, smiles_to_id, alpha = args
-    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha)
+    text, ec, ec_to_uniprot, smiles_to_id, alpha, daev2 = args
+    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha, v2=daev2)
 
 
-def read_dataset_split(ec_type: ECType, split: str, alpha):
+def read_dataset_split(ec_type: ECType, split: str, alpha, daev2):
     input_base = "datasets/ecreact/level4"
     if ec_type == ECType.PRETRAINED:
         ec_to_vec = EC2Vec(load_model=False)
@@ -145,7 +157,7 @@ def read_dataset_split(ec_type: ECType, split: str, alpha):
     if ec_type == ECType.PRETRAINED:
         emb_lines = [ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
     else:
-        args = [(src, ec, ec_to_uniprot, smiles_to_id, alpha) for src, ec in zip(src_lines, ec_lines)]
+        args = [(src, ec, ec_to_uniprot, smiles_to_id, alpha, daev2) for src, ec in zip(src_lines, ec_lines)]
         with ProcessPoolExecutor(max_workers=n_cpu) as executor:
             emb_lines = list(tqdm(executor.map(get_reaction_attention_emb_wrapper, args), total=len(src_lines)))
 
@@ -158,37 +170,41 @@ def read_dataset_split(ec_type: ECType, split: str, alpha):
     src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
     tgt_lines = [tgt_lines[i] for i in range(len(tgt_lines)) if not_none_mask[i]]
     emb_lines = [emb_lines[i] for i in range(len(emb_lines)) if not_none_mask[i]]
-    source_lines= [source_lines[i] for i in range(len(source_lines)) if not_none_mask[i]]
+    source_lines = [source_lines[i] for i in range(len(source_lines)) if not_none_mask[i]]
     return src_lines, tgt_lines, emb_lines, source_lines
 
 
-def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
+def train_model(ec_type: ECType, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, daev2):
     split = "train"
-    outputfile = args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha)
+    outputfile = args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha,
+                                          daev2)
     if os.path.exists(outputfile):
         print("Model already exists")
-        return
-    _, _, emb_lines = read_dataset_split(ec_type, split, alpha)
+    _, _, emb_lines, _ = read_dataset_split(ec_type, split, alpha, daev2)
     vecs = np.array(emb_lines)
     print(vecs.shape)
     tokenizer = ResidualPCATokenizer(n_hierarchical_clusters, n_pca_components, n_clusters_pca)
     tokenizer.fit(vecs)
-    with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha),
-              "wb") as f:
+    with open(
+            args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, daev2),
+            "wb") as f:
         pickle.dump(tokenizer, f)
 
 
-def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha):
-    with open(args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha),
-              "rb") as f:
+def tokenize_dataset_split(ec_type: ECType, split, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha,
+                           daev2):
+    with open(
+            args_to_quant_model_file(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, daev2),
+            "rb") as f:
         tokenizer: ResidualPCATokenizer = pickle.load(f)
-    src_lines, tgt_lines, emb_lines,source_lines = read_dataset_split(ec_type, split, alpha=alpha)
+    src_lines, tgt_lines, emb_lines, source_lines = read_dataset_split(ec_type, split, alpha=alpha, daev2=daev2)
     tokenized_lines = [
         tokenizer.tokenize_vector(e) for e in emb_lines
     ]
     assert len(src_lines) == len(tgt_lines) == len(tokenized_lines)
 
-    output_base = args_to_quant_dataset(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha)
+    output_base = args_to_quant_dataset(ec_type, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha,
+                                        daev2)
 
     os.makedirs(output_base, exist_ok=True)
     src_out = open(f"{output_base}/src-{split}.txt", "w")
@@ -213,6 +229,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_clusters_pca", type=int, default=10)
     parser.add_argument("--alpha", type=int, default=50)
     parser.add_argument("--ec_type", type=int, default=ECType.PRETRAINED.value)
+    parser.add_argument("--daev2", type=int, default=0)
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
     if args.ec_type == ECType.PRETRAINED.value:
@@ -221,7 +238,8 @@ if __name__ == "__main__":
         ec_type = ECType.DAE
     else:
         raise ValueError("Invalid ec_type")
-    train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca, args.alpha)
+    train_model(ec_type, args.n_hierarchical_clusters, args.n_pca_components, args.n_clusters_pca, args.alpha,
+                args.daev2)
     for split in ["train", "valid", "test"]:
         tokenize_dataset_split(ec_type, split, args.n_hierarchical_clusters, args.n_pca_components,
-                               args.n_clusters_pca, alpha=args.alpha)
+                               args.n_clusters_pca, alpha=args.alpha, daev2=args.daev2)

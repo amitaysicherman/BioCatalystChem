@@ -7,10 +7,10 @@ import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
 import os
+
 n_cpu = os.cpu_count()
 
-
-
+V2 = True
 
 ec_to_vec = EC2Vec(load_model=False)
 with open("datasets/docking/smiles_to_id.txt") as f:
@@ -21,8 +21,9 @@ for i, row in ec_mapping.iterrows():
     ec_to_uniprot[row["EC_full"]] = row["Uniprot_id"]
 input_base = "datasets/ecreact/level4"
 
+
 def process_reaction(text, ec):
-    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=0.5)
+    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=0.5, v2=True)
 
 
 for split in ["test", "train", "valid"]:
@@ -38,8 +39,6 @@ for split in ["test", "train", "valid"]:
     src_lines = [x[0] for x in src_ec]
     ec_lines = [x[1] for x in src_ec]
     pre_lines = [ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
-
-
 
     with ProcessPoolExecutor(max_workers=n_cpu) as executor:
         dae_lines = list(tqdm(executor.map(process_reaction, src_lines, ec_lines), total=len(src_lines)))
