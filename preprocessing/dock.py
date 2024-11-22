@@ -14,7 +14,7 @@ import rdkit.RDLogger as rkl
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
 rkrb.DisableLog("rdApp.error")
-
+EPSILON = 1e-6
 aa3to1 = {
     'ALA': 'A', 'VAL': 'V', 'PHE': 'F', 'PRO': 'P', 'MET': 'M',
     'ILE': 'I', 'LEU': 'L', 'ASP': 'D', 'GLU': 'E', 'LYS': 'K',
@@ -95,7 +95,7 @@ def get_protein_mol_att(protein_id, molecule_id, alpha,v2=False):
         if len(ligand_locs) == 0:
             return None
         dist = euclidean_distances(protein_cords, ligand_locs)
-        weights = np.exp(-dist)
+        weights = np.exp(-dist)+EPSILON
         weights = weights / weights.sum(axis=0)
         weights = weights.sum(axis=1)
         weights = weights / weights.sum()
