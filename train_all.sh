@@ -16,5 +16,4 @@ configs=" --ec_type 3  --max_length 213 --addec 1 --daev2 1  --alpha 50 --prequa
 IFS='|' read -ra config_array <<< "$configs"
 
 config=${config_array[$((SLURM_ARRAY_TASK_ID - 1))]}
-sleep 10h
 python finetune_ecreact.py $config
