@@ -112,7 +112,7 @@ def get_protein_mol_att(protein_id, molecule_id, alpha,v2=False):
 
 
 
-def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha,v2=False,verbose=False):
+def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha,v2,verbose=False):
     protein_id = ec_to_uniprot[ec]
     if not check_protein_exists(protein_id):
         if verbose:
