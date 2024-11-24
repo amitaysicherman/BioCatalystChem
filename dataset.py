@@ -88,9 +88,9 @@ class DuplicateSrcManager:
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, weights=None, max_length=200, DEBUG=False,
                  ec_type=ECType.NO_EC, sample_size=None, shuffle=True, alpha=0.5, addec=False, save_ec=False,
-                 retro=False, duplicated_source_mode=IGNORE_DUPLICATES, ec_source=None, drop_short=False,daev2=False):
+                 retro=False, duplicated_source_mode=IGNORE_DUPLICATES, ec_source=None, drop_short=False, daev2=False):
         self.max_length = max_length
-        self.daev2=daev2
+        self.daev2 = daev2
         self.sample_size = sample_size
         self.ec_source = ec_source
         self.tokenizer = tokenizer
@@ -101,6 +101,7 @@ class SeqToSeqDataset(Dataset):
         self.ec_type = ec_type
         self.alpha = alpha
         self.drop_short = drop_short
+        self.samples_ids = []
         self.duplicated_source_manager = DuplicateSrcManager()
         self.sources = []
         if save_ec:
@@ -147,7 +148,6 @@ class SeqToSeqDataset(Dataset):
             self.sources = [self.sources[i] for i in range(len(self.sources)) if mask[i]]
         print(f"Dataset {split} loaded, len: {len(self.data)}")
 
-
     def load_dataset(self, input_base, split, w, have_ec=True, duplicated_source_mode=0):
         if not os.path.exists(input_base):
             print(f"Dataset {input_base} not found")
@@ -164,6 +164,7 @@ class SeqToSeqDataset(Dataset):
             assert len(source_lines) == len(src_lines)
         else:
             source_lines = [0] * len(src_lines)
+        sid = list(range(len(src_lines)))
 
         if self.drop_short:
             src_count = [x.split("|")[0] for x in src_lines]
@@ -173,6 +174,7 @@ class SeqToSeqDataset(Dataset):
             src_lines = [src for src, m in zip(src_lines, src_count_mask) if m]
             tgt_lines = [tgt for tgt, m in zip(tgt_lines, src_count_mask) if m]
             source_lines = [source for source, m in zip(source_lines, src_count_mask) if m]
+            sid = [i for i, m in zip(sid, src_count_mask) if m]
             print(
                 f"Removed {len(src_count) - sum(src_count_mask)} samples, total: {sum(src_count_mask)}, {len(src_count)}")
         emb_lines = [DEFAULT_EMB_VALUE] * len(src_lines)
@@ -186,11 +188,12 @@ class SeqToSeqDataset(Dataset):
             tgt_lines = [tgt for tgt, m in zip(tgt_lines, mask) if m]
             emb_lines = [emb for emb, m in zip(emb_lines, mask) if m]
             source_lines = [source for source, m in zip(source_lines, mask) if m]
+            sid = [i for i, m in zip(sid, mask) if m]
             print("len after", len(src_lines))
 
         if self.retro:
             src_lines, tgt_lines = tgt_lines, src_lines
-        assert len(src_lines) == len(tgt_lines)
+        assert len(src_lines) == len(tgt_lines) == len(source_lines) == len(sid) == len(emb_lines)
 
         if self.sample_size is not None:
             samples_idx = random.sample(range(len(src_lines)), self.sample_size)
@@ -198,6 +201,7 @@ class SeqToSeqDataset(Dataset):
             tgt_lines = [tgt_lines[i] for i in samples_idx]
             source_lines = [source_lines[i] for i in samples_idx]
             emb_lines = [emb_lines[i] for i in samples_idx]
+            sid = [sid[i] for i in samples_idx]
 
         if self.ec_map is not None:
             save_ec_lines = [self.ec_map[(src.split("|")[0], tgt)] for src, tgt in zip(src_lines, tgt_lines)]
@@ -235,6 +239,7 @@ class SeqToSeqDataset(Dataset):
                 emb_lines = [emb_lines[i] for i in range(len(emb_lines)) if not_none_mask[i]]
                 save_ec_lines = [save_ec_lines[i] for i in range(len(save_ec_lines)) if not_none_mask[i]]
                 source_lines = [source_lines[i] for i in range(len(source_lines)) if not_none_mask[i]]
+                sid = [sid[i] for i in range(len(sid)) if not_none_mask[i]]
                 len_after = len(src_lines)
                 print(f"Removed {len_before - len_after} samples, total: {len_after}, {len_before}")
 
@@ -244,11 +249,13 @@ class SeqToSeqDataset(Dataset):
             emb_lines = emb_lines[:100]
             save_ec_lines = save_ec_lines[:100]
             source_lines = source_lines[:100]
-        assert len(src_lines) == len(tgt_lines) == len(emb_lines) == len(save_ec_lines) == len(source_lines)
+            sid = sid[:100]
+        assert len(src_lines) == len(tgt_lines) == len(emb_lines) == len(save_ec_lines) == len(source_lines) == len(sid)
         skip_count = 0
         data = []
         ec_final = []
         source_final = []
+        sid_final = []
         for i in tqdm(range(len(src_lines))):
             input_id = encode_eos_pad(self.tokenizer, src_lines[i], self.max_length, no_pad=True)
             label = encode_eos_pad(self.tokenizer, tgt_lines[i], self.max_length, no_pad=True)
@@ -265,11 +272,13 @@ class SeqToSeqDataset(Dataset):
             data.append((input_id, label, emb))
             ec_final.append(save_ec_lines[i])
             source_final.append(source_lines[i])
+            sid_final.append(sid[i])
 
         for _ in range(w):
             self.data.extend(data)
             self.all_ecs.extend(ec_final)
             self.sources.extend(source_final)
+            self.samples_ids.extend(sid_final)
 
     def __len__(self):
         return len(self.data)
@@ -335,39 +344,5 @@ if "__main__" == __name__:
 
     t = tok()
     ds = SeqToSeqDataset(datasets=["ecreact/level4"], split="test", tokenizer=t, ec_type=ECType.PRETRAINED,
-                         ec_source="all", save_ec=True, max_length=500,drop_short=True)
-
-
-
-    import numpy as np
-    import matplotlib.pyplot as plt
-
-    sources = np.array(ds.sources)
-    print(f"Unique sources {len(np.unique(sources,return_counts=True))}")
-    ecs = np.array(ds.all_ecs)
-
-    l2_ec = ["".join(x.split(" ")[:3]) for x in ecs]
-    src_lines = [t.decode(x[0]) for x in ds.data]
-
-    src_lines = np.array(src_lines)
-
-    for s in np.unique(sources):
-        print(f"Source {s} : {len(np.unique(ecs[sources == s]))}")
-        if s == "":
-            continue
-        mask = sources == s
-        ec_in_sources = ecs[mask]
-        for level in range(2, 4):
-            ec_level = ["".join(x.split(" ")[:level]) for x in ec_in_sources]
-            ec_level = np.array(ec_level)
-            print(f"Level {level} {s} : {len(np.unique(ec_level))}")
-            # Create pie chart
-            data = Counter(ec_level)
-            labels = data.keys()
-            sizes = data.values()
-            fig1, ax1 = plt.subplots()
-            ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-            plt.title(f"Source {s} Level {level}")
-            ax1.axis('equal')
-            plt.show()
-
+                         ec_source="all", save_ec=True, max_length=500, drop_short=True)
+    print(ds.samples_ids)
