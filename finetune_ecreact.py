@@ -169,7 +169,7 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
     if prequantization:
         from offline_quantizer import args_to_quant_dataset
         ecreact_dataset = args_to_quant_dataset(ec_type, n_hierarchical_clusters,
-                                                n_pca_components, n_clusters_pca, alpha)
+                                                n_pca_components, n_clusters_pca, alpha, daev2)
         ecreact_dataset = ecreact_dataset.replace("datasets/", "")
         if addec:
             ecreact_dataset += "_plus"
