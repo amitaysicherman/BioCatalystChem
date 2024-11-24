@@ -48,7 +48,8 @@ class SampleTags:
 
     def add_num_train_ec(self, level=1):
         train_ec = self.train_df[f"ec"].apply(lambda x: ec_to_level(x, level)).value_counts()
-        self.df[f"num_train_ec_{level}"] = self.df["ec"].apply(lambda x: train_ec.get(x, 0))
+        curr_ec = self.df["ec"].apply(lambda x: ec_to_level(x, level))
+        self.df[f"num_train_ec_{level}"] = curr_ec.apply(lambda x: train_ec.get(x, 0))
 
     def add_num_train_src(self):
         train_src = self.train_df["src"].value_counts()
