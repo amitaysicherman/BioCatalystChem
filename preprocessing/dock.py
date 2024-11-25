@@ -66,7 +66,7 @@ def check_protein_exists(protein_id):
     return os.path.exists(protein_file) and os.path.exists(protein_emd_file)
 
 
-def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False):
+def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False,return_weights=False):
     protein_file = f'datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb'
     protein_seq, protein_cords = get_protein_cords(protein_file)
     protein_cords = np.array(protein_cords)
@@ -108,6 +108,8 @@ def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False):
         print(f"Length mismatch: {len(emb)} vs {len(weights)}")
         return None
     docking_attention_emd = np.average(emb, axis=0, weights=weights)
+    if return_weights:
+        return docking_attention_emd, weights
     return docking_attention_emd
 
 
