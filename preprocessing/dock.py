@@ -66,7 +66,7 @@ def check_protein_exists(protein_id):
     return os.path.exists(protein_file) and os.path.exists(protein_emd_file)
 
 
-def get_protein_mol_att(protein_id, molecule_id, alpha,v2=False):
+def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False):
     protein_file = f'datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb'
     protein_seq, protein_cords = get_protein_cords(protein_file)
     protein_cords = np.array(protein_cords)
@@ -79,7 +79,7 @@ def get_protein_mol_att(protein_id, molecule_id, alpha,v2=False):
             lig_coords = get_mol_cords(sdf_file)
             if len(lig_coords) > 0:
                 dist = euclidean_distances(protein_cords, lig_coords)
-                weights = np.exp(-dist)+EPSILON
+                weights = np.exp(-dist) + EPSILON
                 weights = weights / weights.sum(axis=0)
                 weights = weights.sum(axis=1)
                 weights = weights / weights.sum()
@@ -95,7 +95,7 @@ def get_protein_mol_att(protein_id, molecule_id, alpha,v2=False):
         if len(ligand_locs) == 0:
             return None
         dist = euclidean_distances(protein_cords, ligand_locs)
-        weights = np.exp(-dist)+EPSILON
+        weights = np.exp(-dist) + EPSILON
         weights = weights / weights.sum(axis=0)
         weights = weights.sum(axis=1)
         weights = weights / weights.sum()
@@ -111,8 +111,7 @@ def get_protein_mol_att(protein_id, molecule_id, alpha,v2=False):
     return docking_attention_emd
 
 
-
-def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha,v2,verbose=False):
+def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha, v2, verbose=False):
     protein_id = ec_to_uniprot[ec]
     if not check_protein_exists(protein_id):
         if verbose:
@@ -134,7 +133,7 @@ def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, 
                 continue
             molecule_id = smiles_to_id[s]
             try:
-                docking_attention_emd = get_protein_mol_att(protein_id, molecule_id, alpha,v2)
+                docking_attention_emd = get_protein_mol_att(protein_id, molecule_id, alpha, v2)
             except:
                 continue
             if docking_attention_emd is not None:
@@ -144,6 +143,27 @@ def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, 
             print(f"Could not get embeddings for {non_can_smiles}")
         return None
     return np.array(embds).mean(axis=0)
+
+
+from preprocessing.save_all_docks import load_docking_file
+from preprocessing.build_tokenizer import redo_ec_split
+
+
+class Docker:
+    def __init__(self, alpha, v2):
+        self.alpha = alpha
+        self.v2 = v2
+        self.docker = load_docking_file(v2, alpha)
+
+    def dock_src_ec(self, src, ec):
+        key = (src, ec)
+        if key in self.docker:
+            return self.docker[key]
+        return None
+
+    def dock_src_line(self, line):
+        src, ec = redo_ec_split(line, True)
+        return self.dock_src_ec(src, ec)
 
 
 if __name__ == "__main__":
@@ -161,7 +181,7 @@ if __name__ == "__main__":
         ec = ec_tokens_to_seq(ec)
         ec = ec[4:-1]
 
-        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id,alpha=0.5)
+        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha=0.5)
         if reaction_attention_emd is not None:
             print(reaction_attention_emd)
             print(reaction_attention_emd.shape)

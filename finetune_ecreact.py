@@ -91,14 +91,20 @@ class EvalGen(TrainerCallback):
                                            shuffle=False, drop_last=False)
         self.test_ids = test_ds.samples_ids
         self.output_base = output_base
+        os.makedirs(output_base, exist_ok=True)
+
+    def run_eval(self, epoch):
+        print(epoch)
+        valid_output_file = f"{self.output_base}/valid_{epoch}.txt"
+        eval_dataset(self.model, self.tokenizer, self.valid_data_loader, self.valid_ids, valid_output_file)
+        test_output_file = f"{self.output_base}/test_{epoch}.txt"
+        eval_dataset(self.model, self.tokenizer, self.test_data_loader, self.test_ids, test_output_file)
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        self.run_eval(0)
 
     def on_epoch_end(self, args, state, control, **kwargs):
-        # Custom code to run at the end of each epoch
-        print(f"End of epoch {state.epoch}")
-        valid_output_file = f"{self.output_base}/valid_{state.epoch}.txt"
-        eval_dataset(self.model, self.tokenizer, self.valid_data_loader, self.valid_ids, valid_output_file)
-        test_output_file = f"{self.output_base}/test_{state.epoch}.txt"
-        eval_dataset(self.model, self.tokenizer, self.test_data_loader, self.test_ids, test_output_file)
+        self.run_eval(state.epoch)
 
 
 # def compute_metrics(eval_pred, tokenizer):

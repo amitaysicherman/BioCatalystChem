@@ -4,7 +4,9 @@ from transformers import PreTrainedTokenizerFast
 from preprocessing.build_tokenizer import redo_ec_split, encode_eos_pad
 from utils import remove_ec
 from preprocessing.ec_to_vec import EC2Vec
-from preprocessing.dock import get_reaction_attention_emd
+# from preprocessing.dock import get_reaction_attention_emd
+from preprocessing.dock import Docker
+
 from enum import Enum
 from collections import defaultdict
 import pandas as pd
@@ -114,6 +116,7 @@ class SeqToSeqDataset(Dataset):
         if ec_type == ECType.PRETRAINED:
             self.ec_to_vec = EC2Vec(load_model=False)
         if ec_type == ECType.DAE:
+            self.ec_to_vec = Docker(alpha, daev2)
             with open("datasets/docking/smiles_to_id.txt") as f:
                 self.smiles_to_id = {x.split()[0]: int(x.split()[1]) for x in f.readlines()}
             ec_mapping = pd.read_csv("datasets/ec_map.csv")
@@ -222,9 +225,10 @@ class SeqToSeqDataset(Dataset):
                     emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
                 else:
                     emb_lines = [
-                        get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha,
-                                                   v2=self.daev2)
-                        for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
+                        # get_reaction_attention_emd(text, ec, self.ec_to_uniprot, self.smiles_to_id, alpha=self.alpha,
+                        #                            v2=self.daev2)
+                        # for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
+                        self.ec_to_vec.dock_src_ec(text, ec) for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
                     ]
                     # with ProcessPoolExecutor(max_workers=n_cpu) as executor:
                     #     emb_lines = list(

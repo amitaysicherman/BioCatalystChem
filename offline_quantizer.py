@@ -7,7 +7,9 @@ from typing import List
 from tqdm import tqdm
 from preprocessing.build_tokenizer import redo_ec_split
 from preprocessing.ec_to_vec import EC2Vec
-from preprocessing.dock import get_reaction_attention_emd
+# from preprocessing.dock import get_reaction_attention_emd
+from preprocessing.dock import Docker
+
 from collections import defaultdict
 import pandas as pd
 from dataset import ECType
@@ -121,11 +123,6 @@ def args_to_quant_dataset(ec_type: ECType, n_hierarchical_clusters, n_pca_compon
     return f"datasets/ecreact/quant_{name}"
 
 
-def get_reaction_attention_emb_wrapper(args):
-    text, ec, ec_to_uniprot, smiles_to_id, alpha, daev2 = args
-    return get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha, v2=daev2)
-
-
 def read_dataset_split(ec_type: ECType, split: str, alpha, daev2):
     input_base = "datasets/ecreact/level4"
     if ec_type == ECType.PRETRAINED:
@@ -157,14 +154,8 @@ def read_dataset_split(ec_type: ECType, split: str, alpha, daev2):
     if ec_type == ECType.PRETRAINED:
         emb_lines = [ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
     else:
-        # args = [(src, ec, ec_to_uniprot, smiles_to_id, alpha, daev2) for src, ec in zip(src_lines, ec_lines)]
-        # with ProcessPoolExecutor(max_workers=n_cpu) as executor:
-        #     emb_lines = list(tqdm(executor.map(get_reaction_attention_emb_wrapper, args), total=len(src_lines)))
-
-        emb_lines = [
-            get_reaction_attention_emd(text, ec, ec_to_uniprot, smiles_to_id, alpha=alpha, v2=daev2)
-            for text, ec in tqdm(zip(src_lines, ec_lines), total=len(src_lines))
-        ]
+        doker = Docker(alpha, daev2)
+        emb_lines = [doker.dock_src_ec(src, ec) for src, ec in zip(src_lines, ec_lines)]
 
     not_none_mask = [x is not None for x in emb_lines]
     src_lines = [src_lines[i] for i in range(len(src_lines)) if not_none_mask[i]]
