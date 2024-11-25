@@ -105,8 +105,8 @@ class EvalGen(TrainerCallback):
         test_output_file = f"{self.output_base}/test_{epoch}.txt"
         eval_dataset(self.model, self.tokenizer, self.test_data_loader, self.test_ids, test_output_file)
 
-    def on_train_begin(self, args, state, control, **kwargs):
-        self.run_eval(0)
+    # def on_train_begin(self, args, state, control, **kwargs):
+    #     self.run_eval(0)
 
     def on_epoch_end(self, args, state, control, **kwargs):
         self.run_eval(state.epoch)
