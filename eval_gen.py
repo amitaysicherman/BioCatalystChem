@@ -168,9 +168,9 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
                     if rank == 5 and save_file:
                         id_ = batch_ids[j]
                         is_correct = label_smiles in preds_list[:rank]
-                        preds_list = "$".join(preds_list)
+                        preds_list_combine = "$".join(preds_list)
                         with open(save_file, "a") as f:
-                            f.write(f"{id_},{preds_list},{is_correct}\n")
+                            f.write(f"{id_},{preds_list_combine},{is_correct}\n")
                     if label_smiles in preds_list[:rank]:
                         correct_count[batch_ec[j]][rank] += 1
                 ec_count[batch_ec[j]] += 1
