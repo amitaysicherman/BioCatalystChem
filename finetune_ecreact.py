@@ -48,6 +48,7 @@ def k_name(filename, k):
 
 def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3, 5]):
     k = max(all_k)
+    k_to_res= {k_: [] for k_ in all_k}
     for i, batch in enumerate(dataloader):
         batch_ids = all_ids[i * len(batch['input_ids']):(i + 1) * len(batch['input_ids'])]
         input_ids = batch['input_ids'].to(model.device)
@@ -71,10 +72,14 @@ def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3
             id_ = batch_ids[j]
             for k_ in all_k:
                 is_correct = label_smiles in preds_list[:k_]
-                preds_list_combine = "$$$".join(preds_list[:k_])
-                with open(k_name(output_file, k_), "a") as f:
-                    f.write(f"{id_},{label_smiles},{preds_list_combine},{is_correct}\n")
-
+                k_to_res[k_].append((id_, is_correct))
+                # preds_list_combine = "$$$".join(preds_list[:k_])
+                # with open(k_name(output_file, k_), "a") as f:
+                #     f.write(f"{id_},{label_smiles},{preds_list_combine},{is_correct}\n")
+    for k_ in all_k:
+        with open(k_name(output_file, k_), "w") as f:
+            for id_, is_correct in k_to_res[k_]:
+                f.write(f"{id_},{is_correct}\n")
 
 class EvalGen(TrainerCallback):
     def __init__(self, model, tokenizer, valid_ds, test_ds, output_base="results/full", batch_size=16):
