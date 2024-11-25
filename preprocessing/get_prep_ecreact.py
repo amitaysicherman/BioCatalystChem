@@ -66,6 +66,8 @@ with open(output_tokenized_file, 'w') as f2:
 
 print(f"Tokenized {len(src)} reactions")
 assert len(src) == len(tgt)
+output_dir_files = os.path.join(dir_path, 'level4')
+os.makedirs(output_dir_files, exist_ok=True)
 # split into train val test 70 15 15
 np.random.seed(42)
 indices = np.random.permutation(len(src))
@@ -77,12 +79,12 @@ for split, split_indices in zip(['train', 'valid', 'test'], [train_indices, val_
     split_tgt = [tgt[i] for i in split_indices]
     split_dst = [datasets[i] for i in split_indices]
     print(f"{split}: {len(split_src)}")
-    with open(os.path.join(dir_path, f'level4/src-{split}.txt'), 'w') as f:
+    with open(os.path.join(output_dir_files, f'src-{split}.txt'), 'w') as f:
         for line in split_src:
             f.write(f"{line}\n")
-    with open(os.path.join(dir_path, f'level4/tgt-{split}.txt'), 'w') as f:
+    with open(os.path.join(output_dir_files, f'tgt-{split}.txt'), 'w') as f:
         for line in split_tgt:
             f.write(f"{line}\n")
-    with open(os.path.join(dir_path, f'level4/datasets-{split}.txt'), 'w') as f:
+    with open(os.path.join(output_dir_files, f'datasets-{split}.txt'), 'w') as f:
         for line in split_dst:
             f.write(f"{line}\n")
