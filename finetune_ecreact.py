@@ -3,7 +3,8 @@ from transformers import (
     T5ForConditionalGeneration,
 )
 from transformers import PreTrainedTokenizerFast
-from transformers import Trainer, TrainingArguments
+from transformers import Trainer, TrainingArguments, TrainerCallback
+
 from transformers import DataCollatorForSeq2Seq
 
 import numpy as np
@@ -14,7 +15,7 @@ from peft import (
     TaskType,
 )
 import torch
-
+from torch.utils.data import DataLoader
 from dataset import SeqToSeqDataset, combine_datasets, ECType
 from preprocessing.build_tokenizer import get_tokenizer_file_path, get_ec_tokens
 from model import CustomT5Model
@@ -31,30 +32,99 @@ logger.setLevel(rkl.ERROR)
 rkrb.DisableLog("rdApp.error")
 
 
-def compute_metrics(eval_pred, tokenizer):
-    predictions_, labels_ = eval_pred
-    predictions_ = np.argmax(predictions_[0], axis=-1)
-    token_acc = []
-    accuracy = []
-    is_valid = []
-    for i in range(len(predictions_)):
-        mask = (labels_[i] != tokenizer.pad_token_id) & (labels_[i] != -100)
-        pred = predictions_[i][mask]
-        label = labels_[i][mask]
-        token_acc.append((pred == label).mean().item())
-        pred = tokenizer.decode(pred, skip_special_tokens=True)
-        is_valid.append(Chem.MolFromSmiles(pred.replace(" ", "")) is not None)
-        label = tokenizer.decode(label, skip_special_tokens=True)
-        accuracy.append(pred == label)
+def tokens_to_canonical_smiles(tokenizer, tokens):
+    smiles = tokenizer.decode(tokens, skip_special_tokens=True)
+    smiles = smiles.replace(" ", "")
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return smiles
+    return Chem.MolToSmiles(mol, canonical=True)
 
-    token_acc = np.mean(token_acc)
-    accuracy = np.mean(accuracy)
-    is_valid = np.mean(is_valid)
-    return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
+
+def k_name(filename, k):
+    assert filename.endswith(".txt")
+    return filename.replace(".txt", f"_k{k}.txt")
+
+
+def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3, 5]):
+    k = max(all_k)
+    for i, batch in enumerate(dataloader):
+        batch_ids = all_ids[i * len(batch['input_ids']):(i + 1) * len(batch['input_ids'])]
+        input_ids = batch['input_ids'].to(model.device)
+        attention_mask = batch['attention_mask'].to(model.device).bool()
+        labels = batch['labels'].to(model.device)
+        emb = batch['emb'].to(model.device).float()
+        if (emb == 0).all():
+            emb_args = {}
+        else:
+            emb_args = {"emb": emb}
+
+        outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
+                                 max_length=200, do_sample=False, num_beams=k,
+                                 num_return_sequences=k, **emb_args)
+
+        for j in range(len(batch_ids)):
+            mask = (labels[j] != tokenizer.pad_token_id) & (labels[j] != -100)
+            label = labels[j][mask]
+            label_smiles = tokens_to_canonical_smiles(tokenizer, label)
+            preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs[j * k:(j + 1) * k]]
+            id_ = batch_ids[j]
+            for k_ in all_k:
+                is_correct = label_smiles in preds_list[:k_]
+                preds_list_combine = "$$$".join(preds_list[:k_])
+                with open(k_name(output_file, k_), "a") as f:
+                    f.write(f"{id_},{label_smiles},{preds_list_combine},{is_correct}\n")
+
+
+class EvalGen(TrainerCallback):
+    def __init__(self, model, tokenizer, valid_ds, test_ds, output_base="results/full", batch_size=16):
+        super().__init__()
+        self.model = model
+        self.tokenizer = tokenizer
+        self.valid_data_loader = DataLoader(valid_ds, batch_size=args.bs, num_workers=0,
+                                            collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model),
+                                            shuffle=False, drop_last=False)
+
+        self.valid_ids = valid_ds.samples_ids
+        self.test_data_loader = DataLoader(test_ds, batch_size=args.bs, num_workers=0,
+                                           collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model),
+                                           shuffle=False, drop_last=False)
+        self.test_ids = test_ds.samples_ids
+        self.output_base = output_base
+
+    def on_epoch_end(self, args, state, control, **kwargs):
+        # Custom code to run at the end of each epoch
+        print(f"End of epoch {state.epoch}")
+        valid_output_file = f"{self.output_base}/valid_{state.epoch}.txt"
+        eval_dataset(self.model, self.tokenizer, self.valid_data_loader, self.valid_ids, valid_output_file)
+        test_output_file = f"{self.output_base}/test_{state.epoch}.txt"
+        eval_dataset(self.model, self.tokenizer, self.test_data_loader, self.test_ids, test_output_file)
+
+
+# def compute_metrics(eval_pred, tokenizer):
+#     predictions_, labels_ = eval_pred
+#     predictions_ = np.argmax(predictions_[0], axis=-1)
+#     token_acc = []
+#     accuracy = []
+#     is_valid = []
+#     for i in range(len(predictions_)):
+#         mask = (labels_[i] != tokenizer.pad_token_id) & (labels_[i] != -100)
+#         pred = predictions_[i][mask]
+#         label = labels_[i][mask]
+#         token_acc.append((pred == label).mean().item())
+#         pred = tokenizer.decode(pred, skip_special_tokens=True)
+#         is_valid.append(Chem.MolFromSmiles(pred.replace(" ", "")) is not None)
+#         label = tokenizer.decode(label, skip_special_tokens=True)
+#         accuracy.append(pred == label)
+#
+#     token_acc = np.mean(token_acc)
+#     accuracy = np.mean(accuracy)
+#     is_valid = np.mean(is_valid)
+#     return {"accuracy": accuracy, "valid_smiles": is_valid, "token_acc": token_acc}
 
 
 def args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca,
-                 alpha, addec,daev2):
+                 alpha, addec, daev2):
     if ec_type == ECType.PAPER:
         return "paper"
     elif ec_type == ECType.NO_EC:
@@ -158,7 +228,7 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
 
 
 def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components, n_clusters_pca, alpha, addec,
-         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate, max_length, dups, use_bs, ec_source,daev2):
+         nopre, lora, lora_d, regpre, mix, batch_size, learning_rate, max_length, dups, use_bs, ec_source, daev2):
     if DEBUG:
         batch_size = 8
     ec_type = ECType(ec_type)
@@ -201,18 +271,18 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         else:
             train_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args, **dup_args)
 
-    train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args, sample_size=1000, **dup_args)
-    val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", **common_ds_args, **dup_args)
-    test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", **common_ds_args, **dup_args)
-    uspto_args = {**common_ds_args}
-    uspto_args['ec_source'] = None
-    test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", **uspto_args, sample_size=1000)
-
-    eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset,
-                     "uspto": test_uspto_dataset}
+    # train_small_dataset = SeqToSeqDataset([ecreact_dataset], "train", **common_ds_args, sample_size=1000, **dup_args)
+    # val_small_dataset = SeqToSeqDataset([ecreact_dataset], "valid", **common_ds_args, **dup_args)
+    # test_small_dataset = SeqToSeqDataset([ecreact_dataset], "test", **common_ds_args, **dup_args)
+    # uspto_args = {**common_ds_args}
+    # uspto_args['ec_source'] = None
+    # test_uspto_dataset = SeqToSeqDataset(["uspto"], "test", **uspto_args, sample_size=1000)
+    #
+    # eval_datasets = {"train": train_small_dataset, "valid": val_small_dataset, "test": test_small_dataset,
+    #                  "uspto": test_uspto_dataset}
 
     run_name = args_to_name(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_components,
-                            n_clusters_pca, alpha, addec,daev2)
+                            n_clusters_pca, alpha, addec, daev2)
     if nopre:
         run_name += f"_nopre"
     if regpre:
@@ -256,21 +326,22 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         output_dir=output_dir,
         num_train_epochs=num_train_epochs,
         warmup_ratio=0.05,
-        eval_steps=1/7,
-        logging_steps=1/49,
-        save_steps=1/7,
+        # eval_steps=1 / num_train_epochs,
+        logging_steps=1 / (num_train_epochs * num_train_epochs),
+        save_steps=1 / num_train_epochs,
         save_total_limit=4,
         save_strategy="steps",
-        eval_strategy="steps",
+        # eval_strategy="steps",
+        eval_strategy="no",
 
         auto_find_batch_size=False,
         per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size // 8,
-        eval_accumulation_steps=8,
+        # per_device_eval_batch_size=batch_size // 8,
+        # eval_accumulation_steps=8,
 
-        metric_for_best_model="eval_valid_accuracy",
-        load_best_model_at_end=True,
-        greater_is_better=True,
+        # metric_for_best_model="eval_valid_accuracy",
+        # load_best_model_at_end=True,
+        # greater_is_better=True,
         report_to='none' if DEBUG else 'tensorboard',
 
         run_name=run_name,
@@ -286,10 +357,11 @@ def main(ec_type, lookup_len, prequantization, n_hierarchical_clusters, n_pca_co
         model=model,
         args=training_args,
         train_dataset=train_dataset,
-        eval_dataset=eval_datasets,
+        # eval_dataset=eval_datasets,
         tokenizer=tokenizer,
+        callbacks=[EvalGen(model, tokenizer, train_dataset, train_dataset)],
         data_collator=CustomDataCollatorForSeq2Seq(tokenizer, model=model, padding=True),
-        compute_metrics=lambda x: compute_metrics(x, tokenizer)
+        # compute_metrics=lambda x: compute_metrics(x, tokenizer)
     )
 
     trainer.train(resume_from_checkpoint=resume_from_checkpoint)
@@ -337,4 +409,4 @@ if __name__ == '__main__':
          n_clusters_pca=args.n_clusters_pca, alpha=args.alpha, addec=args.addec, nopre=args.nopre, lora=args.lora,
          lora_d=args.lora_d, regpre=args.regpre, mix=args.mix, batch_size=args.batch_size,
          learning_rate=args.learning_rate, max_length=args.max_length, dups=args.dups, use_bs=args.use_bs,
-         ec_source=args.ec_source,daev2=args.daev2)
+         ec_source=args.ec_source, daev2=args.daev2)
