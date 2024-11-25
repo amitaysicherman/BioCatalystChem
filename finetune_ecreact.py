@@ -405,7 +405,7 @@ if __name__ == '__main__':
     parser.add_argument("--ec_source", type=str, default="",
                         choices=["", 'brenda_reaction_smiles', 'rhea_reaction_smiles', 'metanetx_reaction_smiles',
                                  'pathbank_reaction_smiles'])
-    parser.add_argument("--daev2", type=int, default=0)
+    parser.add_argument("--daev2", type=int, default=1)
 
     args = parser.parse_args()
     if args.ec_source == "":
