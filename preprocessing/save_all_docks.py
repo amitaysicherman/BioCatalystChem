@@ -59,7 +59,8 @@ if __name__ == "__main__":
         if key in src_ec_to_vec:
             continue
         v = get_reaction_attention_emd(src, ec, ec_to_uniprot, smiles_to_id, alpha=args.alpha, v2=args.v2)
-        src_ec_to_vec[key] = v
+        if v is not None:
+            src_ec_to_vec[key] = v
     with open(args_to_file(args.v2, args.alpha), "w") as f:
         for key, v_numpy in src_ec_to_vec.items():
             v_str = " ".join(str(x) for x in v_numpy)
