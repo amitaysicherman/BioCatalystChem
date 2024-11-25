@@ -81,12 +81,12 @@ class EvalGen(TrainerCallback):
         super().__init__()
         self.model = model
         self.tokenizer = tokenizer
-        self.valid_data_loader = DataLoader(valid_ds, batch_size=args.bs, num_workers=0,
+        self.valid_data_loader = DataLoader(valid_ds, batch_size=batch_size, num_workers=0,
                                             collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model),
                                             shuffle=False, drop_last=False)
 
         self.valid_ids = valid_ds.samples_ids
-        self.test_data_loader = DataLoader(test_ds, batch_size=args.bs, num_workers=0,
+        self.test_data_loader = DataLoader(test_ds, batch_size=batch_size, num_workers=0,
                                            collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model),
                                            shuffle=False, drop_last=False)
         self.test_ids = test_ds.samples_ids
