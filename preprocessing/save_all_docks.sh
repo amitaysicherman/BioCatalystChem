@@ -15,4 +15,4 @@ configs=" --alpha 10 --v2 0|\
 IFS='|' read -ra config_array <<< "$configs"
 
 config=${config_array[$((SLURM_ARRAY_TASK_ID - 1))]}
-python save_all_docks.py $config
+PYTHONPATH=./ python preprocessing/save_all_docks.py save_all_docks.py $config
