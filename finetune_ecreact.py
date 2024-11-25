@@ -25,7 +25,7 @@ from dataset import ECType
 import json
 import os
 import re
-
+from tqdm import tqdm
 DEBUG = False
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
@@ -49,7 +49,7 @@ def k_name(filename, k):
 def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3, 5]):
     k = max(all_k)
     k_to_res= {k_: [] for k_ in all_k}
-    for i, batch in enumerate(dataloader):
+    for i, batch in tqdm(enumerate(dataloader),total=len(dataloader)):
         batch_ids = all_ids[i * len(batch['input_ids']):(i + 1) * len(batch['input_ids'])]
         input_ids = batch['input_ids'].to(model.device)
         attention_mask = batch['attention_mask'].to(model.device).bool()
