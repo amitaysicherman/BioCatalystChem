@@ -82,7 +82,7 @@ def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3
                 f.write(f"{id_},{is_correct}\n")
 
 class EvalGen(TrainerCallback):
-    def __init__(self, model, tokenizer, valid_ds, test_ds, output_base="results/full", batch_size=16):
+    def __init__(self, model, tokenizer, valid_ds, test_ds, output_base="results/full", batch_size=64):
         super().__init__()
         self.model = model
         self.tokenizer = tokenizer
