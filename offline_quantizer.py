@@ -215,12 +215,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n_hierarchical_clusters", type=int, default=5)
-    parser.add_argument("--n_pca_components", type=int, default=6)
-    parser.add_argument("--n_clusters_pca", type=int, default=10)
+    parser.add_argument("--n_hierarchical_clusters", type=int, default=7)
+    parser.add_argument("--n_pca_components", type=int, default=0)
+    parser.add_argument("--n_clusters_pca", type=int, default=7)
     parser.add_argument("--alpha", type=int, default=50)
     parser.add_argument("--ec_type", type=int, default=ECType.PRETRAINED.value)
-    parser.add_argument("--daev2", type=int, default=0)
+    parser.add_argument("--daev2", type=int, default=1)
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
     if args.ec_type == ECType.PRETRAINED.value:

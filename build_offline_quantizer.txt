@@ -1,3 +1,4 @@
---n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 7 --ec_type 3 --alpha 50 --daev2 1
---n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 7 --ec_type 3 --alpha 10 --daev2 1
---n_hierarchical_clusters 7 --n_pca_components 0 --n_clusters_pca 7 --ec_type 3 --alpha 90 --daev2 1
+--ec_type 2
+--ec_type 3 --alpha 50
+--ec_type 3 --alpha 10
+--ec_type 3 --alpha 90
