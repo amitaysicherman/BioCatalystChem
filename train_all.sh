@@ -2,7 +2,7 @@
 #SBATCH --time=7-00
 #SBATCH --mem=128G
 #SBATCH --requeue
-#SBATCH --gres=gpu:A40:1
+#SBATCH --gres=gpu:L40:1
 #SBATCH -c 8
 #SBATCH --array=1-14
 
