@@ -71,7 +71,7 @@ def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3
             preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs[j * k:(j + 1) * k]]
             id_ = batch_ids[j]
             for k_ in all_k:
-                is_correct = label_smiles in preds_list[:k_]
+                is_correct = int(label_smiles in preds_list[:k_])
                 k_to_res[k_].append((id_, is_correct))
                 # preds_list_combine = "$$$".join(preds_list[:k_])
                 # with open(k_name(output_file, k_), "a") as f:
