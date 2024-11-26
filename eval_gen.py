@@ -257,9 +257,11 @@ def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3
 #         best_model_checkpoint = f"{base_results_dir}/" + "/".join(best_model_checkpoint_split[1:])
 #     return best_model_checkpoint
 def get_all_cp(base_dir):
-    all_cp = glob.glob(f"{base_dir}/checkpoint-*")
+    all_cp = os.listdir(base_dir)
+    all_cp = [f for f in all_cp if f.startswith("checkpoint-")]
     all_cp = sorted(all_cp, key=lambda x: int(x.split("-")[1]))
     cp_steps = [int(cp.split("-")[1]) for cp in all_cp]
+    all_cp = [f"{base_dir}/{cp}" for cp in all_cp]
     return all_cp, cp_steps
 
 
