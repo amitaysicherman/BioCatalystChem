@@ -45,6 +45,38 @@ def plot_w(w, protein_id, m):
     plt.close(fig)
 
 
+def plot_tsne(all_vecs, uniport_to_ec, protein_id,mol_ids=None):
+    from sklearn.manifold import TSNE
+    per_protein_vecs = [len(x) for x in all_vecs]
+    vecs_concat = np.array(sum(all_vecs, []))
+    print(vecs_concat.shape)
+    protein_names = [f'{p}-({uniport_to_ec[p]})' for p in protein_id]
+    vecs_2d = TSNE(n_components=2, perplexity=5).fit_transform(vecs_concat)
+    fig = plt.figure(figsize=(7, 7))
+    for i, name in enumerate(protein_names):
+        # plot the first (center) protein with shape X
+        start_index = sum(per_protein_vecs[:i])
+        end_index = sum(per_protein_vecs[:i + 1])
+        plt.scatter(vecs_2d[start_index:start_index + 1, 0], vecs_2d[start_index:start_index + 1, 1],
+                    color=TAB10_COLORS[i], marker='x')
+        plt.scatter(vecs_2d[start_index + 1:end_index, 0], vecs_2d[start_index + 1:end_index, 1], label=name,
+                    color=TAB10_COLORS[i])
+    plt.legend()
+    if mol_ids:
+        for i, txt in enumerate(mol_ids):
+            plt.annotate(txt, (vecs_2d[i, 0], vecs_2d[i, 1]))
+    plt.title("Protein Molecules Embeddings")
+    plt.tight_layout()
+    plt.axis('off')
+    plt.grid(False)
+    names = " + ".join(protein_names)
+    if mol_ids:
+        names += "_mols"
+    plt.tight_layout()
+    plt.savefig(f"vis/figures/protein_molecules_tsne_{names}.png", bbox_inches='tight')
+    plt.close(fig)
+
+
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -53,7 +85,7 @@ args = parser.parse_args()
 id_to_smile, smile_to_id, uniport_to_ec = load_maps()
 
 all_vecs = []
-
+all_mols_ids = []
 for protein_id in args.protein_id:
     protein_vecs = []
     protein_ec = uniport_to_ec[protein_id]
@@ -62,6 +94,7 @@ for protein_id in args.protein_id:
     c1 = len(molecules_ids)
     molecules_ids = remove_dup_mis_mols(molecules_ids, id_to_smile)
     c2 = len(molecules_ids)
+    all_mols_ids.append(molecules_ids)
     print(f"Found {c1} molecules for protein {protein_id}, after removing duplicates: {c2}")
     for m in molecules_ids:
         sdf_files = glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf")
@@ -81,30 +114,5 @@ for protein_id in args.protein_id:
     all_vecs.append(protein_vecs)
 
 # create 2D plot of protein embeddings with TSNE
-from sklearn.manifold import TSNE
-
-per_protein_vecs = [len(x) for x in all_vecs]
-vecs_concat = np.array(sum(all_vecs, []))
-print(vecs_concat.shape)
-protein_names = [f'{p}-({uniport_to_ec[p]})' for p in args.protein_id]
-vecs_2d = TSNE(n_components=2, perplexity=5).fit_transform(vecs_concat)
-
-fig = plt.figure(figsize=(7, 7))
-for i, name in enumerate(protein_names):
-    # plot the first (center) protein with shape X
-    start_index = sum(per_protein_vecs[:i])
-    end_index = sum(per_protein_vecs[:i + 1])
-    plt.scatter(vecs_2d[start_index:start_index + 1, 0], vecs_2d[start_index:start_index + 1, 1],
-                color=TAB10_COLORS[i], marker='x')
-    plt.scatter(vecs_2d[start_index + 1:end_index, 0], vecs_2d[start_index + 1:end_index, 1], label=name,
-                color=TAB10_COLORS[i])
-
-plt.legend()
-plt.title("Protein Molecules Embeddings")
-plt.tight_layout()
-plt.axis('off')
-plt.grid(False)
-names = " + ".join(protein_names)
-plt.tight_layout()
-plt.savefig(f"vis/figures/protein_molecules_tsne_{names}.png", bbox_inches='tight')
-plt.close(fig)
+plot_tsne(all_vecs, uniport_to_ec, args.protein_id)
+plot_tsne(all_vecs, uniport_to_ec, args.protein_id, all_mols_ids)
