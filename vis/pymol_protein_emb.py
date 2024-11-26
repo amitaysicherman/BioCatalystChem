@@ -35,7 +35,7 @@ def create_pymol_script(pdb_file: str, embedding_file: str, output_script,k_clus
         # Load the PDB file in PyMOL
         f.write(f"load {pdb_file}, protein\n")
         for (chain_id, res_num), color in zip(residue_ids, emb_colors):
-            r, g, b, _ = color  # RGB values
+            r, g, b= color  # RGB values
             f.write(f"set_color color_{chain_id}_{res_num}, [{r}, {g}, {b}]\n")
             f.write(f"color color_{chain_id}_{res_num}, protein and chain {chain_id} and resi {res_num}\n")
     f.write('show_as("mesh"      ,"all")')
