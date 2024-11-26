@@ -259,7 +259,8 @@ def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3
 def get_all_cp(base_dir):
     all_cp = glob.glob(f"{base_dir}/checkpoint-*")
     all_cp = sorted(all_cp, key=lambda x: int(x.split("-")[1]))
-    return all_cp
+    cp_steps = [int(cp.split("-")[1]) for cp in all_cp]
+    return all_cp, cp_steps
 
 
 def args_to_lens(args):
@@ -325,7 +326,7 @@ def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=Non
         new_tokens = get_ec_tokens()
         tokenizer.add_tokens(new_tokens)
     # best_val_cp = get_best_val_cp(run_name, base_results_dir, cp_step)
-    all_cps = get_all_cp(f"{base_results_dir}/{run_name}")
+    all_cps, cp_steps = get_all_cp(f"{base_results_dir}/{run_name}")
     models = []
     for cp in all_cps:
         print("Loading model", cp)
@@ -349,7 +350,7 @@ def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=Non
     if only_new:
         gen_dataset = get_only_new_ecs(gen_dataset)
 
-    return models, tokenizer, gen_dataset
+    return models, tokenizer, gen_dataset, cp_steps
 
 
 def get_ec_from_df(dataset, per_level):
@@ -393,10 +394,11 @@ if __name__ == "__main__":
     print("---" * 10)
     print(f"Run: {run_name}")
     print("---" * 10)
-    models, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
-                                                                  base_results_dir=args.res_base,
-                                                                  only_new=args.only_new,
-                                                                  cp_step=args.cp_step, drop_short=args.drop_short)
+    models, tokenizer, gen_dataset, cp_steps = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
+                                                                            base_results_dir=args.res_base,
+                                                                            only_new=args.only_new,
+                                                                            cp_step=args.cp_step,
+                                                                            drop_short=args.drop_short)
 
     if args.per_ds:
         all_ec = gen_dataset.sources
@@ -409,8 +411,8 @@ if __name__ == "__main__":
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
     with torch.no_grad():
-        for j, model in enumerate(models[::-1]):
-            output_file = f"results/{run_name}/{args.split}_-{j}.txt"
+        for j, model in enumerate(models):
+            output_file = f"results/{run_name}/{args.split}_{cp_steps[j]}.txt"
 
             eval_dataset(model, tokenizer, gen_dataloader, all_ids, all_k=[1, 3, 5], output_file=output_file)
         # correct_count, ec_count = eval_dataset(model, tokenizer, gen_dataloader, all_ids, k=args.k, fast=args.fast,
