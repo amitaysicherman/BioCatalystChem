@@ -4,7 +4,7 @@ import os
 import glob
 from preprocessing.dock import get_protein_mol_att
 from sklearn.preprocessing import MinMaxScaler
-from vis.utils import get_residue_ids_from_pdb, replace_local_pathes, load_maps, remove_dup_mis_mols
+from vis.utils import get_residue_ids_from_pdb, replace_local_pathes, load_maps, remove_dup_mis_mols,filter_molecule_by_len
 
 v_cmap = plt.get_cmap("Greens")
 TAB10_COLORS = plt.get_cmap("tab10").colors
@@ -42,12 +42,12 @@ pdb_file = f"datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb"
 molecules_ids = os.listdir(f"datasets/docking2/{protein_id}")
 print(f"Found {len(molecules_ids)} molecules for protein {protein_id}")
 molecules_ids = remove_dup_mis_mols(molecules_ids, id_to_smile)
-sdf_files = []
 for m in molecules_ids:
-    sdf_files.extend(glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf"))
+    sdf_files = glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf")
+    sdf_files=filter_molecule_by_len(sdf_files,0.5)
     print(f"Found {len(molecules_ids)} unique molecules for protein {protein_id}")
     docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
-    w=np.log(w)
+    w = np.log(w)
     w = MinMaxScaler(feature_range=(0, 1)).fit_transform(w.reshape(-1, 1)).flatten()
     output_script = f"vis/scripts/protein_molecules_{protein_id}_{m}.pml"
     create_pymol_script_with_sdf(pdb_file, sdf_files, w, output_script=output_script)

@@ -4,7 +4,7 @@ import pandas as pd
 from Bio.PDB import PDBParser
 from rdkit import Chem
 import numpy as np
-
+from tqdm import tqdm
 
 def get_residue_ids_from_pdb(pdb_file):
     """
@@ -71,29 +71,50 @@ def load_molecules(file_path):
     return molecules
 
 
-def calculate_average_distance(mols1, mols2):
-    if len(mols1) != len(mols2):
-        raise ValueError("The number of molecules in the files must be the same.")
-    total_distance = 0
-    atom_pairs_count = 0
-    for mol1, mol2 in zip(mols1, mols2):
-        if mol1.GetNumAtoms() != mol2.GetNumAtoms():
-            raise ValueError("The molecules must have the same number of atoms.")
-        conf1 = mol1.GetConformer()
-        conf2 = mol2.GetConformer()
-        for atom_idx in range(mol1.GetNumAtoms()):
-            pos1 = np.array(conf1.GetAtomPosition(atom_idx))
-            pos2 = np.array(conf2.GetAtomPosition(atom_idx))
-            distance = np.linalg.norm(pos1 - pos2)
-            total_distance += distance
-            atom_pairs_count += 1
-    average_distance = total_distance / atom_pairs_count if atom_pairs_count > 0 else 0
-    return average_distance
+def calculate_average_distance(mol1, mol2):
+    if mol1.GetNumAtoms() != mol2.GetNumAtoms():
+        raise ValueError("The molecules must have the same number of atoms.")
+    conf1 = mol1.GetConformer()
+    conf2 = mol2.GetConformer()
+    from sklearn.metrics.pairwise import euclidean_distances
+    all_dist=euclidean_distances(conf1.GetPositions(), conf2.GetPositions())
+    avg_distance = np.mean(all_dist)
+    return avg_distance
+
+def filter_molecule_by_len(mols_files, min_len_ratio):
+    mols = []
+    files_with_mol = []
+    for file in mols_files:
+        new_mols = load_molecules(file)
+        if len(new_mols) == 0:
+            print(f"File {file} is empty")
+            continue
+        if len(new_mols) > 1:
+            print(f"File {file} contains more than 1 molecule")
+            continue
+        files_with_mol.append(file)
+        mols.append(new_mols[0])
+    conf = mols[0].GetConformer()
+    mol_xyz = [conf.GetAtomPosition(i) for i in range(mols[0].GetNumAtoms())]
+    max_size = max(
+        [np.linalg.norm(mol_xyz[i] - mol_xyz[j]) for i in range(len(mol_xyz)) for j in range(i + 1, len(mol_xyz))])
+    min_len = min_len_ratio * max_size
+    print(f"Max size is {max_size}, min len is {min_len}")
+    pair_dist = np.zeros((len(mols), len(mols)))
+    for i in tqdm(range(len(mols))):
+        for j in range(0,i + 1):
+            pair_dist[i, j] = calculate_average_distance(mols[i], mols[j])
+    mols_files_filtered = [files_with_mol[0]]
+    for i in range(1, len(mols)):
+        print(pair_dist[i, :i])
+        if np.all(pair_dist[i, :i] > min_len):
+            mols_files_filtered.append(files_with_mol[i])
+    print(f"Filtered {len(files_with_mol) - len(mols_files_filtered)} molecules, {len(mols_files_filtered)} left")
+    return mols_files_filtered
 
 
 if __name__ == "__main__":
-    a = "/Users/amitay.s/PycharmProjects/BioCatalystChem/datasets/docking2/A0A009HWM5/47/complex_0/rank10_confidence-4.14.sdf"
-    b = "/Users/amitay.s/PycharmProjects/BioCatalystChem/datasets/docking2/A0A009HWM5/47/complex_0/rank1_confidence-1.83.sdf"
-    mols1 = load_molecules(a)
-    mols2 = load_molecules(b)
-    print(calculate_average_distance(mols1, mols2))
+    from glob import glob
+
+    mols_file = glob("/Users/amitay.s/PycharmProjects/BioCatalystChem/datasets/docking2/A0A009HWM5/0/complex_0/*.sdf")
+    filter_molecule_by_len(mols_file, 0.5)
