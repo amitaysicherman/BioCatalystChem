@@ -49,6 +49,6 @@ for m in molecules_ids:
     docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
     w=np.log(w)
     w = MinMaxScaler(feature_range=(0, 1)).fit_transform(w.reshape(-1, 1)).flatten()
-    output_script = f"vis/scripts/protein_molecules_colored_{m}.pml"
+    output_script = f"vis/scripts/protein_molecules_{protein_id}_{m}.pml"
     create_pymol_script_with_sdf(pdb_file, sdf_files, w, output_script=output_script)
     replace_local_pathes(output_script)
