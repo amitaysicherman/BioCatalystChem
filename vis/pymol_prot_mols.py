@@ -81,7 +81,7 @@ def plot_tsne(all_vecs, uniport_to_ec, protein_id, mol_ids=None):
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--protein_id", type=str, default=["G5EGA5", "F0E1K6","H2K888"], nargs="+")
+parser.add_argument("--protein_id", type=str, default=["E9P8D2", "F0E1K6","H2K888"], nargs="+")
 args = parser.parse_args()
 id_to_smile, smile_to_id, uniport_to_ec = load_maps()
 
