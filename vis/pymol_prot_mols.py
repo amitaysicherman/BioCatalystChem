@@ -39,7 +39,7 @@ id_to_smile, smile_to_id, uniport_to_ec = load_maps()
 
 protein_ec = uniport_to_ec[protein_id]
 pdb_file = f"datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb"
-molecules_ids = os.listdir(f"`datasets/docking2`/{protein_id}")
+molecules_ids = os.listdir(f"datasets/docking2/{protein_id}")
 print(f"Found {len(molecules_ids)} molecules for protein {protein_id}")
 molecules_ids = remove_dup_mis_mols(molecules_ids, id_to_smile)
 sdf_files = []
