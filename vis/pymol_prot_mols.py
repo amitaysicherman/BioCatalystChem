@@ -6,7 +6,9 @@ from preprocessing.dock import get_protein_mol_att
 from sklearn.preprocessing import MinMaxScaler
 from vis.utils import get_residue_ids_from_pdb, replace_local_pathes, load_maps, remove_dup_mis_mols, \
     filter_molecule_by_len
-
+import seaborn as sns
+sns.set()
+sns.set_style("whitegrid")
 v_cmap = plt.get_cmap("Greens")
 TAB10_COLORS = plt.get_cmap("tab10").colors
 
@@ -53,8 +55,15 @@ for m in molecules_ids:
     print(f"Found {mc1} molecules for protein {protein_id}, after filtering by length: {mc2}")
     docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
 
-    plt.figure(figsize=(5, 10))
+    plt.figure(figsize=(10, 3))
     plt.plot(w)
+    # remove grid and axis
+    plt.grid(False)
+    plt.axis('off')
+    plt.tight_layout()
+    
+
+
     plt.savefig(f"vis/figures/protein_molecules_{protein_id}_{m}.png")
     w = np.log(w)
 
