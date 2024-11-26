@@ -7,6 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 from vis.utils import get_residue_ids_from_pdb, replace_local_pathes, load_maps, remove_dup_mis_mols, \
     filter_molecule_by_len
 import seaborn as sns
+
 sns.set()
 sns.set_style("whitegrid")
 v_cmap = plt.get_cmap("Greens")
@@ -40,6 +41,8 @@ protein_id = args.protein_id
 
 id_to_smile, smile_to_id, uniport_to_ec = load_maps()
 
+protein_vecs = []
+
 protein_ec = uniport_to_ec[protein_id]
 pdb_file = f"datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb"
 molecules_ids = os.listdir(f"datasets/docking2/{protein_id}")
@@ -49,12 +52,14 @@ c2 = len(molecules_ids)
 print(f"Found {c1} molecules for protein {protein_id}, after removing duplicates: {c2}")
 for m in molecules_ids:
     sdf_files = glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf")
-    mc1=len(sdf_files)
+    mc1 = len(sdf_files)
     sdf_files = filter_molecule_by_len(sdf_files, 0.5)
-    mc2=len(sdf_files)
+    mc2 = len(sdf_files)
     print(f"Found {mc1} molecules for protein {protein_id}, after filtering by length: {mc2}")
     docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
-
+    if len(protein_vecs) == 0:
+        protein_vecs.append(get_protein_mol_att(protein_id, m, 0.0, True, return_weights=False))
+    protein_vecs.append(docking_attention_emd)
     plt.figure(figsize=(10, 2))
     plt.plot(w)
     # remove grid and axis
@@ -71,3 +76,12 @@ for m in molecules_ids:
 
     create_pymol_script_with_sdf(pdb_file, sdf_files, w, output_script=output_script)
     replace_local_pathes(output_script)
+
+
+# create 2D plot of protein embeddings with TSNE
+from sklearn.manifold import TSNE
+vecs_2d = TSNE(n_components=2).fit_transform(protein_vecs)
+plt.figure(figsize=(10, 10))
+plt.scatter(vecs_2d[:, 0], vecs_2d[:, 1], c=range(len(vecs_2d)), cmap="tab20")
+plt.tight_layout()
+plt.savefig(f"vis/figures/protein_molecules_{protein_id}_tsne.png", bbox_inches='tight')
