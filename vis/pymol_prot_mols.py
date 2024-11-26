@@ -87,7 +87,7 @@ per_protein_vecs = [len(x) for x in all_vecs]
 vecs_concat = np.array(sum(all_vecs, []))
 print(vecs_concat.shape)
 protein_names = [f'{p}-({uniport_to_ec[p]}' for p in args.protein_id]
-vecs_2d = TSNE(n_components=2).fit_transform(vecs_concat)
+vecs_2d = TSNE(n_components=2,perplexity=5).fit_transform(vecs_concat)
 
 fig = plt.figure(figsize=(7, 7))
 for i, name in enumerate(protein_names):
