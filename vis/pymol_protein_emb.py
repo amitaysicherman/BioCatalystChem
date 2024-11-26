@@ -50,6 +50,7 @@ output_script = f"vis/scripts/protein_emb_{k}.pml"
 create_pymol_script(
     "datasets/pdb_files/A0A009H5L7/A0A009H5L7_esmfold.pdb",
     "datasets/docking/A0A009H5L7/protein.npy",
-    output_script=output_script)
+    output_script=output_script,
+    k_clusters=k)
 
 replace_local_pathes(output_script)
