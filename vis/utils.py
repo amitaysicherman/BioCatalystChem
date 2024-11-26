@@ -67,7 +67,6 @@ def remove_dup_mis_mols(molecules_ids, id_to_smile):
 def load_molecules(file_path):
     supplier = Chem.SDMolSupplier(file_path)
     molecules = [mol for mol in supplier if mol is not None]
-    print(f"Loaded {len(molecules)} molecules from {file_path}")
     return molecules
 
 
@@ -87,10 +86,8 @@ def filter_molecule_by_len(mols_files, min_len_ratio):
     for file in mols_files:
         new_mols = load_molecules(file)
         if len(new_mols) == 0:
-            print(f"File {file} is empty")
             continue
         if len(new_mols) > 1:
-            print(f"File {file} contains more than 1 molecule")
             continue
         files_with_mol.append(file)
         mols.append(new_mols[0])
@@ -106,7 +103,6 @@ def filter_molecule_by_len(mols_files, min_len_ratio):
             pair_dist[i, j] = calculate_average_distance(mols[i], mols[j])
     mols_files_filtered = [files_with_mol[0]]
     for i in range(1, len(mols)):
-        print(pair_dist[i, :i])
         if np.all(pair_dist[i, :i] > min_len):
             mols_files_filtered.append(files_with_mol[i])
     print(f"Filtered {len(files_with_mol) - len(mols_files_filtered)} molecules, {len(mols_files_filtered)} left")
