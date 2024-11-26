@@ -257,7 +257,9 @@ def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3
 #         best_model_checkpoint = f"{base_results_dir}/" + "/".join(best_model_checkpoint_split[1:])
 #     return best_model_checkpoint
 def get_all_cp(base_dir):
-    return glob.glob(f"{base_dir}/checkpoint-*")
+    all_cp = glob.glob(f"{base_dir}/checkpoint-*")
+    all_cp = sorted(all_cp, key=lambda x: int(x.split("-")[1]))
+    return all_cp
 
 
 def args_to_lens(args):
