@@ -94,7 +94,6 @@ for protein_id in args.protein_id:
     c1 = len(molecules_ids)
     molecules_ids = remove_dup_mis_mols(molecules_ids, id_to_smile)
     c2 = len(molecules_ids)
-    all_mols_ids.extend(molecules_ids)
     print(f"Found {c1} molecules for protein {protein_id}, after removing duplicates: {c2}")
     for m in molecules_ids:
         sdf_files = glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf")
@@ -104,8 +103,10 @@ for protein_id in args.protein_id:
         print(f"Found {mc1} molecules for protein {protein_id}, after filtering by length: {mc2}")
         docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
         if len(protein_vecs) == 0:
+            all_mols_ids.append("-")
             protein_vecs.append(get_protein_mol_att(protein_id, m, 0.0, True, return_weights=False))
         protein_vecs.append(docking_attention_emd)
+        all_mols_ids.append(m)
         plot_w(w, protein_id, m)
         w = MinMaxScaler(feature_range=(0, 1)).fit_transform(np.log(w).reshape(-1, 1)).flatten()
         output_script = f"vis/scripts/protein_molecules_{protein_id}_{m}.pml"
