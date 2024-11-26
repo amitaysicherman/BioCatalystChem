@@ -94,7 +94,7 @@ for protein_id in args.protein_id:
     c1 = len(molecules_ids)
     molecules_ids = remove_dup_mis_mols(molecules_ids, id_to_smile)
     c2 = len(molecules_ids)
-    all_mols_ids.append(molecules_ids)
+    all_mols_ids.extend(molecules_ids)
     print(f"Found {c1} molecules for protein {protein_id}, after removing duplicates: {c2}")
     for m in molecules_ids:
         sdf_files = glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf")
