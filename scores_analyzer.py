@@ -58,6 +58,8 @@ all_methods = [x for x in all_methods if os.path.isdir(os.path.join("results", x
 print(all_methods)
 all_results = []
 for name in tqdm(all_methods):
+    if name=="full":
+        continue
     if len([x for x in os.listdir(os.path.join("results", name)) if x.endswith(".txt")]) == 0:
         continue
     res = ValTestFiles(name).get_score()
@@ -66,34 +68,3 @@ for name in tqdm(all_methods):
     all_results.append(res)
 results = pd.DataFrame(all_results)
 print(results)
-# all_df = []
-# for file in scores_files:
-#     file_path = os.path.join(base_dir, file)
-#     df = read_res_file(file_path)
-#     df = df[~df.index.duplicated(keep='first')]
-#     df['name'] = file
-#     all_df.append(df)
-
-# all_df = pd.concat(all_df)
-# all_df = all_df.reset_index().pivot(index='index', columns="name", values="res").dropna()  # to_csv("tmp.csv")
-# print(all_df)
-
-3 / 0
-
-test = SampleTags("test")
-print(len(test.df))
-
-base_dir = "results/full"
-scores_files = [x for x in os.listdir(base_dir) if x.endswith(".csv")]
-print(scores_files)
-all_df = []
-for file in scores_files:
-    file_path = os.path.join(base_dir, file)
-    df = read_res_file(file_path)
-    df = df[~df.index.duplicated(keep='first')]
-
-    df['name'] = file
-    all_df.append(df)
-all_df = pd.concat(all_df)
-all_df = all_df.reset_index().pivot(index='index', columns="name", values="res").dropna()  # to_csv("tmp.csv")
-all_df.merge(test.df, left_index=True, right_index=True, how="left").dropna().to_csv("tmp.csv")
