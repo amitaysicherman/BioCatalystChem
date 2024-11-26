@@ -45,7 +45,7 @@ def plot_w(w, protein_id, m):
     plt.close(fig)
 
 
-def plot_tsne(all_vecs, uniport_to_ec, protein_id,mol_ids=None):
+def plot_tsne(all_vecs, uniport_to_ec, protein_id, mol_ids=None):
     from sklearn.manifold import TSNE
     per_protein_vecs = [len(x) for x in all_vecs]
     vecs_concat = np.array(sum(all_vecs, []))
@@ -62,6 +62,7 @@ def plot_tsne(all_vecs, uniport_to_ec, protein_id,mol_ids=None):
         plt.scatter(vecs_2d[start_index + 1:end_index, 0], vecs_2d[start_index + 1:end_index, 1], label=name,
                     color=TAB10_COLORS[i])
     plt.legend()
+    print(mol_ids)
     if mol_ids:
         for i, txt in enumerate(mol_ids):
             plt.annotate(txt, (vecs_2d[i, 0], vecs_2d[i, 1]))
@@ -103,8 +104,8 @@ for protein_id in args.protein_id:
         print(f"Found {mc1} molecules for protein {protein_id}, after filtering by length: {mc2}")
         docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
         if len(protein_vecs) == 0:
-            all_mols_ids.append("-")
             protein_vecs.append(get_protein_mol_att(protein_id, m, 0.0, True, return_weights=False))
+            all_mols_ids.append("-")
         protein_vecs.append(docking_attention_emd)
         all_mols_ids.append(m)
         plot_w(w, protein_id, m)
