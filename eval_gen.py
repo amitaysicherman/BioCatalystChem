@@ -409,7 +409,7 @@ if __name__ == "__main__":
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
     with torch.no_grad():
-        for j, model in enumerate(models):
+        for j, model in enumerate(models[::-1]):
             output_file = f"results/{run_name}/{args.split}_-{j}.txt"
 
             eval_dataset(model, tokenizer, gen_dataloader, all_ids, all_k=[1, 3, 5], output_file=output_file)
