@@ -9,7 +9,7 @@ from vis.utils import get_residue_ids_from_pdb, replace_local_pathes, load_maps,
 import seaborn as sns
 
 sns.set()
-sns.set_style("paper")
+sns.set_style("white")
 v_cmap = plt.get_cmap("Greens")
 TAB10_COLORS = plt.get_cmap("tab10").colors
 
