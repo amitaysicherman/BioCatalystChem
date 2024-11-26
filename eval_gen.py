@@ -17,6 +17,7 @@ from dataset import ECType
 from preprocessing.build_tokenizer import get_ec_tokens
 from finetune_ecreact import CustomDataCollatorForSeq2Seq
 from collections import Counter
+import glob
 
 RDLogger.DisableLog('rdApp.*')
 
@@ -103,16 +104,91 @@ def tokens_to_canonical_smiles(tokenizer, tokens):
     return Chem.MolToSmiles(mol, canonical=True)
 
 
-def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokenizerFast, gen_dataloader: DataLoader,
-                 all_ids, k=10, fast=0, save_file=None, all_ec=None, return_all=False):
-    correct_count = {ec: {i: 0 for i in range(1, k + 1)} for ec in set(all_ec)}
-    ec_count = {ec: 0 for ec in set(all_ec)}
-    if return_all:
-        all_scores = []
-    pbar = tqdm(enumerate(gen_dataloader), total=len(gen_dataloader))
+# def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokenizerFast, gen_dataloader: DataLoader,
+#                  all_ids, k=10, fast=0, save_file=None, all_ec=None, return_all=False):
+#     correct_count = {ec: {i: 0 for i in range(1, k + 1)} for ec in set(all_ec)}
+#     ec_count = {ec: 0 for ec in set(all_ec)}
+#     if return_all:
+#         all_scores = []
+#     pbar = tqdm(enumerate(gen_dataloader), total=len(gen_dataloader))
+#
+#     for i, batch in pbar:
+#         batch_ec = all_ec[i * len(batch['input_ids']):(i + 1) * len(batch['input_ids'])]
+#         batch_ids = all_ids[i * len(batch['input_ids']):(i + 1) * len(batch['input_ids'])]
+#         input_ids = batch['input_ids'].to(model.device)
+#         attention_mask = batch['attention_mask'].to(model.device).bool()
+#         labels = batch['labels'].to(model.device)
+#         emb = batch['emb'].to(model.device).float()
+#         if (emb == 0).all():
+#             emb_args = {}
+#         else:
+#             emb_args = {"emb": emb}
+#
+#         if fast:  # predict and not generate
+#             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels, **emb_args)
+#             predictions = outputs.logits.argmax(dim=-1)
+#             mask = (labels != tokenizer.pad_token_id) & (labels != -100)
+#
+#             for j in range(len(batch_ec)):  # Iterate over each example in the batch
+#                 pred = predictions[j][mask[j]]
+#                 label = labels[j][mask[j]]
+#
+#                 pred_decoded = tokenizer.decode(pred, skip_special_tokens=True)
+#                 label_decoded = tokenizer.decode(label, skip_special_tokens=True)
+#
+#                 correct_count[batch_ec[j]][1] += (pred_decoded == label_decoded)
+#                 if return_all:
+#                     all_scores.append((pred_decoded == label_decoded))
+#                 ec_count[batch_ec[j]] += 1
+#
+#                 if save_file:
+#                     id_ = batch_ids[j]
+#                     pred = tokenizer.decode(pred, skip_special_tokens=True)
+#                     is_correct = pred == label_decoded
+#                     with open(save_file, "a") as f:
+#                         f.write(f"{id_},{pred},{is_correct}\n")
+#                     # y = tokenizer.decode(labels[j][labels[j] != -100], skip_special_tokens=True)
+#                     # x = tokenizer.decode(input_ids[j], skip_special_tokens=True)
+#                     # ec = batch_ec[j]
+#                     # with open(save_file, "a") as f:
+#                     #     f.write(f"{x},{ec},{y},{label_decoded == pred_decoded}\n")
+#
+#         else:  # Generation with beam search
+#             outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
+#                                      max_length=200, do_sample=False, num_beams=k,
+#                                      num_return_sequences=k, **emb_args)
+#
+#             for j in range(len(batch_ec)):  # Iterate over each example in the batch
+#                 mask = (labels[j] != tokenizer.pad_token_id) & (labels[j] != -100)
+#                 label = labels[j][mask]
+#
+#                 label_smiles = tokens_to_canonical_smiles(tokenizer, label)
+#                 preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs[j * k:(j + 1) * k]]
+#
+#                 for rank in range(1, k + 1):
+#                     if rank == 5 and save_file:
+#                         id_ = batch_ids[j]
+#                         is_correct = label_smiles in preds_list[:rank]
+#                         preds_list_combine = "$".join(preds_list)
+#                         with open(save_file, "a") as f:
+#                             f.write(f"{id_},{preds_list_combine},{is_correct}\n")
+#                     if label_smiles in preds_list[:rank]:
+#                         correct_count[batch_ec[j]][rank] += 1
+#                 ec_count[batch_ec[j]] += 1
+#
+#     if return_all:
+#         return correct_count, ec_count, all_scores
+#     return correct_count, ec_count
 
-    for i, batch in pbar:
-        batch_ec = all_ec[i * len(batch['input_ids']):(i + 1) * len(batch['input_ids'])]
+def k_name(filename, k):
+    assert filename.endswith(".txt")
+    return filename.replace(".txt", f"_k{k}.txt")
+
+
+def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3, 5]):
+    k = max(all_k)
+    k_to_res = {k_: [] for k_ in all_k}
+    for i, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
         batch_ids = all_ids[i * len(batch['input_ids']):(i + 1) * len(batch['input_ids'])]
         input_ids = batch['input_ids'].to(model.device)
         attention_mask = batch['attention_mask'].to(model.device).bool()
@@ -123,101 +199,65 @@ def eval_dataset(model: T5ForConditionalGeneration, tokenizer: PreTrainedTokeniz
         else:
             emb_args = {"emb": emb}
 
-        if fast:  # predict and not generate
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels, **emb_args)
-            predictions = outputs.logits.argmax(dim=-1)
-            mask = (labels != tokenizer.pad_token_id) & (labels != -100)
+        outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
+                                 max_length=200, do_sample=False, num_beams=k,
+                                 num_return_sequences=k, **emb_args)
 
-            for j in range(len(batch_ec)):  # Iterate over each example in the batch
-                pred = predictions[j][mask[j]]
-                label = labels[j][mask[j]]
-
-                pred_decoded = tokenizer.decode(pred, skip_special_tokens=True)
-                label_decoded = tokenizer.decode(label, skip_special_tokens=True)
-
-                correct_count[batch_ec[j]][1] += (pred_decoded == label_decoded)
-                if return_all:
-                    all_scores.append((pred_decoded == label_decoded))
-                ec_count[batch_ec[j]] += 1
-
-                if save_file:
-                    id_ = batch_ids[j]
-                    pred = tokenizer.decode(pred, skip_special_tokens=True)
-                    is_correct = pred == label_decoded
-                    with open(save_file, "a") as f:
-                        f.write(f"{id_},{pred},{is_correct}\n")
-                    # y = tokenizer.decode(labels[j][labels[j] != -100], skip_special_tokens=True)
-                    # x = tokenizer.decode(input_ids[j], skip_special_tokens=True)
-                    # ec = batch_ec[j]
-                    # with open(save_file, "a") as f:
-                    #     f.write(f"{x},{ec},{y},{label_decoded == pred_decoded}\n")
-
-        else:  # Generation with beam search
-            outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask,
-                                     max_length=200, do_sample=False, num_beams=k,
-                                     num_return_sequences=k, **emb_args)
-
-            for j in range(len(batch_ec)):  # Iterate over each example in the batch
-                mask = (labels[j] != tokenizer.pad_token_id) & (labels[j] != -100)
-                label = labels[j][mask]
-
-                label_smiles = tokens_to_canonical_smiles(tokenizer, label)
-                preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs[j * k:(j + 1) * k]]
-
-                for rank in range(1, k + 1):
-                    if rank == 5 and save_file:
-                        id_ = batch_ids[j]
-                        is_correct = label_smiles in preds_list[:rank]
-                        preds_list_combine = "$".join(preds_list)
-                        with open(save_file, "a") as f:
-                            f.write(f"{id_},{preds_list_combine},{is_correct}\n")
-                    if label_smiles in preds_list[:rank]:
-                        correct_count[batch_ec[j]][rank] += 1
-                ec_count[batch_ec[j]] += 1
-
-    if return_all:
-        return correct_count, ec_count, all_scores
-    return correct_count, ec_count
+        for j in range(len(batch_ids)):
+            mask = (labels[j] != tokenizer.pad_token_id) & (labels[j] != -100)
+            label = labels[j][mask]
+            label_smiles = tokens_to_canonical_smiles(tokenizer, label)
+            preds_list = [tokens_to_canonical_smiles(tokenizer, opt) for opt in outputs[j * k:(j + 1) * k]]
+            id_ = batch_ids[j]
+            for k_ in all_k:
+                is_correct = int(label_smiles in preds_list[:k_])
+                k_to_res[k_].append((id_, is_correct))
+    for k_ in all_k:
+        with open(k_name(output_file, k_), "w") as f:
+            for id_, is_correct in k_to_res[k_]:
+                f.write(f"{id_},{is_correct}\n")
 
 
-def get_last_cp(base_dir):
-    import os
-    import re
-    if not os.path.exists(base_dir):
-        return None
-    cp_dirs = os.listdir(base_dir)
-    cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
-    cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
-    if len(cp_dirs) == 0:
-        return None
-    return f"{base_dir}/{cp_dirs[-1]}"
+# def get_last_cp(base_dir):
+#     import os
+#     import re
+#     if not os.path.exists(base_dir):
+#         return None
+#     cp_dirs = os.listdir(base_dir)
+#     cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
+#     cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
+#     if len(cp_dirs) == 0:
+#         return None
+#     return f"{base_dir}/{cp_dirs[-1]}"
+#
+#
+# def get_closest_cp(base_dir, cp_step):
+#     cp_dirs = os.listdir(base_dir)
+#     cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
+#     cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
+#     cp_steps = [int(cp.split("-")[1]) for cp in cp_dirs]
+#     cp_diffs = [abs(cp_step - cp) for cp in cp_steps]
+#     closest_cp = cp_dirs[cp_diffs.index(min(cp_diffs))]
+#     return f"{base_dir}/{closest_cp}"
 
 
-def get_closest_cp(base_dir, cp_step):
-    cp_dirs = os.listdir(base_dir)
-    cp_dirs = [f for f in cp_dirs if re.match(r"checkpoint-\d+", f)]
-    cp_dirs = sorted(cp_dirs, key=lambda x: int(x.split("-")[1]))
-    cp_steps = [int(cp.split("-")[1]) for cp in cp_dirs]
-    cp_diffs = [abs(cp_step - cp) for cp in cp_steps]
-    closest_cp = cp_dirs[cp_diffs.index(min(cp_diffs))]
-    return f"{base_dir}/{closest_cp}"
-
-
-def get_best_val_cp(run_name, base_results_dir="results", cp_step=None):
-    if cp_step is not None:
-        return get_closest_cp(f"{base_results_dir}/{run_name}", cp_step)
-    base_dir = f"{base_results_dir}/{run_name}"
-    last_cp = get_last_cp(base_dir)
-    trainer_state_file = f"{last_cp}/trainer_state.json"
-    if not os.path.exists(trainer_state_file):
-        raise ValueError(f"trainer_state.json not found in {base_dir}")
-    with open(trainer_state_file) as f:
-        trainer_state = json.load(f)
-    best_model_checkpoint = trainer_state["best_model_checkpoint"]
-    if not best_model_checkpoint.startswith(base_results_dir):
-        best_model_checkpoint_split = best_model_checkpoint.split("/")
-        best_model_checkpoint = f"{base_results_dir}/" + "/".join(best_model_checkpoint_split[1:])
-    return best_model_checkpoint
+# def get_best_val_cp(run_name, base_results_dir="results", cp_step=None):
+#     if cp_step is not None:
+#         return get_closest_cp(f"{base_results_dir}/{run_name}", cp_step)
+#     base_dir = f"{base_results_dir}/{run_name}"
+#     last_cp = get_last_cp(base_dir)
+#     trainer_state_file = f"{last_cp}/trainer_state.json"
+#     if not os.path.exists(trainer_state_file):
+#         raise ValueError(f"trainer_state.json not found in {base_dir}")
+#     with open(trainer_state_file) as f:
+#         trainer_state = json.load(f)
+#     best_model_checkpoint = trainer_state["best_model_checkpoint"]
+#     if not best_model_checkpoint.startswith(base_results_dir):
+#         best_model_checkpoint_split = best_model_checkpoint.split("/")
+#         best_model_checkpoint = f"{base_results_dir}/" + "/".join(best_model_checkpoint_split[1:])
+#     return best_model_checkpoint
+def get_all_cp(base_dir):
+    return glob.glob(f"{base_dir}/checkpoint-*")
 
 
 def args_to_lens(args):
@@ -282,17 +322,23 @@ def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=Non
     if ec_type == ECType.PAPER or addec:
         new_tokens = get_ec_tokens()
         tokenizer.add_tokens(new_tokens)
-    best_val_cp = get_best_val_cp(run_name, base_results_dir, cp_step)
-    print("Loading model", best_val_cp)
-    if (ec_type == ECType.PAPER or ec_type == ECType.NO_EC) or prequantization:
-        model = T5ForConditionalGeneration.from_pretrained(best_val_cp)
-    else:
-        print("Loading custom model", best_val_cp)
-        model = CustomT5Model.from_pretrained(best_val_cp, lookup_len=lookup_len)
-    if same_length:
-        max_length = args_to_lens(run_args)
-    else:
-        max_length = 200
+    # best_val_cp = get_best_val_cp(run_name, base_results_dir, cp_step)
+    all_cps = get_all_cp(f"{base_results_dir}/{run_name}")
+    models = []
+    for cp in all_cps:
+        print("Loading model", cp)
+        if (ec_type == ECType.PAPER or ec_type == ECType.NO_EC) or prequantization:
+            model = T5ForConditionalGeneration.from_pretrained(cp)
+        else:
+            print("Loading custom model", cp)
+            model = CustomT5Model.from_pretrained(cp, lookup_len=lookup_len)
+        if same_length:
+            max_length = args_to_lens(run_args)
+        else:
+            max_length = 200
+        model.to(device)
+        model.eval()
+        models.append(model)
 
     gen_dataset = SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, ec_type=ec_type, DEBUG=False,
                                   save_ec=True, addec=addec, alpha=alpha, max_length=max_length,
@@ -301,9 +347,7 @@ def load_model_tokenizer_dataest(run_name, split, same_length=False, samples=Non
     if only_new:
         gen_dataset = get_only_new_ecs(gen_dataset)
 
-    model.to(device)
-    model.eval()
-    return model, tokenizer, gen_dataset
+    return models, tokenizer, gen_dataset
 
 
 def get_ec_from_df(dataset, per_level):
@@ -325,7 +369,7 @@ def get_training_ec_count(level):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run_name", default="pretrained_5", type=str)
+    parser.add_argument("--run_name", default="paper_mix", type=str)
     parser.add_argument("--split", default="test", type=str)
     parser.add_argument("--fast", default=0, type=int)
     parser.add_argument("--k", default=5, type=int)
@@ -347,10 +391,10 @@ if __name__ == "__main__":
     print("---" * 10)
     print(f"Run: {run_name}")
     print("---" * 10)
-
-    model, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
-                                                                 base_results_dir=args.res_base, only_new=args.only_new,
-                                                                 cp_step=args.cp_step, drop_short=args.drop_short)
+    models, tokenizer, gen_dataset = load_model_tokenizer_dataest(run_name, args.split, dups=args.dups,
+                                                                  base_results_dir=args.res_base,
+                                                                  only_new=args.only_new,
+                                                                  cp_step=args.cp_step, drop_short=args.drop_short)
 
     if args.per_ds:
         all_ec = gen_dataset.sources
@@ -358,34 +402,38 @@ if __name__ == "__main__":
         all_ec = get_ec_from_df(gen_dataset, per_level)
     all_ids = gen_dataset.samples_ids
     gen_dataloader = DataLoader(gen_dataset, batch_size=args.bs, num_workers=0,
-                                collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model))
+                                collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=models[0]))
 
     # Evaluate the averaged model
     os.makedirs("results/full", exist_ok=True)
     with torch.no_grad():
-        correct_count, ec_count = eval_dataset(model, tokenizer, gen_dataloader, all_ids, k=args.k, fast=args.fast,
-                                               save_file=f"results/full/{run_name}.csv", all_ec=all_ec)
-    ec_training_count = get_training_ec_count(per_level)
+        for j, model in enumerate(models):
+            output_file = f"results/{run_name}/{args.split}_-{j}.txt"
 
-    print(f"Run: {run_name}")
-    for ec in correct_count:
-        for i in range(1, args.k + 1):
-            if ec_count[ec] == 0:
-                continue
-            print(f"{ec}: {i}: {correct_count[ec][i] / ec_count[ec]:.2f}")
-        print(f"{ec}: {ec_count[ec]:.2f}")
-    # Save the evaluation results
-    output_file = f"results/eval_gen.csv"
-    config_cols = f"{run_name},{args.split},{args.k},{args.fast},{args.per_level},{args.dups},{args.only_new},{args.per_ds},{args.cp_step},{args.drop_short}"
-    if not os.path.exists(output_file):
-        with open(output_file, "w") as f:
-            f.write(
-                "run_name,split,k,fast,per_level,dups,only_new,per_ds,cp_step,drop_short,ec,rank,accuracy,ec_count,training_count\n")
-
-    with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
-        for ec in correct_count:
-            for i in range(1, args.k + 1):
-                if ec_count[ec] == 0:
-                    continue
-                f.write(
-                    f"{config_cols},{ec},{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]},{ec_training_count[ec]}\n")
+            eval_dataset(model, tokenizer, gen_dataloader, all_ids, all_k=[1, 3, 5], output_file=output_file)
+        # correct_count, ec_count = eval_dataset(model, tokenizer, gen_dataloader, all_ids, k=args.k, fast=args.fast,
+        #                                        save_file=f"results/full/{run_name}.csv", all_ec=all_ec)
+    # ec_training_count = get_training_ec_count(per_level)
+    #
+    # print(f"Run: {run_name}")
+    # for ec in correct_count:
+    #     for i in range(1, args.k + 1):
+    #         if ec_count[ec] == 0:
+    #             continue
+    #         print(f"{ec}: {i}: {correct_count[ec][i] / ec_count[ec]:.2f}")
+    #     print(f"{ec}: {ec_count[ec]:.2f}")
+    # # Save the evaluation results
+    # output_file = f"results/eval_gen.csv"
+    # config_cols = f"{run_name},{args.split},{args.k},{args.fast},{args.per_level},{args.dups},{args.only_new},{args.per_ds},{args.cp_step},{args.drop_short}"
+    # if not os.path.exists(output_file):
+    #     with open(output_file, "w") as f:
+    #         f.write(
+    #             "run_name,split,k,fast,per_level,dups,only_new,per_ds,cp_step,drop_short,ec,rank,accuracy,ec_count,training_count\n")
+    #
+    # with open(output_file, "a") as f:  # Changed to append mode to log multiple runs
+    #     for ec in correct_count:
+    #         for i in range(1, args.k + 1):
+    #             if ec_count[ec] == 0:
+    #                 continue
+    #             f.write(
+    #                 f"{config_cols},{ec},{i},{correct_count[ec][i] / ec_count[ec]:.4f},{ec_count[ec]},{ec_training_count[ec]}\n")

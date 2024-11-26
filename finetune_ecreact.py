@@ -73,9 +73,6 @@ def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3
             for k_ in all_k:
                 is_correct = int(label_smiles in preds_list[:k_])
                 k_to_res[k_].append((id_, is_correct))
-                # preds_list_combine = "$$$".join(preds_list[:k_])
-                # with open(k_name(output_file, k_), "a") as f:
-                #     f.write(f"{id_},{label_smiles},{preds_list_combine},{is_correct}\n")
     for k_ in all_k:
         with open(k_name(output_file, k_), "w") as f:
             for id_, is_correct in k_to_res[k_]:
