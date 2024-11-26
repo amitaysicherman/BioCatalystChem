@@ -103,7 +103,6 @@ def filter_molecule_by_len(mols_files, min_len_ratio):
     for i in range(1, len(mols)):
         if np.all(pair_dist[i, :i] > min_len):
             mols_files_filtered.append(files_with_mol[i])
-    print(f"Filtered {len(files_with_mol) - len(mols_files_filtered)} molecules, {len(mols_files_filtered)} left")
     return mols_files_filtered
 
 

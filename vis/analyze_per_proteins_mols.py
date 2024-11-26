@@ -1,15 +1,16 @@
 import os
-from vis.utils import load_maps, remove_stereo, remove_dup_mis_mols
-
+from vis.utils import load_maps, remove_dup_mis_mols, filter_molecule_by_len
+import glob
 id_to_smile, smile_to_id, uniport_to_ec = load_maps()
 
 base_dir = "datasets/docking2"
-for prot in os.listdir(base_dir):
-    if not os.path.isdir(os.path.join(base_dir, prot)):
-        continue
-    if len(os.listdir(os.path.join(base_dir, prot))) == 0:
-        continue
-    mols = os.listdir(os.path.join(base_dir, prot))
-    mols = remove_dup_mis_mols(mols, id_to_smile)
-    print(f"Found {len(mols)} unique molecules for protein {prot}")
-
+for protein_id in os.listdir(base_dir):
+    protein_ec = uniport_to_ec[protein_id]
+    molecules_ids = os.listdir(f"datasets/docking2/{protein_id}")
+    molecules_ids = remove_dup_mis_mols(molecules_ids, id_to_smile)
+    m_dock_positions = []
+    for m in molecules_ids:
+        sdf_files = glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf")
+        sdf_files = filter_molecule_by_len(sdf_files, 0.5)
+        m_dock_positions.append(len(sdf_files))
+    print(f"Protein {protein_id} - {len(molecules_ids)} molecules, {m_dock_positions}")
