@@ -94,7 +94,7 @@ for i, name in enumerate(protein_names):
     # plot the first (center) protein with shape X
     start_index = sum(per_protein_vecs[:i])
     end_index = sum(per_protein_vecs[:i + 1])
-    plt.scatter(vecs_2d[start_index:start_index + 1, 0], vecs_2d[start_index:start_index + 1, 1], label=name,
+    plt.scatter(vecs_2d[start_index:start_index + 1, 0], vecs_2d[start_index:start_index + 1, 1],
                 color=TAB10_COLORS[i], marker='x')
     plt.scatter(vecs_2d[start_index + 1:end_index, 0], vecs_2d[start_index + 1:end_index, 1], label=name,
                 color=TAB10_COLORS[i])
