@@ -19,7 +19,6 @@ def create_pymol_script_with_sdf(pdb_file: str, sdf_files: list, color_values,
     residue_ids = get_residue_ids_from_pdb(pdb_file)
     with open(output_script, 'w') as f:
         f.write(f"load {pdb_file}, protein\n")
-        r, g, b = TAB10_COLORS[0]
         for i, sdf_file in enumerate(sdf_files):
             molecule_name = f"molecule_{i + 1}"
             f.write(f"load {sdf_file}, {molecule_name}\n")
@@ -85,6 +84,7 @@ for m in molecules_ids:
     sdf_files.extend(glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf"))
     print(f"Found {len(molecules_ids)} unique molecules for protein {protein_id}")
     docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
+    w=np.log(w)
     w = MinMaxScaler(feature_range=(0, 1)).fit_transform(w.reshape(-1, 1)).flatten()
     output_script = f"vis/scripts/protein_molecules_colored_{m}.pml"
     create_pymol_script_with_sdf(pdb_file, sdf_files, w, output_script=output_script)
