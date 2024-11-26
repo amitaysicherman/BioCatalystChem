@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-
+from tqdm import tqdm
 from preprocessing.sample_tagging import SampleTags
 from dataclasses import dataclass
 
@@ -57,7 +57,7 @@ all_methods = os.listdir("results")
 all_methods = [x for x in all_methods if os.path.isdir(os.path.join("results", x))]
 print(all_methods)
 all_results = []
-for name in all_methods:
+for name in tqdm(all_methods):
     if len([x for x in os.listdir(os.path.join("results", name)) if x.endswith(".txt")]) == 0:
         continue
     res = ValTestFiles(name).get_score()
