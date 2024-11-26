@@ -10,7 +10,7 @@ from preprocessing.dock import get_protein_mol_att
 from sklearn.preprocessing import MinMaxScaler
 from vis.utils import get_residue_ids_from_pdb, replace_local_pathes
 
-v_cmap = plt.get_cmap("viridis")
+v_cmap = plt.get_cmap("Greens")
 TAB10_COLORS = plt.get_cmap("tab10").colors
 
 
