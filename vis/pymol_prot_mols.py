@@ -63,7 +63,7 @@ for m in molecules_ids:
 
     plt.tight_layout()
 
-    plt.savefig(f"vis/figures/protein_molecules_{protein_id}_{m}.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"vis/figures/protein_molecules_{protein_id}_{m}.png", bbox_inches='tight')
     w = np.log(w)
 
     w = MinMaxScaler(feature_range=(0, 1)).fit_transform(w.reshape(-1, 1)).flatten()
