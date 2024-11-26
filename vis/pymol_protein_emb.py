@@ -16,7 +16,7 @@ def create_pymol_script(pdb_file: str, embedding_file: str, output_script, k_clu
         kmeans = KMeans(n_clusters=k_clusters)
         kmeans.fit(embeddings)
         cluster_labels = kmeans.labels_
-        cluster_colors_map = plt.cm.get_cmap("tab10", k_clusters)
+        cluster_colors_map = plt.cm.get_cmap("tab10")
         emb_colors = cluster_colors_map(cluster_labels)
         emb_colors = emb_colors[:, :3]
 
