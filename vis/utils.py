@@ -37,7 +37,6 @@ def remove_stereo(s):
     if mol is None:
         return None
     Chem.RemoveStereochemistry(mol)
-    print(Chem.MolToSmiles(mol))
     return Chem.MolToSmiles(mol)
 
 
@@ -96,7 +95,6 @@ def filter_molecule_by_len(mols_files, min_len_ratio):
     max_size = max(
         [np.linalg.norm(mol_xyz[i] - mol_xyz[j]) for i in range(len(mol_xyz)) for j in range(i + 1, len(mol_xyz))])
     min_len = min_len_ratio * max_size
-    print(f"Max size is {max_size}, min len is {min_len}")
     pair_dist = np.zeros((len(mols), len(mols)))
     for i in tqdm(range(len(mols))):
         for j in range(0,i + 1):
