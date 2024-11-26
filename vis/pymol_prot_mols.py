@@ -60,7 +60,7 @@ for m in molecules_ids:
     if len(protein_vecs) == 0:
         protein_vecs.append(get_protein_mol_att(protein_id, m, 0.0, True, return_weights=False))
     protein_vecs.append(docking_attention_emd)
-    plt.figure(figsize=(10, 2))
+    fig = plt.figure(figsize=(10, 2))
     plt.plot(w)
     # remove grid and axis
     plt.grid(False)
@@ -69,6 +69,7 @@ for m in molecules_ids:
     plt.tight_layout()
 
     plt.savefig(f"vis/figures/protein_molecules_{protein_id}_{m}.png", bbox_inches='tight')
+    plt.close(fig)
     w = np.log(w)
 
     w = MinMaxScaler(feature_range=(0, 1)).fit_transform(w.reshape(-1, 1)).flatten()
@@ -77,12 +78,13 @@ for m in molecules_ids:
     create_pymol_script_with_sdf(pdb_file, sdf_files, w, output_script=output_script)
     replace_local_pathes(output_script)
 
-
 # create 2D plot of protein embeddings with TSNE
 from sklearn.manifold import TSNE
+
 protein_vecs = np.array(protein_vecs)
 vecs_2d = TSNE(n_components=2).fit_transform(protein_vecs)
-plt.figure(figsize=(10, 10))
+fig = plt.figure(figsize=(10, 10))
 plt.scatter(vecs_2d[:, 0], vecs_2d[:, 1], c=range(len(vecs_2d)), cmap="tab20")
 plt.tight_layout()
 plt.savefig(f"vis/figures/protein_molecules_{protein_id}_tsne.png", bbox_inches='tight')
+plt.close(fig)
