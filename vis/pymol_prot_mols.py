@@ -80,6 +80,7 @@ for m in molecules_ids:
 
 # create 2D plot of protein embeddings with TSNE
 from sklearn.manifold import TSNE
+protein_vecs = np.array(protein_vecs)
 vecs_2d = TSNE(n_components=2).fit_transform(protein_vecs)
 plt.figure(figsize=(10, 10))
 plt.scatter(vecs_2d[:, 0], vecs_2d[:, 1], c=range(len(vecs_2d)), cmap="tab20")
