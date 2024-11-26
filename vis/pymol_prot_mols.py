@@ -86,22 +86,25 @@ from sklearn.manifold import TSNE
 per_protein_vecs = [len(x) for x in all_vecs]
 vecs_concat = np.array(sum(all_vecs, []))
 print(vecs_concat.shape)
-protein_names = [f'{p}-({uniport_to_ec[p]}' for p in args.protein_id]
-vecs_2d = TSNE(n_components=2,perplexity=5).fit_transform(vecs_concat)
+protein_names = [f'{p}-({uniport_to_ec[p]})' for p in args.protein_id]
+vecs_2d = TSNE(n_components=2, perplexity=5).fit_transform(vecs_concat)
 
 fig = plt.figure(figsize=(7, 7))
 for i, name in enumerate(protein_names):
-    plt.scatter(vecs_2d[sum(per_protein_vecs[:i]):sum(per_protein_vecs[:i + 1]), 0],
-                vecs_2d[sum(per_protein_vecs[:i]):sum(per_protein_vecs[:i + 1]), 1],
-                label=name, color=TAB10_COLORS[i])
+    # plot the first (center) protein with shape X
+    start_index = sum(per_protein_vecs[:i])
+    end_index = sum(per_protein_vecs[:i + 1])
+    plt.scatter(vecs_2d[start_index:start_index + 1, 0], vecs_2d[start_index:start_index + 1, 1], label=name,
+                color=TAB10_COLORS[i], marker='x')
+    plt.scatter(vecs_2d[start_index + 1:end_index, 0], vecs_2d[start_index + 1:end_index, 1], label=name,
+                color=TAB10_COLORS[i])
+
 plt.legend()
 plt.title("Protein Molecules Embeddings")
 plt.tight_layout()
 plt.axis('off')
 plt.grid(False)
 names = " + ".join(protein_names)
-plt.savefig(f"vis/figures/protein_molecules_tsne_{names}.png", bbox_inches='tight')
-
 plt.tight_layout()
-plt.savefig(f"vis/figures/protein_molecules_{protein_id}_tsne.png", bbox_inches='tight')
+plt.savefig(f"vis/figures/protein_molecules_tsne_{names}.png", bbox_inches='tight')
 plt.close(fig)
