@@ -44,13 +44,14 @@ def create_pymol_script(pdb_file: str, embedding_file: str, output_script, k_clu
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--k", type=int, default=0)
+parser.add_argument("--protein_id", type=str, default=["E9P8D2", "F0E1K6","H2K888"], nargs="+")
 args = parser.parse_args()
 k = args.k
-output_script = f"vis/scripts/protein_emb_{k}.pml"
-create_pymol_script(
-    "datasets/pdb_files/A0A009H5L7/A0A009H5L7_esmfold.pdb",
-    "datasets/docking/A0A009H5L7/protein.npy",
-    output_script=output_script,
-    k_clusters=k)
-
-replace_local_pathes(output_script)
+for protein_id in args.protein_id:
+    output_script = f"vis/scripts/protein_emb_{protein_id}_{k}.pml"
+    create_pymol_script(
+        f"datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb",
+        f"datasets/docking/{protein_id}/protein.npy",
+        output_script=output_script,
+        k_clusters=k)
+    replace_local_pathes(output_script)
