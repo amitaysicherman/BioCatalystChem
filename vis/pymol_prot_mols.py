@@ -55,16 +55,15 @@ for m in molecules_ids:
     print(f"Found {mc1} molecules for protein {protein_id}, after filtering by length: {mc2}")
     docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
 
-    plt.figure(figsize=(10, 3))
+    plt.figure(figsize=(10, 2))
     plt.plot(w)
     # remove grid and axis
     plt.grid(False)
     plt.axis('off')
+
     plt.tight_layout()
-    
 
-
-    plt.savefig(f"vis/figures/protein_molecules_{protein_id}_{m}.png")
+    plt.savefig(f"vis/figures/protein_molecules_{protein_id}_{m}.png", dpi=300, bbox_inches='tight')
     w = np.log(w)
 
     w = MinMaxScaler(feature_range=(0, 1)).fit_transform(w.reshape(-1, 1)).flatten()
