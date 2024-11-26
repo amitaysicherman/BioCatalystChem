@@ -91,8 +91,8 @@ vecs_2d = TSNE(n_components=2,perplexity=5).fit_transform(vecs_concat)
 
 fig = plt.figure(figsize=(7, 7))
 for i, name in enumerate(protein_names):
-    plt.scatter(vecs_2d[0][sum(per_protein_vecs[:i]):sum(per_protein_vecs[:i + 1]), 0],
-                vecs_2d[0][sum(per_protein_vecs[:i]):sum(per_protein_vecs[:i + 1]), 1],
+    plt.scatter(vecs_2d[sum(per_protein_vecs[:i]):sum(per_protein_vecs[:i + 1]), 0],
+                vecs_2d[sum(per_protein_vecs[:i]):sum(per_protein_vecs[:i + 1]), 1],
                 label=name, color=TAB10_COLORS[i])
 plt.legend()
 plt.title("Protein Molecules Embeddings")
