@@ -4,7 +4,7 @@ from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
-from vis.utils import get_residue_ids_from_pdb
+from vis.utils import get_residue_ids_from_pdb,replace_local_pathes
 
 def create_pymol_script(pdb_file: str, embedding_file: str, output_script,k_clusters=None):
     embeddings = np.load(embedding_file)[1:-1]  # Assuming shape is (num_residues, embedding_dimension)
@@ -43,7 +43,13 @@ def create_pymol_script(pdb_file: str, embedding_file: str, output_script,k_clus
 
 
 # Example usage
+output_script = "vis/scripts/protein_emb.pml"
 create_pymol_script(
-    "/Users/amitay.s/PycharmProjects/BioCatalystChem/datasets/pdb_files/A0A009H5L7/A0A009H5L7_esmfold.pdb",
-    "/Users/amitay.s/PycharmProjects/BioCatalystChem/datasets/docking/A0A009H5L7/protein.npy",
-    output_script="vis/scripts/protein_emb.pml")
+    "datasets/pdb_files/A0A009H5L7/A0A009H5L7_esmfold.pdb",
+    "datasets/docking/A0A009H5L7/protein.npy",
+    output_script=output_script)
+
+replace_local_pathes(output_script)
+
+
+
