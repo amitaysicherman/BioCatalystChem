@@ -95,7 +95,7 @@ filter_configs = [
      ("ec_l_2", lambda x: x == "1.1.1")],
 ]
 all_results = []
-for filter_tags in filter_configs:
+for filter_tags in tqdm(filter_configs):
     index_valid = sample_tags_valid.get_query_indexes(filter_tags)
     index_test = sample_tags_test.get_query_indexes(filter_tags)
     config_results = dict()
