@@ -59,9 +59,9 @@ class ValTestFiles:
 sample_tags_valid = SampleTags(split="valid")
 sample_tags_test = SampleTags(split="test")
 filter_tags = [("num_mol", lambda x: x > 3)]
-indxs_valid = sample_tags_valid.get_query_indexes(filter_tags)
+index_valid = sample_tags_valid.get_query_indexes(filter_tags)
 index_test = sample_tags_test.get_query_indexes(filter_tags)
-print(len(indxs_valid), len(index_test))
+print(len(index_valid), len(index_test))
 all_methods = os.listdir("results")
 all_methods = [x for x in all_methods if os.path.isdir(os.path.join("results", x))]
 print(all_methods)
