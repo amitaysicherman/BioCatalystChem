@@ -92,7 +92,7 @@ singaltons_names = ["all", "no_tgt", "no_src", "no_ec3", "no_ec4", "train_src"]
 reaction_lengths = [(), ("num_mol", lambda x: x > 1), ("num_large_mol", lambda x: x > 1), ("num_mol", lambda x: x > 2),
                     ("num_large_mol", lambda x: x > 2), ("num_mol", lambda x: x > 3),
                     ("num_large_mol", lambda x: x > 3)]
-length_names = ["all", "more_than_1", "large_more_than_2", "more_than_2", "large_more_than_2", "more_than_3",
+length_names = ["all", "more_than_1", "large_more_than_1", "more_than_2", "large_more_than_2", "more_than_3",
                 "large_more_than_3"]
 filter_categories = ["dataset", "singalton", "length"]
 filter_configs = []
@@ -106,17 +106,16 @@ for dataset_name, dataset_filter in zip(datasets_names, datasets):
             configs = [configs[i] for i in range(len(configs)) if i not in remove_index]
             filter_configs.append((names, configs))
 
-new_names=[f"common_mol_{i}" for i in range(10)]+[f"common_ec_{i}" for i in range(10)]
-new_configs=[("common_mol_0", lambda x: x > 0), ("common_mol_1", lambda x: x > 0), ("common_mol_2", lambda x: x > 0),
-("common_mol_3", lambda x: x > 0), ("common_mol_4", lambda x: x > 0), ("common_mol_5", lambda x: x > 0),
-("common_mol_6", lambda x: x > 0), ("common_mol_7", lambda x: x > 0), ("common_mol_8", lambda x: x > 0),
-("common_mol_9", lambda x: x > 0), ("common_ec_0", lambda x: x > 0), ("common_ec_1", lambda x: x > 0),
-("common_ec_2", lambda x: x > 0), ("common_ec_3", lambda x: x > 0), ("common_ec_4", lambda x: x > 0),
-("common_ec_5", lambda x: x > 0), ("common_ec_6", lambda x: x > 0), ("common_ec_7", lambda x: x > 0),
-("common_ec_8", lambda x: x > 0), ("common_ec_9", lambda x: x > 0)]
+new_names = [f"common_mol_{i}" for i in range(10)] + [f"common_ec_{i}" for i in range(10)]
+new_configs = [("common_mol_0", lambda x: x > 0), ("common_mol_1", lambda x: x > 0), ("common_mol_2", lambda x: x > 0),
+               ("common_mol_3", lambda x: x > 0), ("common_mol_4", lambda x: x > 0), ("common_mol_5", lambda x: x > 0),
+               ("common_mol_6", lambda x: x > 0), ("common_mol_7", lambda x: x > 0), ("common_mol_8", lambda x: x > 0),
+               ("common_mol_9", lambda x: x > 0), ("common_ec_0", lambda x: x > 0), ("common_ec_1", lambda x: x > 0),
+               ("common_ec_2", lambda x: x > 0), ("common_ec_3", lambda x: x > 0), ("common_ec_4", lambda x: x > 0),
+               ("common_ec_5", lambda x: x > 0), ("common_ec_6", lambda x: x > 0), ("common_ec_7", lambda x: x > 0),
+               ("common_ec_8", lambda x: x > 0), ("common_ec_9", lambda x: x > 0)]
 for i in range(len(new_names)):
     filter_configs.append(([new_names[i]], [new_configs[i]]))
-
 
 all_results = []
 for conf_name, filter_tags in tqdm(filter_configs):
