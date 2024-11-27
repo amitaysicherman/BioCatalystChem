@@ -2,6 +2,7 @@ import pandas as pd
 from typing import List, Tuple, Dict
 from preprocessing.build_tokenizer import SMILES_REGEX
 
+
 def load_df(split):
     with open(f"datasets/ecreact/level4/src-{split}.txt", "r") as f:
         src_ec = f.read().splitlines()
@@ -22,41 +23,22 @@ def ec_to_level(ec, level=1):
 
 
 class SampleTags:
-    def __init__(self, split):
+    def __init__(self, split, common_molecules=[], common_ec=[]):
         self.df = load_df(split)
         self.train_df = load_df("train")
         self.add_all_tag()
+        self.common_molecules = common_molecules
+        self.common_ec = common_ec
 
     def add_number_of_molecules(self):
         self.df["num_mol"] = self.df["src"].apply(lambda x: len(x.split(".")))
 
     def add_number_of_large_molecules(self, t=3):
         self.df["num_large_mol"] = self.df["src"].apply(
-            lambda x: len([y for y in x.split(".") if len(SMILES_REGEX.findall(y))>=t]))
+            lambda x: len([y for y in x.split(".") if len(SMILES_REGEX.findall(y)) >= t]))
 
     def add_ec_level(self, level):
         self.df[f"ec_l_{level}"] = self.df["ec"].apply(lambda x: ec_to_level(x, level))
-
-
-    def add_most_common_molecules(self, n=10, len_threshold=3):
-        all_molecules = []
-        for x in self.df["src"]:
-            all_molecules.extend([y for y in x.split(".") if len(SMILES_REGEX.findall(y)) >= len_threshold])
-        all_molecules = pd.Series(all_molecules)
-        most_common_molecules = all_molecules.value_counts().head(n)
-        for i in range(n):
-            print(i, most_common_molecules.index[i], most_common_molecules[i])
-            self.df[f"common_mol_{i}"] = self.df["src"].apply(
-                lambda x: len([y for y in x.split(".") if y == most_common_molecules.index[i]]))
-
-    def add_most_common_ec(self, n=10, level=4):
-        all_ec = self.df["ec"].apply(lambda x: ec_to_level(x, level))
-        all_ec = all_ec[all_ec.apply(lambda x: "-" not in x)]
-        most_common_ec = all_ec.value_counts().head(n)
-        for i in range(n):
-            print(i, most_common_ec.index[i], most_common_ec[i])
-            self.df[f"common_ec_{i}"] = self.df["ec"].apply(
-                lambda x: len([y for y in x.split(" ") if y == most_common_ec.index[i]]))
 
     def add_num_train_ec(self, level=1):
         train_ec = self.train_df[f"ec"].apply(lambda x: ec_to_level(x, level)).value_counts()
@@ -71,6 +53,30 @@ class SampleTags:
         train_tgt = self.train_df["tgt"].value_counts()
         self.df["num_train_tgt"] = self.df["tgt"].apply(lambda x: train_tgt.get(x, 0))
 
+    def add_most_common_molecules(self, n=10, len_threshold=3):
+        if len(self.common_molecules) == 0:
+
+            all_molecules = []
+            for x in self.df["src"]:
+                all_molecules.extend([y for y in x.split(".") if len(SMILES_REGEX.findall(y)) >= len_threshold])
+            all_molecules = pd.Series(all_molecules)
+            self.common_molecules = all_molecules.value_counts().head(n).index.tolist()
+
+        for i in range(len(self.common_molecules)):
+            print(i, self.common_molecules[i])
+            self.df[f"common_mol_{i}"] = self.df["src"].apply(
+                lambda x: len([y for y in x.split(".") if y == self.common_molecules[i]]))
+
+    def add_most_common_ec(self, n=10, level=4):
+        if len(self.common_ec) == 0:
+            all_ec = self.df["ec"].apply(lambda x: ec_to_level(x, level))
+            all_ec = all_ec[all_ec.apply(lambda x: "-" not in x)]
+            self.common_ec = all_ec.value_counts().head(n).index.tolist()
+        for i in range(len(self.common_ec)):
+            print(i, self.common_ec[i])
+            self.df[f"common_ec_{i}"] = self.df["ec"].apply(
+                lambda x: len([y for y in x.split(" ") if y == self.common_ec[i]]))
+
     def add_all_tag(self):
         self.add_number_of_molecules()
         self.add_number_of_large_molecules()
@@ -79,13 +85,13 @@ class SampleTags:
         self.add_ec_level(3)
         self.add_ec_level(4)
 
-        self.add_most_common_molecules()
         self.add_num_train_ec(1)
         self.add_num_train_ec(2)
         self.add_num_train_ec(3)
         self.add_num_train_ec(4)
         self.add_num_train_src()
         self.add_num_train_tgt()
+        self.add_most_common_molecules()
         self.add_most_common_ec(level=4)
 
     def get_query_indexes(self, cols_funcs):

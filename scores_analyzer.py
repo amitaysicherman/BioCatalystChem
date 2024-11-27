@@ -81,7 +81,7 @@ for name in tqdm(all_methods):
     run_num_to_obj[name] = ValTestFiles(name)
 
 sample_tags_valid = SampleTags(split="valid")
-sample_tags_test = SampleTags(split="test")
+sample_tags_test = SampleTags(split="test", common_molecules=sample_tags_valid.common_molecules,common_ec=sample_tags_valid.common_ec)
 datasets = [(), ("ds", lambda x: x == "brenda_reaction_smiles"), ("ds", lambda x: x == "metanetx_reaction_smiles"),
             ("ds", lambda x: x == "pathbank_reaction_smiles"), ("ds", lambda x: x == "rhea_reaction_smiles")]
 datasets_names = ["all", "brenda", "metanetx", "pathbank", "rhea"]
