@@ -1,4 +1,5 @@
 import pandas as pd
+from typing import List, Tuple, Dict
 
 
 def load_df(split):
@@ -11,7 +12,7 @@ def load_df(split):
     tgt = [x.replace(" ", "") for x in tgt]
     with open(f"datasets/ecreact/level4/{split}_sources.txt", "r") as f:
         ds = f.read().splitlines()
-    assert len(src) == len(tgt) == len(ec) == len(ds)
+    assert len(src) == len(tgt) == len(ec) == len(ds), f"{len(src)} {len(tgt)} {len(ec)} {len(ds)}"
     df = pd.DataFrame({"src": src, "tgt": tgt, "ec": ec, "ds": ds})
     return df
 
@@ -55,6 +56,10 @@ class SampleTags:
         train_src = self.train_df["src"].value_counts()
         self.df["num_train_src"] = self.df["src"].apply(lambda x: train_src.get(x, 0))
 
+    def add_num_train_tgt(self):
+        train_tgt = self.train_df["tgt"].value_counts()
+        self.df["num_train_tgt"] = self.df["tgt"].apply(lambda x: train_tgt.get(x, 0))
+
     def add_all_tag(self):
         self.add_number_of_molecules()
         self.add_number_of_large_molecules()
@@ -66,6 +71,13 @@ class SampleTags:
         self.add_num_train_ec(2)
         self.add_num_train_ec(3)
         self.add_num_train_src()
+        self.add_num_train_tgt()
+
+    def get_query_indexes(self, cols_funcs):
+        filtered_df = self.df.copy()
+        for col, func in cols_funcs:
+            filtered_df = filtered_df[filtered_df[col].apply(func)]
+        return filtered_df.index.tolist()
 
 
 if __name__ == "__main__":

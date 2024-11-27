@@ -52,11 +52,11 @@ class ReactionToSource:
         ec = ".".join([x.replace("[", "").replace("]", "")[1:] for x in ec.strip().split(" ")])
         reaction = f"{src}|{ec}>>{tgt}"
         if reaction not in self.reaction_to_source:
-            print(f"Reaction {reaction} not found in csv")
             return ""
         return self.reaction_to_source[reaction]
 
     def get_source_to_ds_split(self, base_dir, split):
+        print(f"Getting sources for {split}, {base_dir}")
         src_file = pjoin(base_dir, f"src-{split}.txt")
         tgt_file = pjoin(base_dir, f"tgt-{split}.txt")
         with open(src_file) as f:
@@ -64,8 +64,12 @@ class ReactionToSource:
         with open(tgt_file) as f:
             tgt_lines = f.readlines()
         sources = []
-        for src, tgt in zip(src_lines, tgt_lines):
+        missing = 0
+        for src, tgt in tqdm(zip(src_lines, tgt_lines),total=len(src_lines)):
             sources.append(self.get_source(src, tgt))
+            if sources[-1] == "":
+                missing += 1
+        print(f"Missing {missing} out of {len(sources)} in {split}")
         return sources
 
     def get_source_to_ds(self, base_dir):
