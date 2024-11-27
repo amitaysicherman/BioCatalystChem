@@ -24,11 +24,12 @@ def ec_to_level(ec, level=1):
 
 class SampleTags:
     def __init__(self, split, common_molecules=[], common_ec=[]):
+        self.common_molecules = common_molecules
+        self.common_ec = common_ec
+
         self.df = load_df(split)
         self.train_df = load_df("train")
         self.add_all_tag()
-        self.common_molecules = common_molecules
-        self.common_ec = common_ec
 
     def add_number_of_molecules(self):
         self.df["num_mol"] = self.df["src"].apply(lambda x: len(x.split(".")))
