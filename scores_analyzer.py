@@ -10,7 +10,7 @@ def get_scores_from_file(file_path, indexes):
                      dtype={"res": int, "index": int})
     print(len(df))
     if indexes is not None:
-        indexes_in_df = [x for x in df["index"] if x in indexes]
+        indexes_in_df = [x for x in df.index if x in indexes]
         df = df.loc[indexes_in_df]
     print(len(df))
     return df["res"].mean()
