@@ -61,7 +61,7 @@ class ValTestFiles:
 
 sample_tags_valid = SampleTags(split="valid")
 sample_tags_test = SampleTags(split="test")
-filter_tags = [("num_mol", lambda x: x > 3)]
+filter_tags = [("num_train_tgt", lambda x: x == 0)]
 index_valid = sample_tags_valid.get_query_indexes(filter_tags)
 index_test = sample_tags_test.get_query_indexes(filter_tags)
 print(len(index_valid), len(index_test))
