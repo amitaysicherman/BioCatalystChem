@@ -31,7 +31,8 @@ class SampleTags:
         self.df["num_mol"] = self.df["src"].apply(lambda x: len(x.split(".")))
 
     def add_number_of_large_molecules(self, t=3):
-        self.df["num_large_mol"] = self.df["src"].apply(lambda x: len([y for y in x.split(".") if len(y) > t]))
+        self.df["num_large_mol"] = self.df["src"].apply(
+            lambda x: len([y for y in x.split(".") if y.count(' ') >= t - 1]))
 
     def add_ec_level(self, level):
         self.df[f"ec_l_{level}"] = self.df["ec"].apply(lambda x: ec_to_level(x, level))
@@ -39,7 +40,7 @@ class SampleTags:
     def add_most_common_molecules(self, n=10, len_threshold=3):
         all_molecules = []
         for x in self.df["src"]:
-            all_molecules.extend([y for y in x.split(".") if len(y) > len_threshold])
+            all_molecules.extend([y for y in x.split(".") if y.count(" ") >= len_threshold - 1])
         all_molecules = pd.Series(all_molecules)
         most_common_molecules = all_molecules.value_counts().head(n)
         for i in range(n):
@@ -47,14 +48,14 @@ class SampleTags:
             self.df[f"common_mol_{i}"] = self.df["src"].apply(
                 lambda x: len([y for y in x.split(".") if y == most_common_molecules.index[i]]))
 
-    def add_most_common_ec(self, n=10,level=4):
+    def add_most_common_ec(self, n=10, level=4):
         all_ec = self.df["ec"].apply(lambda x: ec_to_level(x, level))
+        all_ec = all_ec[all_ec.apply(lambda x: "-" not in x)]
         most_common_ec = all_ec.value_counts().head(n)
         for i in range(n):
             print(i, most_common_ec.index[i], most_common_ec[i])
             self.df[f"common_ec_{i}"] = self.df["ec"].apply(
                 lambda x: len([y for y in x.split(" ") if y == most_common_ec.index[i]]))
-
 
     def add_num_train_ec(self, level=1):
         train_ec = self.train_df[f"ec"].apply(lambda x: ec_to_level(x, level)).value_counts()
