@@ -66,7 +66,7 @@ def impact_score(results: pd.Series):
     base_score = results.loc[base_lines_indexes].max()
     pre_score = results.loc[pre_indexes].max()
     dae_score = results.loc[dae].max()
-    return dae_score - max(base_score, pre_score)
+    return dae_score - max(base_score, pre_score), max(dae_score, pre_score) - base_score, dae_score - base_score
 
 
 all_methods = os.listdir("results")
@@ -83,17 +83,22 @@ for name in tqdm(all_methods):
 sample_tags_valid = SampleTags(split="valid")
 sample_tags_test = SampleTags(split="test")
 
-filter_configs = [
-    [("ds", lambda x: x == "rhea_reaction_smiles"), ("num_train_tgt", lambda x: x == 0),
-     ("num_large_mol", lambda x: x > 2)],
-    [("ds", lambda x: x == "rhea_reaction_smiles"), ("num_train_tgt", lambda x: x == 0),
-     ("num_large_mol", lambda x: x > 2), ("num_mol", lambda x: x > 2)],
-    [("ds", lambda x: x == "rhea_reaction_smiles"), ("num_train_tgt", lambda x: x == 0),
-     ("num_large_mol", lambda x: x > 2), ("num_mol", lambda x: x > 2), ("ec_l_1", lambda x: x == "1.1")],
-    [("ds", lambda x: x == "rhea_reaction_smiles"), ("num_train_tgt", lambda x: x == 0),
-     ("num_large_mol", lambda x: x > 2), ("num_mol", lambda x: x > 2), ("ec_l_1", lambda x: x == "1.1"),
-     ("ec_l_2", lambda x: x == "1.1.1")],
-]
+datasets = [] + [("ds", lambda x: x == y) for y in
+                 ["brenda_reaction_smiles", "metanetx_reaction_smiles", "pathbank_reaction_smiles",
+                  "rhea_reaction_smiles"]]
+singaltons = [] + [("num_train_tgt", lambda x: x == 0), ("num_train_src", lambda x: x == 0),
+                   ("num_train_ec_3", lambda x: x == 0), ("num_train_ec_4", lambda x: x == 0)]
+reaction_lengths = [] + [("num_mol", lambda x: x > 2), ("num_large_mol", lambda x: x > 2), ("num_mol", lambda x: x > 3),
+                         ("num_large_mol", lambda x: x > 3)]
+
+
+
+filter_configs = []
+for ds in datasets:
+    for sing in singaltons:
+        for react in reaction_lengths:
+            filter_configs.append([x for x in [ds, sing, react] if x != []])
+
 all_results = []
 for filter_tags in tqdm(filter_configs):
     index_valid = sample_tags_valid.get_query_indexes(filter_tags)
@@ -102,17 +107,14 @@ for filter_tags in tqdm(filter_configs):
     for name, obj in run_num_to_obj.items():
         config_results[name] = obj.get_score_k(5, index_valid, index_test)
     config_results['count'] = len(index_test)
-    config_results["impact"] = impact_score(pd.Series(config_results))
+    i1, i2, i3 = impact_score(pd.Series(config_results))
+    config_results['impact1'] = i1
+    config_results['impact2'] = i2
+    config_results['impact3'] = i3
     results = pd.Series(config_results)
     all_results.append(results)
 print(all_results)
-#convert to dataframe
+# convert to dataframe
 df = pd.DataFrame(all_results)
 print(df)
 df.to_csv("results/impact_results.csv")
-
-config_results[name] = res
-# all_results.append(res)
-print(config_results)
-results = pd.Series(config_results)
-print(results)

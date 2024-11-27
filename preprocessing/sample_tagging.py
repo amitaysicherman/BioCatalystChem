@@ -66,10 +66,13 @@ class SampleTags:
         self.add_ec_level(1)
         self.add_ec_level(2)
         self.add_ec_level(3)
+        self.add_ec_level(4)
+
         self.add_most_common_molecules()
         self.add_num_train_ec(1)
         self.add_num_train_ec(2)
         self.add_num_train_ec(3)
+        self.add_num_train_ec(4)
         self.add_num_train_src()
         self.add_num_train_tgt()
 
