@@ -82,37 +82,41 @@ for name in tqdm(all_methods):
 
 sample_tags_valid = SampleTags(split="valid")
 sample_tags_test = SampleTags(split="test")
-
-datasets = [] + [("ds", lambda x: x == y) for y in
-                 ["brenda_reaction_smiles", "metanetx_reaction_smiles", "pathbank_reaction_smiles",
-                  "rhea_reaction_smiles"]]
+datasets = [(), ("ds", lambda x: x == "brenda_reaction_smiles"), ("ds", lambda x: x == "metanetx_reaction_smiles"),
+            ("ds", lambda x: x == "pathbank_reaction_smiles"), ("ds", lambda x: x == "rhea_reaction_smiles")]
 datasets_names = ["all", "brenda", "metanetx", "pathbank", "rhea"]
-singaltons = [] + [("num_train_tgt", lambda x: x == 0), ("num_train_src", lambda x: x == 0),
-                   ("num_train_ec_3", lambda x: x == 0), ("num_train_ec_4", lambda x: x == 0)]
-singaltons_names = ["all", "no_tgt", "no_src", "no_ec3", "no_ec4"]
-reaction_lengths = [] + [("num_mol", lambda x: x > 2), ("num_large_mol", lambda x: x > 2), ("num_mol", lambda x: x > 3),
-                         ("num_large_mol", lambda x: x > 3)]
-length_names = ["all", "more_than_2", "large_more_than_2", "more_than_3", "large_more_than_3"]
-
+singaltons = [(), ("num_train_tgt", lambda x: x == 0), ("num_train_src", lambda x: x == 0),
+              ("num_train_ec_3", lambda x: x == 0), ("num_train_ec_4", lambda x: x == 0),
+              ("num_train_src", lambda x: x > 0)]
+singaltons_names = ["all", "no_tgt", "no_src", "no_ec3", "no_ec4", "train_src"]
+reaction_lengths = [(), ("num_mol", lambda x: x > 1), ("num_large_mol", lambda x: x > 1), ("num_mol", lambda x: x > 2),
+                    ("num_large_mol", lambda x: x > 2), ("num_mol", lambda x: x > 3),
+                    ("num_large_mol", lambda x: x > 3)]
+length_names = ["all", "more_than_1", "large_more_than_2", "more_than_2", "large_more_than_2", "more_than_3",
+                "large_more_than_3"]
+filter_categories = ["dataset", "singalton", "length"]
 filter_configs = []
-for dataset_name, dataset_filter in datasets:
-    for singalton_name, singalton_filter in singaltons:
-        for length_name, length_filter in reaction_lengths:
+for dataset_name, dataset_filter in zip(datasets_names, datasets):
+    for singalton_name, singalton_filter in zip(singaltons_names, singaltons):
+        for length_name, length_filter in zip(length_names, reaction_lengths):
             names = [dataset_name, singalton_name, length_name]
             configs = [dataset_filter, singalton_filter, length_filter]
-            remove_index = [i for i in range(len(names)) if configs[i] == []]
-            names = [names[i] for i in range(len(names)) if i not in remove_index]
+            remove_index = [i for i in range(len(names)) if configs[i] == ()]
+            names = [names[i] if i not in remove_index else "all" for i in range(len(names))]
             configs = [configs[i] for i in range(len(configs)) if i not in remove_index]
             filter_configs.append((names, configs))
 all_results = []
-for conf_name,filter_tags in tqdm(filter_configs):
+for conf_name, filter_tags in tqdm(filter_configs):
+    print(conf_name)
     index_valid = sample_tags_valid.get_query_indexes(filter_tags)
     index_test = sample_tags_test.get_query_indexes(filter_tags)
     config_results = dict()
     for name, obj in run_num_to_obj.items():
         config_results[name] = obj.get_score_k(5, index_valid, index_test)
     config_results['count'] = len(index_test)
-    config_results['filter'] = conf_name
+    for i in range(len(conf_name)):
+        config_results[f'f_{filter_categories[i]}'] = conf_name[i]
+
     i1, i2, i3 = impact_score(pd.Series(config_results))
     config_results['impact1'] = i1
     config_results['impact2'] = i2
