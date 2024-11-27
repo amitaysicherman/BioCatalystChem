@@ -8,8 +8,11 @@ from dataclasses import dataclass
 def get_scores_from_file(file_path, indexes):
     df = pd.read_csv(file_path, index_col=0, header=None, names=["index", "res"],
                      dtype={"res": int, "index": int})
+    print(len(df))
     if indexes is not None:
-        df = df.loc[indexes]
+        indexes_in_df = [x for x in df["index"] if x in indexes]
+        df = df.loc[indexes_in_df]
+    print(len(df))
     return df["res"].mean()
 
 
