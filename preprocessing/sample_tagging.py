@@ -47,6 +47,15 @@ class SampleTags:
             self.df[f"common_mol_{i}"] = self.df["src"].apply(
                 lambda x: len([y for y in x.split(".") if y == most_common_molecules.index[i]]))
 
+    def add_most_common_ec(self, n=10,level=4):
+        all_ec = self.df["ec"].apply(lambda x: ec_to_level(x, level))
+        most_common_ec = all_ec.value_counts().head(n)
+        for i in range(n):
+            print(i, most_common_ec.index[i], most_common_ec[i])
+            self.df[f"common_ec_{i}"] = self.df["ec"].apply(
+                lambda x: len([y for y in x.split(" ") if y == most_common_ec.index[i]]))
+
+
     def add_num_train_ec(self, level=1):
         train_ec = self.train_df[f"ec"].apply(lambda x: ec_to_level(x, level)).value_counts()
         curr_ec = self.df["ec"].apply(lambda x: ec_to_level(x, level))
@@ -75,6 +84,7 @@ class SampleTags:
         self.add_num_train_ec(4)
         self.add_num_train_src()
         self.add_num_train_tgt()
+        self.add_most_common_ec(level=4)
 
     def get_query_indexes(self, cols_funcs):
         filtered_df = self.df.copy()

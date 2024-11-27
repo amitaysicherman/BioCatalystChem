@@ -105,6 +105,19 @@ for dataset_name, dataset_filter in zip(datasets_names, datasets):
             names = [names[i] if i not in remove_index else "all" for i in range(len(names))]
             configs = [configs[i] for i in range(len(configs)) if i not in remove_index]
             filter_configs.append((names, configs))
+
+new_names=[f"common_mol_{i}" for i in range(10)]+[f"common_ec_{i}" for i in range(10)]
+new_configs=[("common_mol_0", lambda x: x > 0), ("common_mol_1", lambda x: x > 0), ("common_mol_2", lambda x: x > 0),
+("common_mol_3", lambda x: x > 0), ("common_mol_4", lambda x: x > 0), ("common_mol_5", lambda x: x > 0),
+("common_mol_6", lambda x: x > 0), ("common_mol_7", lambda x: x > 0), ("common_mol_8", lambda x: x > 0),
+("common_mol_9", lambda x: x > 0), ("common_ec_0", lambda x: x > 0), ("common_ec_1", lambda x: x > 0),
+("common_ec_2", lambda x: x > 0), ("common_ec_3", lambda x: x > 0), ("common_ec_4", lambda x: x > 0),
+("common_ec_5", lambda x: x > 0), ("common_ec_6", lambda x: x > 0), ("common_ec_7", lambda x: x > 0),
+("common_ec_8", lambda x: x > 0), ("common_ec_9", lambda x: x > 0)]
+for i in range(len(new_names)):
+    filter_configs.append(([new_names[i]], [new_configs[i]]))
+
+
 all_results = []
 for conf_name, filter_tags in tqdm(filter_configs):
     print(conf_name)
