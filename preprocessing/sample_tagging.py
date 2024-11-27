@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import List, Tuple, Dict
-
+from preprocessing.build_tokenizer import SMILES_REGEX
 
 def load_df(split):
     with open(f"datasets/ecreact/level4/src-{split}.txt", "r") as f:
@@ -32,15 +32,16 @@ class SampleTags:
 
     def add_number_of_large_molecules(self, t=3):
         self.df["num_large_mol"] = self.df["src"].apply(
-            lambda x: len([y for y in x.split(".") if y.count(' ') >= t - 1]))
+            lambda x: len([y for y in x.split(".") if len(SMILES_REGEX.findall(y))>=t]))
 
     def add_ec_level(self, level):
         self.df[f"ec_l_{level}"] = self.df["ec"].apply(lambda x: ec_to_level(x, level))
 
+
     def add_most_common_molecules(self, n=10, len_threshold=3):
         all_molecules = []
         for x in self.df["src"]:
-            all_molecules.extend([y for y in x.split(".") if y.count(" ") >= len_threshold - 1])
+            all_molecules.extend([y for y in x.split(".") if len(SMILES_REGEX.findall(y)) >= len_threshold])
         all_molecules = pd.Series(all_molecules)
         most_common_molecules = all_molecules.value_counts().head(n)
         for i in range(n):
