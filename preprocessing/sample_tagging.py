@@ -68,9 +68,9 @@ class SampleTags:
             self.df[f"common_mol_{i}"] = self.df["src"].apply(
                 lambda x: len([y for y in x.split(".") if y == self.common_molecules[i]]))
 
-    def add_most_common_ec(self, n=10, level=4):
+    def add_most_common_ec(self, n=10):
         if len(self.common_ec) == 0:
-            all_ec = self.df["ec"].apply(lambda x: ec_to_level(x, level))
+            all_ec = self.df["ec"].copy()
             all_ec = all_ec[all_ec.apply(lambda x: "-" not in x)]
             self.common_ec = all_ec.value_counts().head(n).index.tolist()
         for i in range(len(self.common_ec)):
@@ -92,8 +92,8 @@ class SampleTags:
         self.add_num_train_ec(4)
         self.add_num_train_src()
         self.add_num_train_tgt()
-        self.add_most_common_molecules()
-        self.add_most_common_ec(level=4)
+        self.add_most_common_molecules(n=50)
+        self.add_most_common_ec(n=50)
 
     def get_query_indexes(self, cols_funcs):
         filtered_df = self.df.copy()
