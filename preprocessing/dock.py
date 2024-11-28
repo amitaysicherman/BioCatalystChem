@@ -66,7 +66,7 @@ def check_protein_exists(protein_id):
     return os.path.exists(protein_file) and os.path.exists(protein_emd_file)
 
 
-def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False,return_weights=False,exp=True):
+def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False, return_weights=False, exp=True):
     protein_file = f'datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb'
     protein_seq, protein_cords = get_protein_cords(protein_file)
     protein_cords = np.array(protein_cords)
@@ -116,13 +116,14 @@ def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False,return_weights=
     return docking_attention_emd
 
 
-def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha, v2, verbose=False):
+def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha, v2, verbose=False, only_w=False):
     protein_id = ec_to_uniprot[ec]
     if not check_protein_exists(protein_id):
         if verbose:
             print(f"Protein {protein_id} does not exist")
         return None
     embds = []
+    weights = []
     non_can_smiles = non_can_smiles.replace(" ", "")
     for s in non_can_smiles.split("."):
 
@@ -138,15 +139,18 @@ def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, 
                 continue
             molecule_id = smiles_to_id[s]
             try:
-                docking_attention_emd = get_protein_mol_att(protein_id, molecule_id, alpha, v2)
+                docking_attention_emd, w = get_protein_mol_att(protein_id, molecule_id, alpha, v2, return_weights=True)
             except:
                 continue
             if docking_attention_emd is not None:
                 embds.append(docking_attention_emd)
+                weights.append(w)
     if len(embds) == 0:
         if verbose:
             print(f"Could not get embeddings for {non_can_smiles}")
         return None
+    if only_w:
+        return np.array(weights).mean(axis=0)
     return np.array(embds).mean(axis=0)
 
 
@@ -186,7 +190,7 @@ if __name__ == "__main__":
         ec = ec_tokens_to_seq(ec)
         ec = ec[4:-1]
 
-        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha=0.5)
+        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha=0.5,v2=True)
         if reaction_attention_emd is not None:
             print(reaction_attention_emd)
             print(reaction_attention_emd.shape)

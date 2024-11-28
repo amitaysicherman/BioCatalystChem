@@ -11,11 +11,12 @@ UNK = "[UNK]"
 SPACIAL_TOKENS = {PAD: 0, EOS: 1, UNK: 2}
 
 
-def encode_eos_pad(tokenizer, text, max_length, no_pad=False):
+def encode_eos_pad(tokenizer, text, max_length, no_pad=False,remove_unk=False):
     tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
     if SPACIAL_TOKENS[UNK] in tokens:
+        if remove_unk:
+            tokens = [x for x in tokens if x != SPACIAL_TOKENS[UNK]]
         print(f"UNK in tokens: {text}")
-
     tokens = tokens + [tokenizer.eos_token_id]
     if no_pad:
         if len(tokens) > max_length:
@@ -89,6 +90,9 @@ def redo_ec_split(text, return_smiles_num=False):
         return text_no_ec, ec
     return f"{text_no_ec} | {ec}"
 
+def get_ec_from_seq(text):
+    ec = ec_tokens_to_seq(text.split("|")[1].strip())
+    return ec.replace("[", "").replace("]", "").replace("ec:", "")
 
 def read_files(file_paths):
     contents = []
