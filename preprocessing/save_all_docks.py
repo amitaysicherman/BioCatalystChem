@@ -4,7 +4,6 @@ from collections import defaultdict
 from tqdm import tqdm
 from preprocessing.dock import get_reaction_attention_emd
 from preprocessing.build_tokenizer import redo_ec_split
-import os
 
 
 def args_to_file(v2, alpha):
@@ -56,11 +55,13 @@ if __name__ == "__main__":
     for text in tqdm(src_lines[:10]):
         src, ec = redo_ec_split(text, True)
 
-        key = (src, ec)
+        key = "|".join([src, ec])
         if key in src_ec_to_vec:
             continue
         w = get_reaction_attention_emd(src, ec, ec_to_uniprot, smiles_to_id, alpha=args.alpha, v2=args.v2, only_w=True)
         if w is not None:
             src_ec_to_vec[key] = w
+
+
 
     np.savez(args_to_file(args.v2, args.alpha).replace(".txt", "npz"), **src_ec_to_vec)
