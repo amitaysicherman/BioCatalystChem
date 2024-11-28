@@ -75,8 +75,7 @@ class SampleTags:
             self.common_ec = all_ec.value_counts().head(n).index.tolist()
         for i in range(len(self.common_ec)):
             print(i, self.common_ec[i])
-            self.df[f"common_ec_{i}"] = self.df["ec"].apply(
-                lambda x: len([y for y in x.split(" ") if y == self.common_ec[i]]))
+            self.df[f"common_ec_{i}"] = self.df["ec"].apply(lambda x: x == self.common_ec[i])
 
     def add_all_tag(self):
         self.add_number_of_molecules()
