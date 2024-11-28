@@ -8,19 +8,15 @@ from preprocessing.build_tokenizer import redo_ec_split
 
 def args_to_file(v2, alpha):
     docking_dir = "docking2" if v2 else "docking"
-    return "datasets/" + docking_dir + f"/docking_{alpha}.txt"
+    return "datasets/" + docking_dir + f"/docking_{alpha}.npz"
 
 
 def load_docking_file(v2, alpha):
-    docking_dir = "docking2" if v2 else "docking"
-    with open("datasets/" + docking_dir + f"/docking_{alpha}.txt") as f:
-        lines = f.read().splitlines()
+    d=np.load(args_to_file(v2, alpha))
     src_ec_to_vec = dict()
-    for line in lines:
-        src, ec, v_str = line.split(",")
-        key = (src, ec)
-        v = [float(x) for x in v_str.split()]
-        src_ec_to_vec[key] = np.array(v)
+    for key in d.keys():
+        key=key.split("|")
+        src_ec_to_vec[(key[0], key[1])]=d[key]
     return src_ec_to_vec
 
 
@@ -62,6 +58,4 @@ if __name__ == "__main__":
         if w is not None:
             src_ec_to_vec[key] = w
 
-
-
-    np.savez(args_to_file(args.v2, args.alpha).replace(".txt", "npz"), **src_ec_to_vec)
+    np.savez(args_to_file(args.v2, args.alpha), **src_ec_to_vec)

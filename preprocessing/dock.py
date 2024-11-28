@@ -176,21 +176,8 @@ class Docker:
 
 
 if __name__ == "__main__":
-    with open("datasets/docking/smiles_to_id.txt") as f:
-        smiles_to_id = {x.split()[0]: int(x.split()[1]) for x in f.readlines()}
-    ec_mapping = pd.read_csv("datasets/ec_map.csv")
-    ec_to_uniprot = defaultdict(str)
-    for i, row in ec_mapping.iterrows():
-        ec_to_uniprot[row["EC_full"]] = row["Uniprot_id"]
-
+    docker = Docker(0.5, 1)
     with open("datasets/ecreact/level4/src-train.txt") as f:
-        lines = f.read().splitlines()
-    for reaction_src_smiles in lines:
-        non_can_smiles, ec = reaction_src_smiles.split("|")
-        ec = ec_tokens_to_seq(ec)
-        ec = ec[4:-1]
-
-        reaction_attention_emd = get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha=0.5,v2=True)
-        if reaction_attention_emd is not None:
-            print(reaction_attention_emd)
-            print(reaction_attention_emd.shape)
+        src_lines = f.read().splitlines()
+    for text in src_lines[:10]:
+        docker.dock_src_line(text)
