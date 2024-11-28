@@ -11,14 +11,6 @@ def args_to_file(v2, alpha):
     return "datasets/" + docking_dir + f"/docking_{alpha}.npz"
 
 
-def load_docking_file(v2, alpha):
-    d=np.load(args_to_file(v2, alpha))
-    src_ec_to_vec = dict()
-    for key in d.keys():
-        key=key.split("|")
-        src_ec_to_vec[(key[0], key[1])]=d[key]
-    return src_ec_to_vec
-
 
 if __name__ == "__main__":
 

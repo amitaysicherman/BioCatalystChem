@@ -10,6 +10,7 @@ from preprocessing.build_tokenizer import ec_tokens_to_seq
 import glob
 import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
+from preprocessing.build_tokenizer import redo_ec_split
 
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
@@ -153,9 +154,18 @@ def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, 
         return np.array(weights).mean(axis=0)
     return np.array(embds).mean(axis=0)
 
+def args_to_file(v2, alpha):
+    docking_dir = "docking2" if v2 else "docking"
+    return "datasets/" + docking_dir + f"/docking_{alpha}.npz"
 
-from preprocessing.save_all_docks import load_docking_file
-from preprocessing.build_tokenizer import redo_ec_split
+def load_docking_file(v2, alpha):
+    d=np.load(args_to_file(v2, alpha))
+    src_ec_to_vec = dict()
+    for key in d.keys():
+        key=key.split("|")
+        src_ec_to_vec[(key[0], key[1])]=d[key]
+    return src_ec_to_vec
+
 
 
 class Docker:
