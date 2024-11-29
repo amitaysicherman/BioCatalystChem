@@ -130,7 +130,12 @@ def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id):
                 weights.append(w)
     if len(weights) == 0:
         return None
-    return np.array(weights).mean(axis=0)
+    weights = np.array(weights).mean(axis=0)
+    # add 0,0 in the beginning and end for cls and eos tokens
+    print(weights.shape)
+    weights = np.concatenate([[0], weights, [0]])
+    print(weights.shape)
+    return weights
 
 
 def args_to_file(v2):
@@ -138,8 +143,8 @@ def args_to_file(v2):
     return "datasets/" + docking_dir + f"/docking.npz"
 
 
-def load_docking_file(v2, alpha):
-    d = np.load(args_to_file(v2, alpha))
+def load_docking_file(v2):
+    d = np.load(args_to_file(v2))
     src_ec_to_vec = dict()
     for key in d.keys():
         src, ec = key.split("|")
@@ -148,10 +153,8 @@ def load_docking_file(v2, alpha):
 
 
 class Docker:
-    def __init__(self, alpha, v2):
-        self.alpha = alpha
-        self.v2 = v2
-        self.docker = load_docking_file(v2, alpha)
+    def __init__(self, v2=1):
+        self.docker = load_docking_file(v2)
 
     def dock_src_ec(self, src, ec):
         key = (src, ec)
@@ -165,7 +168,7 @@ class Docker:
 
 
 if __name__ == "__main__":
-    docker = Docker(0.5, 1)
+    docker = Docker(1)
     with open("datasets/ecreact/level4/src-train.txt") as f:
         src_lines = f.read().splitlines()
     for text in src_lines[:10]:

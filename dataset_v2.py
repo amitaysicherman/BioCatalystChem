@@ -64,6 +64,7 @@ class SeqToSeqDataset(Dataset):
             files_pathed = [f"datasets/docking/{uniprot_id}/protein.npy" for uniprot_id in uniprot_ids]
             emb_lines = [np.load(f) if os.path.exists(f) else None for f in files_pathed]
 
+
         if self.ec_type == ECType.PRETRAINED:
             emb_lines = [self.ec_to_vec.ec_to_vec_mem.get(ec, None) for ec in tqdm(ec_lines)]
         else:
