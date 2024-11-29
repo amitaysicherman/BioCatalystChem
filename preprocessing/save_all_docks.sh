@@ -5,11 +5,8 @@
 #SBATCH -c 8
 #SBATCH --array=1-6
 
-configs=" --alpha 10 --v2 0|\
-  --alpha 10 --v2 1|\
-  --alpha 50 --v2 0|\
+configs="--alpha 10 --v2 1|\
   --alpha 50 --v2 1|\
-  --alpha 90 --v2 0|\
   --alpha 90 --v2 1"
 
 IFS='|' read -ra config_array <<< "$configs"
