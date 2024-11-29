@@ -3,7 +3,7 @@
 #SBATCH --mem=128G
 #SBATCH --requeue
 #SBATCH -c 8
-#SBATCH --array=1-6
+#SBATCH --array=1-3
 
 configs="--alpha 10 --v2 1|\
   --alpha 50 --v2 1|\
