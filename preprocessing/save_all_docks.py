@@ -6,9 +6,9 @@ from preprocessing.dock import get_reaction_attention_emd
 from preprocessing.build_tokenizer import redo_ec_split
 
 
-def args_to_file(v2, alpha):
+def args_to_file(v2):
     docking_dir = "docking2" if v2 else "docking"
-    return "datasets/" + docking_dir + f"/docking_{alpha}.npz"
+    return "datasets/" + docking_dir + f"/docking.npz"
 
 
 if __name__ == "__main__":
@@ -48,4 +48,4 @@ if __name__ == "__main__":
         if w is not None:
             src_ec_to_vec[key] = w
 
-    np.savez(args_to_file(args.v2, args.alpha), **src_ec_to_vec)
+    np.savez(args_to_file(args.v2), **src_ec_to_vec)

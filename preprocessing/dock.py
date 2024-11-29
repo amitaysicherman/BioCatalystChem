@@ -133,9 +133,9 @@ def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id):
     return np.array(weights).mean(axis=0)
 
 
-def args_to_file(v2, alpha):
+def args_to_file(v2):
     docking_dir = "docking2" if v2 else "docking"
-    return "datasets/" + docking_dir + f"/docking_{alpha}.npz"
+    return "datasets/" + docking_dir + f"/docking.npz"
 
 
 def load_docking_file(v2, alpha):
