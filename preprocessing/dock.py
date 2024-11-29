@@ -72,65 +72,41 @@ def calculate_dsw(distances, vdw_products=1.7, clip_value=1.91):
     return (1 / distances) * (2 * np.power(vdw_products / distances, 12) - np.power(vdw_products / distances, 6))
 
 
-def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False, return_weights=False, exp=True):
+def get_protein_mol_att(protein_id, molecule_id):
     protein_file = f'datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb'
     protein_seq, protein_cords = get_protein_cords(protein_file)
     protein_cords = np.array(protein_cords)
-    if v2:
-        ligand_dir = f'datasets/docking2/{protein_id}/{molecule_id}/complex_0/'
-        sdf_files = glob.glob(f"{ligand_dir}*.sdf")
+    ligand_dir = f'datasets/docking2/{protein_id}/{molecule_id}/complex_0/'
+    sdf_files = glob.glob(f"{ligand_dir}*.sdf")
 
-        all_weights = []  # Store coordinates from all .sdf files
-        for sdf_file in sdf_files:
-            lig_coords = get_mol_cords(sdf_file)
-            if len(lig_coords) > 0:
-                dist = euclidean_distances(protein_cords, lig_coords)
-                weights = calculate_dsw(dist)
-                # if exp:
-                #     weights = np.exp(-dist) + EPSILON
-                # else:
-                #     weights = 1 / (dist + EPSILON)
-                # weights = weights / weights.sum(axis=0)
-                weights = weights.sum(axis=1)
-                weights = weights / weights.sum()
-                all_weights.append(weights)
-        if not all_weights:
-            return None  # If no coordinates were found, return None
-        weights = np.array(all_weights).mean(axis=0)
-
-    else:
-        ligand_file = f'datasets/docking/{protein_id}/{molecule_id}/complex_0/rank1.sdf'
-        lig_coords = get_mol_cords(ligand_file)
-        ligand_locs = np.array(lig_coords)
-        if len(ligand_locs) == 0:
-            return None
-        dist = euclidean_distances(protein_cords, ligand_locs)
-        # weights = np.exp(-dist) + EPSILON
-        # weights = weights / weights.sum(axis=0)
-        weights = calculate_dsw(dist)
-        weights = weights.sum(axis=1)
-        weights = weights / weights.sum()
-
-    weights = weights * alpha + (1 - alpha) / len(weights)
-
-    protein_emd_file = f'datasets/docking/{protein_id}/protein.npy'
-    emb = np.load(protein_emd_file)[1:-1]  # remove cls and eos tokens
-    if len(emb) != len(weights):
-        print(f"Length mismatch: {len(emb)} vs {len(weights)}")
-        return None
-    docking_attention_emd = np.average(emb, axis=0, weights=weights)
-    if return_weights:
-        return docking_attention_emd, weights
-    return docking_attention_emd
+    all_weights = []  # Store coordinates from all .sdf files
+    for sdf_file in sdf_files:
+        lig_coords = get_mol_cords(sdf_file)
+        if len(lig_coords) > 0:
+            dist = euclidean_distances(protein_cords, lig_coords)
+            weights = calculate_dsw(dist)
+            weights = weights.sum(axis=1)
+            weights = weights / weights.sum()
+            all_weights.append(weights)
+    if not all_weights:
+        return None  # If no coordinates were found, return None
+    weights = np.array(all_weights).mean(axis=0)
+    return weights
+    # protein_emd_file = f'datasets/docking/{protein_id}/protein.npy'
+    # emb = np.load(protein_emd_file)[1:-1]  # remove cls and eos tokens
+    # if len(emb) != len(weights):
+    #     print(f"Length mismatch: {len(emb)} vs {len(weights)}")
+    #     return None
+    # docking_attention_emd = np.average(emb, axis=0, weights=weights)
+    # if return_weights:
+    #     return docking_attention_emd, weights
+    # return docking_attention_emd
 
 
-def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, alpha, v2, verbose=False, only_w=False):
+def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id):
     protein_id = ec_to_uniprot[ec]
     if not check_protein_exists(protein_id):
-        if verbose:
-            print(f"Protein {protein_id} does not exist")
         return None
-    embds = []
     weights = []
     non_can_smiles = non_can_smiles.replace(" ", "")
     for s in non_can_smiles.split("."):
@@ -147,19 +123,14 @@ def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id, 
                 continue
             molecule_id = smiles_to_id[s]
             try:
-                docking_attention_emd, w = get_protein_mol_att(protein_id, molecule_id, alpha, v2, return_weights=True)
+                w = get_protein_mol_att(protein_id, molecule_id)
             except:
                 continue
-            if docking_attention_emd is not None:
-                embds.append(docking_attention_emd)
+            if w is not None:
                 weights.append(w)
-    if len(embds) == 0:
-        if verbose:
-            print(f"Could not get embeddings for {non_can_smiles}")
+    if len(weights) == 0:
         return None
-    if only_w:
-        return np.array(weights).mean(axis=0)
-    return np.array(embds).mean(axis=0)
+    return np.array(weights).mean(axis=0)
 
 
 def args_to_file(v2, alpha):
@@ -171,8 +142,8 @@ def load_docking_file(v2, alpha):
     d = np.load(args_to_file(v2, alpha))
     src_ec_to_vec = dict()
     for key in d.keys():
-        src,ec = key.split("|")
-        src_ec_to_vec[(src,ec)] = d[key]
+        src, ec = key.split("|")
+        src_ec_to_vec[(src, ec)] = d[key]
     return src_ec_to_vec
 
 

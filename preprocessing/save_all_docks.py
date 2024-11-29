@@ -16,7 +16,6 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--alpha", type=int, default=50)
     parser.add_argument("--v2", type=int, default=1)
     args = parser.parse_args()
     args.alpha = float(args.alpha / 100)
@@ -45,7 +44,7 @@ if __name__ == "__main__":
         key = "|".join([src, ec])
         if key in src_ec_to_vec:
             continue
-        w = get_reaction_attention_emd(src, ec, ec_to_uniprot, smiles_to_id, alpha=args.alpha, v2=args.v2, only_w=True)
+        w = get_reaction_attention_emd(src, ec, ec_to_uniprot, smiles_to_id)
         if w is not None:
             src_ec_to_vec[key] = w
 

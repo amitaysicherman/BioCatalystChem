@@ -18,8 +18,7 @@ from typing import List
 
 class SeqToSeqDataset(Dataset):
     def __init__(self, datasets, split, tokenizer: PreTrainedTokenizerFast, add_emb, weights=None, max_length=200,
-                 DEBUG=False,
-                 sample_size=None, shuffle=True):
+                 DEBUG=False,sample_size=None, shuffle=True):
         self.max_length = max_length
         self.sample_size = sample_size
         self.tokenizer = tokenizer
@@ -27,7 +26,7 @@ class SeqToSeqDataset(Dataset):
         self.DEBUG = DEBUG
         self.samples_ids = []
 
-        # self.ec_to_vec = Docker(alpha, daev2)
+        self.ec_to_vec = Docker()
         # with open("datasets/docking/smiles_to_id.txt") as f:
         #     self.smiles_to_id = {x.split()[0]: int(x.split()[1]) for x in f.readlines()}
         ec_mapping = pd.read_csv("datasets/ec_map.csv")
