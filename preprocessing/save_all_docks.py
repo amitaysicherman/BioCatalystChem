@@ -11,7 +11,6 @@ def args_to_file(v2, alpha):
     return "datasets/" + docking_dir + f"/docking_{alpha}.npz"
 
 
-
 if __name__ == "__main__":
 
     import argparse
@@ -40,7 +39,7 @@ if __name__ == "__main__":
         src_lines += f.read().splitlines()
 
     src_ec_to_vec = dict()
-    for text in tqdm(src_lines[:10]):
+    for text in tqdm(src_lines):
         src, ec = redo_ec_split(text, True)
 
         key = "|".join([src, ec])
