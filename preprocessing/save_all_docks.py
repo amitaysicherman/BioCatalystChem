@@ -18,7 +18,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--v2", type=int, default=1)
     args = parser.parse_args()
-    args.alpha = float(args.alpha / 100)
 
     with open("datasets/docking/smiles_to_id.txt") as f:
         smiles_to_id = {x.split()[0]: int(x.split()[1]) for x in f.readlines()}
