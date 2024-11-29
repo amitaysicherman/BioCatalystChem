@@ -132,9 +132,7 @@ def get_reaction_attention_emd(non_can_smiles, ec, ec_to_uniprot, smiles_to_id):
         return None
     weights = np.array(weights).mean(axis=0)
     # add 0,0 in the beginning and end for cls and eos tokens
-    print(weights.shape)
     weights = np.concatenate([[0], weights, [0]])
-    print(weights.shape)
     return weights
 
 
