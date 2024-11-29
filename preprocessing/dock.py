@@ -67,6 +67,11 @@ def check_protein_exists(protein_id):
     return os.path.exists(protein_file) and os.path.exists(protein_emd_file)
 
 
+def calculate_dsw(distances, vdw_products=1.7, clip_value=1.91):
+    distances = np.clip(distances, clip_value, None)
+    return (1 / distances) * (2 * np.power(vdw_products / distances, 12) - np.power(vdw_products / distances, 6))
+
+
 def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False, return_weights=False, exp=True):
     protein_file = f'datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb'
     protein_seq, protein_cords = get_protein_cords(protein_file)
@@ -80,11 +85,12 @@ def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False, return_weights
             lig_coords = get_mol_cords(sdf_file)
             if len(lig_coords) > 0:
                 dist = euclidean_distances(protein_cords, lig_coords)
-                if exp:
-                    weights = np.exp(-dist) + EPSILON
-                else:
-                    weights = 1 / (dist + EPSILON)
-                weights = weights / weights.sum(axis=0)
+                weights = calculate_dsw(dist)
+                # if exp:
+                #     weights = np.exp(-dist) + EPSILON
+                # else:
+                #     weights = 1 / (dist + EPSILON)
+                # weights = weights / weights.sum(axis=0)
                 weights = weights.sum(axis=1)
                 weights = weights / weights.sum()
                 all_weights.append(weights)
@@ -99,8 +105,9 @@ def get_protein_mol_att(protein_id, molecule_id, alpha, v2=False, return_weights
         if len(ligand_locs) == 0:
             return None
         dist = euclidean_distances(protein_cords, ligand_locs)
-        weights = np.exp(-dist) + EPSILON
-        weights = weights / weights.sum(axis=0)
+        # weights = np.exp(-dist) + EPSILON
+        # weights = weights / weights.sum(axis=0)
+        weights = calculate_dsw(dist)
         weights = weights.sum(axis=1)
         weights = weights / weights.sum()
 
