@@ -12,19 +12,6 @@ class DaaType(Enum):
     MEAN = 2
     ALL = 3
 
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from enum import Enum
-
-
-class DaaType(Enum):
-    ALL = "all"
-    MEAN = "mean"
-    DOCKING = "docking"
-
-
 class DockingAwareAttention(nn.Module):
     def __init__(self, input_dim, output_dim, num_heads, daa_type=DaaType.ALL):
         super(DockingAwareAttention, self).__init__()
