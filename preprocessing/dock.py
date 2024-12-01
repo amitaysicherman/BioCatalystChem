@@ -1,17 +1,13 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 from sklearn.metrics.pairwise import euclidean_distances
 import re
 from rdkit import Chem
-from collections import defaultdict
-import pandas as pd
-from preprocessing.build_tokenizer import ec_tokens_to_seq
 import glob
 import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
 from preprocessing.build_tokenizer import redo_ec_split
-
+from tqdm import tqdm
 logger = rkl.logger()
 logger.setLevel(rkl.ERROR)
 rkrb.DisableLog("rdApp.error")
@@ -142,9 +138,11 @@ def args_to_file(v2):
 
 
 def load_docking_file(v2):
+    print("Loading docking file")
     d = np.load(args_to_file(v2))
     src_ec_to_vec = dict()
-    for key in d.keys():
+
+    for key in tqdm(d.keys()):
         src, ec = key.split("|")
         src_ec_to_vec[(src, ec)] = d[key]
     return src_ec_to_vec
