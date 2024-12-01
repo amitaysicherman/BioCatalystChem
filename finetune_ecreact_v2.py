@@ -233,20 +233,18 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ec_type", default=1, type=int)
-    parser.add_argument("--daa_type", default=0, type=int)
-    parser.add_argument("--lookup_len", default=5, type=int)
+    parser.add_argument("--ec_type", default=3, type=int)
+    parser.add_argument("--daa_type", default=3, type=int)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--batch_size_factor", type=int, default=2)
     parser.add_argument("--learning_rate", type=float, default=0.001)
     parser.add_argument("--max_length", type=int, default=200)
     args = parser.parse_args()
     ec_type = ECType(args.ec_type)
-    lookup_len = args.lookup_len
     batch_size = args.batch_size
     batch_size_factor = args.batch_size_factor
     learning_rate = args.learning_rate
     max_length = args.max_length
     daa_type = args.daa_type
-    main(ec_type=ec_type, lookup_len=lookup_len, daa_type=daa_type, batch_size=batch_size,
+    main(ec_type=ec_type, daa_type=daa_type, batch_size=batch_size,
          batch_size_factor=batch_size_factor, learning_rate=learning_rate, max_length=max_length)
