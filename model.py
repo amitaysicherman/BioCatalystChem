@@ -86,7 +86,7 @@ class DockingAwareAttention(nn.Module):
         attn_weights = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5)
         # Apply mask if provided
         if mask is not None:
-            attn_mask = mask.unsqueeze(1).unsqueeze(2)  # (batch_size, 1, 1, seq_len)
+            attn_mask = mask.bool().unsqueeze(1).unsqueeze(2)  # (batch_size, 1, 1, seq_len)
             attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))
 
         # Softmax attention weights
