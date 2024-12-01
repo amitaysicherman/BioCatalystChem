@@ -13,6 +13,18 @@ class DaaType(Enum):
     ALL = 3
 
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from enum import Enum
+
+
+class DaaType(Enum):
+    ALL = "all"
+    MEAN = "mean"
+    DOCKING = "docking"
+
+
 class DockingAwareAttention(nn.Module):
     def __init__(self, input_dim, output_dim, num_heads, daa_type=DaaType.ALL):
         super(DockingAwareAttention, self).__init__()
@@ -20,7 +32,10 @@ class DockingAwareAttention(nn.Module):
         self.output_dim = output_dim
         self.num_heads = num_heads
         self.head_dim = input_dim // num_heads
-        assert input_dim % num_heads == 0, "d_model must be divisible by num_heads"
+        self.daa_type = daa_type
+
+        # Ensure input dimension is divisible by number of heads
+        assert input_dim % num_heads == 0, "input_dim must be divisible by num_heads"
 
         # Linear layers for Q, K, V
         self.q_proj = nn.Linear(input_dim, input_dim)
@@ -30,59 +45,77 @@ class DockingAwareAttention(nn.Module):
         # Output projection
         self.out_proj = nn.Linear(input_dim, output_dim)
 
-        self.daa_type = daa_type
-
-        # Learnable parameter alpha
-        self.alpha = nn.Parameter(torch.tensor(0.5))
-        self.beta = nn.Parameter(torch.tensor(0.5))
+        # Learnable parameters with more stable initialization
+        self.alpha = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
+        self.beta = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
 
     def forward(self, x, docking_scores, mask=None):
         """
         Args:
-            x: Tensor of shape (batch_size, seq_len, d_model)
-            docking_scores: Tensor of shape (batch_size, seq_len) (scalar per token)
-            mask: Optional tensor for masking (batch_size, 1, 1, seq_len)
+            x: Tensor of shape (batch_size, seq_len, input_dim)
+            docking_scores: Tensor of shape (batch_size, seq_len)
+            mask: Optional tensor for masking (batch_size, seq_len)
         Returns:
-            Tensor of shape (batch_size, seq_len, d_model)
+            Tensor of shape (batch_size, seq_len, output_dim)
         """
         batch_size, seq_len, _ = x.size()
-        x_mean = x.mean(dim=1).unsqueeze(1)  # (batch_size, 1, d_model)
+
+        # Compute mean representation
+        x_mean = x.mean(dim=1).unsqueeze(1)  # (batch_size, 1, input_dim)
+
+        # Handle different DAA types
         if self.daa_type == DaaType.MEAN:
             return x_mean
 
-        docking_scores = docking_scores.unsqueeze(1).unsqueeze(2)
-        if mask is not None:
-            docking_scores = docking_scores.masked_fill(mask == 0, 0)
+        # Prepare docking scores
+        docking_scores = docking_scores.unsqueeze(-1)  # (batch_size, seq_len, 1)
 
+        # Handle mask if provided
+        if mask is not None:
+            # Ensure mask is boolean and broadcast correctly
+            d_mask = mask.bool().unsqueeze(-1) # (batch_size, seq_len, 1)
+            docking_scores = docking_scores.masked_fill(~d_mask, 0)
+
+        # Docking type specific processing
         if self.daa_type == DaaType.DOCKING:
-            docking_x = docking_scores * x  # (batch_size, seq_len, d_model)
-            docking_x = docking_x.sum(dim=1).unsqueeze(1)  # (batch_size, 1, d_model)
+            # x : (batch_size, seq_len, input_dim)
+            # docking_scores : (batch_size, seq_len, 1)
+            docking_x = (docking_scores * x).sum(dim=1) # (batch_size, input_dim)
+            docking_x = docking_x.unsqueeze(1)  # (batch_size, 1, input_dim)
             return docking_x * self.alpha + x_mean * (1 - self.alpha)
 
+        # Multi-head attention processing for ALL type
         # Project inputs to Q, K, V
-        Q = self.q_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1,
-                                                                                              2)  # (batch_size, num_heads, seq_len, head_dim)
+        Q = self.q_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         K = self.k_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         V = self.v_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
 
         # Compute scaled dot-product attention
-        attn_weights = torch.matmul(Q, K.transpose(-2, -1)) / (
-                self.head_dim ** 0.5)  # (batch_size, num_heads, seq_len, seq_len)
+        attn_weights = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5) # (batch_size, num_heads, seq_len, seq_len)
 
+        # Apply mask if provided
         if mask is not None:
-            attn_mask = mask.unsqueeze(1).unsqueeze(2) # (batch_size, 1, 1, seq_len)
-            attn_weights = attn_weights.masked_fill(attn_mask == 0, float('-inf'))
-        attn_weights = F.softmax(attn_weights, dim=-1)  # (batch_size, num_heads, seq_len, seq_len)
+            attn_mask = mask.unsqueeze(1).unsqueeze(2)  # (batch_size, 1, 1, seq_len)
+            attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))
 
+        # Softmax attention weights
+        attn_weights = F.softmax(attn_weights, dim=-1)
+
+        # Incorporate docking scores
         if self.daa_type != DaaType.ALL:
-            docking_scores = docking_scores.expand(-1, self.num_heads, -1, -1)
-            attn_weights = (1 - self.beta) * attn_weights + self.beta * docking_scores
+            # Properly broadcast docking scores
+            docking_scores_expanded = docking_scores.view(batch_size, 1, seq_len, 1).expand(
+                -1, self.num_heads, -1, -1
+            )
+            attn_weights = (1 - self.beta) * attn_weights + self.beta * docking_scores_expanded
 
+        # Compute context
         context = torch.matmul(attn_weights, V)  # (batch_size, num_heads, seq_len, head_dim)
-        context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.input_dim)
+
+        # Final projection
         output = self.out_proj(context)
         return output
-
 
 def get_layers(dims, dropout=0.0):
     layers = torch.nn.Sequential()
