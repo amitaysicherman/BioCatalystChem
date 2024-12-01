@@ -11,7 +11,8 @@ import random
 from tqdm import tqdm
 import os
 
-emb_scores_zero = np.zeros((1,2560))
+emb_zero = np.zeros((1,2560))
+scores_zero = np.zeros(2560)
 
 
 def to_torch_float(x):
@@ -71,8 +72,8 @@ class SeqToSeqDataset(Dataset):
                             tqdm(range(len(src_lines)))]
 
         else:
-            emb_lines = [emb_scores_zero] * len(src_lines)
-            scores_lines = [emb_scores_zero] * len(src_lines)
+            emb_lines = [emb_zero] * len(src_lines)
+            scores_lines = [scores_zero] * len(src_lines)
 
         data = []
         for i in tqdm(range(len(src_lines))):
