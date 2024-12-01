@@ -68,7 +68,7 @@ class DockingAwareAttention(nn.Module):
         if self.daa_type == DaaType.DOCKING:
             docking_x = (docking_scores * x).sum(dim=1)  # (batch_size, input_dim)
             docking_x = docking_x.unsqueeze(1)  # (batch_size, 1, input_dim)
-            return self.out_proj(docking_x * self.alpha + x_mean * (1 - self.alpha))
+            return self.out_proj(docking_x * self.alpha + x_mean)
 
         # Multi-head attention processing for ALL type
         # Project inputs to Q, K, V
@@ -91,7 +91,7 @@ class DockingAwareAttention(nn.Module):
             docking_scores_expanded = docking_scores.view(batch_size, 1, seq_len, 1).expand(
                 -1, self.num_heads, -1, -1
             )
-            attn_weights = (1 - self.beta) * attn_weights + self.beta * docking_scores_expanded
+            attn_weights = self.beta * attn_weights + docking_scores_expanded
 
         # Compute context
         context = torch.matmul(attn_weights, V)  # (batch_size, num_heads, seq_len, head_dim)
