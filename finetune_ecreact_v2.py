@@ -127,9 +127,9 @@ def load_pretrained_model():
     return trainer_state["best_model_checkpoint"]
 
 
-def get_tokenizer_and_model(ec_type, daa_type):
+def get_tokenizer_and_model(ec_type, daa_type, add_ec):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
-    if ec_type == ECType.PAPER:
+    if ec_type == ECType.PAPER or add_ec:
         new_tokens = get_ec_tokens()
         tokenizer.add_tokens(new_tokens)
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
@@ -169,8 +169,8 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
         return batch
 
 
-def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_length):
-    tokenizer, model = get_tokenizer_and_model(ec_type, daa_type=daa_type)
+def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_length, add_ec):
+    tokenizer, model = get_tokenizer_and_model(ec_type, daa_type=daa_type, add_ec=add_ec)
     ecreact_dataset = "ecreact/level4"
     if ec_type == ECType.PAPER or ec_type == ECType.NO_EC:
         add_emb = False
@@ -239,6 +239,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size_factor", type=int, default=2)
     parser.add_argument("--learning_rate", type=float, default=0.001)
     parser.add_argument("--max_length", type=int, default=200)
+    parser.add_argument("--add_ec", type=int, default=0)
     args = parser.parse_args()
     ec_type = ECType(args.ec_type)
     batch_size = args.batch_size
@@ -246,5 +247,6 @@ if __name__ == '__main__':
     learning_rate = args.learning_rate
     max_length = args.max_length
     daa_type = args.daa_type
+    add_ec = args.add_ec
     main(ec_type=ec_type, daa_type=daa_type, batch_size=batch_size,
-         batch_size_factor=batch_size_factor, learning_rate=learning_rate, max_length=max_length)
+         batch_size_factor=batch_size_factor, learning_rate=learning_rate, max_length=max_length, add_ec=add_ec)
