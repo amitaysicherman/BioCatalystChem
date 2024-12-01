@@ -3,12 +3,19 @@ from transformers import T5ForConditionalGeneration, T5Config, GenerationConfig
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from enum import Enum
+
+
+class DaaType(Enum):
+    ATTENTION = 0
+    DOCKING = 1
+    MEAN = 2
+    ALL = 3
 
 
 class DockingAwareAttention(nn.Module):
-    def __init__(self, d_model, num_heads, only_attention=False):
+    def __init__(self, d_model, num_heads, daa_type=DaaType.ALL):
         super(DockingAwareAttention, self).__init__()
-        self.only_attention = only_attention
         self.d_model = d_model
         self.num_heads = num_heads
         self.head_dim = d_model // num_heads
@@ -22,8 +29,11 @@ class DockingAwareAttention(nn.Module):
         # Output projection
         self.out_proj = nn.Linear(d_model, d_model)
 
+        self.daa_type = daa_type
+
         # Learnable parameter alpha
         self.alpha = nn.Parameter(torch.tensor(0.5))
+        self.beta = nn.Parameter(torch.tensor(0.5))
 
     def forward(self, x, docking_scores, mask=None):
         """
@@ -35,6 +45,18 @@ class DockingAwareAttention(nn.Module):
             Tensor of shape (batch_size, seq_len, d_model)
         """
         batch_size, seq_len, _ = x.size()
+        x_mean = x.mean(dim=1).unsqueeze(1)  # (batch_size, 1, d_model)
+        if self.daa_type == DaaType.MEAN:
+            return x_mean
+
+        docking_scores = docking_scores.unsqueeze(1).unsqueeze(2)
+        if mask is not None:
+            docking_scores = docking_scores.masked_fill(mask == 0, 0)
+
+        if self.daa_type == DaaType.DOCKING:
+            docking_x = docking_scores * x  # (batch_size, seq_len, d_model)
+            docking_x = docking_x.sum(dim=1).unsqueeze(1)  # (batch_size, 1, d_model)
+            return docking_x * self.alpha + x_mean * (1 - self.alpha)
 
         # Project inputs to Q, K, V
         Q = self.q_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1,
@@ -43,23 +65,18 @@ class DockingAwareAttention(nn.Module):
         V = self.v_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
 
         # Compute scaled dot-product attention
-        scores = torch.matmul(Q, K.transpose(-2, -1)) / (
+        attn_weights = torch.matmul(Q, K.transpose(-2, -1)) / (
                 self.head_dim ** 0.5)  # (batch_size, num_heads, seq_len, seq_len)
 
         if mask is not None:
-            scores = scores.masked_fill(mask == 0, float('-inf'))
-        attn_weights = F.softmax(scores, dim=-1)  # (batch_size, num_heads, seq_len, seq_len)
+            attn_weights = attn_weights.masked_fill(mask == 0, float('-inf'))
+        attn_weights = F.softmax(attn_weights, dim=-1)  # (batch_size, num_heads, seq_len, seq_len)
 
-        if not self.only_attention:
-            docking_scores = docking_scores.unsqueeze(1).unsqueeze(2)  # (batch_size, 1, 1, seq_len)
-            if mask is not None:
-                docking_scores = docking_scores.masked_fill(mask == 0, 0)
-            attn_weights = (1 - self.alpha) * attn_weights + self.alpha * docking_scores
+        if self.daa_type != DaaType.ALL:
+            attn_weights = (1 - self.beta) * attn_weights + self.beta * docking_scores
 
         context = torch.matmul(attn_weights, V)  # (batch_size, num_heads, seq_len, head_dim)
         context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
-
-        # Final output projection
         output = self.out_proj(context)
         return output
 
@@ -76,32 +93,18 @@ def get_layers(dims, dropout=0.0):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, lookup_len, daa_type=0, prot_dim=2560):
+    def __init__(self, config: T5Config, lookup_len, daa_type, prot_dim=2560):
 
         super(CustomT5Model, self).__init__(config)
-        self.daa_type = daa_type
+        self.daa_type = DaaType(daa_type)
         layers_dims = [prot_dim] + [config.d_model] * lookup_len
         self.lookup_proj = get_layers(layers_dims, dropout=config.dropout_rate)
-        if daa_type != 0:
-            self.docking_attention = DockingAwareAttention(config.d_model, config.num_heads,
-                                                           only_attention=daa_type == 2)
+        self.docking_attention = DockingAwareAttention(config.d_model, config.num_heads, daa_type)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb, emb_mask, docking_scores):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)
         batch_size, seq_length, emb_dim = input_embeddings.shape
-
-        # Project the embedding
-        # emb dim : (batch_size, seq_len, prot_dim)
-        # docking_scores dim : (batch_size, seq_len)
-        if self.daa_type == 0:
-            # regular mean pooling
-            emb = emb.mean(dim=1)  # Shape: (batch_size, embedding_dim)
-        elif self.daa_type == 1:
-            # use the docking scores to weight the embeddings
-            docking_scores = docking_scores.unsqueeze(-1)  # Shape: (batch_size, seq_len, 1)
-            emb = (emb[1:-1] * docking_scores).sum(dim=1)
-        else:  # 2 for only attention, 3 for both
-            emb = self.docking_attention(emb, docking_scores, mask=emb_mask)[:, 0]  # CLS token
+        emb = self.docking_attention(emb, docking_scores, mask=emb_mask)[:, 0]  # CLS token
 
         emb_projection = self.lookup_proj(emb)  # Shape: (batch_size, 1, embedding_dim)
         if emb_projection.ndim == 2:
