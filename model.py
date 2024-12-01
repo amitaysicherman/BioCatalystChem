@@ -115,10 +115,19 @@ class DockingAwareAttention(nn.Module):
 
     def forward(self, x, docking_scores, mask=None):
         res = self._forward(x, docking_scores, mask)
+        print(res.shape)
         res = res[:, 0]
+        print(res.shape)
+
         res = res.unsqueeze(1)
+        print(res.shape)
+
         res = self.out_proj(res)
+        print(res.shape)
+
         res = self.replace_empty_emb(res, docking_scores)
+        print(res.shape)
+
         return res
 
 
