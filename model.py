@@ -53,7 +53,7 @@ class DockingAwareAttention(nn.Module):
 
         # Handle different DAA types
         if self.daa_type == DaaType.MEAN:
-            return x_mean
+            return self.out_proj(x_mean)
 
         # Prepare docking scores
         docking_scores = docking_scores.unsqueeze(-1)  # (batch_size, seq_len, 1)
@@ -68,7 +68,7 @@ class DockingAwareAttention(nn.Module):
         if self.daa_type == DaaType.DOCKING:
             docking_x = (docking_scores * x).sum(dim=1)  # (batch_size, input_dim)
             docking_x = docking_x.unsqueeze(1)  # (batch_size, 1, input_dim)
-            return docking_x * self.alpha + x_mean * (1 - self.alpha)
+            return self.out_proj(docking_x * self.alpha + x_mean * (1 - self.alpha))
 
         # Multi-head attention processing for ALL type
         # Project inputs to Q, K, V
@@ -97,9 +97,7 @@ class DockingAwareAttention(nn.Module):
         context = torch.matmul(attn_weights, V)  # (batch_size, num_heads, seq_len, head_dim)
         context = context.transpose(1, 2).reshape(batch_size, seq_len, self.input_dim)
 
-        # Final projection
-        output = self.out_proj(context)
-        return output
+        return self.out_proj(context)
 
 
 def get_layers(dims, dropout=0.0):
@@ -114,11 +112,11 @@ def get_layers(dims, dropout=0.0):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, lookup_len, daa_type, prot_dim=2560):
+    def __init__(self, config: T5Config, daa_type, prot_dim=2560):
 
         super(CustomT5Model, self).__init__(config)
         self.daa_type = DaaType(daa_type)
-        layers_dims = [prot_dim] + [config.d_model] * lookup_len
+        print(f"Using DAA type: {self.daa_type}")
         self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, daa_type)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb, emb_mask, docking_scores):
