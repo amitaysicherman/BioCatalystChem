@@ -106,10 +106,12 @@ class EvalGen(TrainerCallback):
         self.run_eval(state.epoch)
 
 
-def args_to_name(ec_type, daa_type):
+def args_to_name(ec_type, daa_type, add_ec):
     run_name = f"{ec_type.name}"
     if ec_type != ec_type.PAPER and ec_type != ec_type.NO_EC:
-        run_name += f"_{daa_type.name}"
+        run_name += f"_{daa_type}"
+    if add_ec:
+        run_name += "_ec"
     return run_name
 
 
@@ -182,7 +184,7 @@ def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_le
                                     add_emb=[add_emb, False])
     val_dataset = SeqToSeqDataset([ecreact_dataset], "valid", **common_ds_args, add_emb=[add_emb])
     test_dataset = SeqToSeqDataset([ecreact_dataset], "test", **common_ds_args, add_emb=[add_emb])
-    run_name = args_to_name(ec_type, daa_type)
+    run_name = args_to_name(ec_type, daa_type, add_ec)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
