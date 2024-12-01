@@ -37,13 +37,16 @@ class DockingAwareAttention(nn.Module):
         self.alpha = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         self.beta = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         # learn emmbeding for empty lines (1, input_dim)
-        self.empty_emb = nn.Parameter(torch.randn(1, input_dim))
+        self.empty_emb = nn.Parameter(torch.randn(1, 1, input_dim))
 
     def replace_empty_emb(self, x, docking_scores):
-        empty_mask = docking_scores.sum(dim=1) == 0
-        x[empty_mask] = self.empty_emb
-        return x
+        # X is the representation of (batch_size, seq, input_dim)
+        # docking_scores is the docking scores of (batch_size, seq)
 
+        empty_mask = docking_scores.sum(dim=1) == 0
+        empty_emb_expanded = self.empty_emb.expand(x.size(0), x.size(1), -1)  # Shape: (batch_size, seq, input_dim)
+        x = torch.where(empty_mask.unsqueeze(1).unsqueeze(2), empty_emb_expanded, x)
+        return x
     def forward(self, x, docking_scores, mask=None):
         """
         Args:
