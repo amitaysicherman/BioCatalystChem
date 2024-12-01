@@ -65,9 +65,9 @@ class SeqToSeqDataset(Dataset):
         if add_emb:
             uniprot_ids = [self.ec_to_uniprot[ec] if ec in self.ec_to_uniprot else None for ec in ec_lines]
             files_pathed = [f"datasets/docking/{uniprot_id}/protein.npy" for uniprot_id in uniprot_ids]
-            emb_lines = [np.load(f) if os.path.exists(f) else None for f in files_pathed]
+            emb_lines = [np.load(f) if os.path.exists(f) else None for f in tqdm(files_pathed)]
             scores_lines = [self.doker.dock_src_line(src_lines[i]) if emb_lines is not None else None for i in
-                            range(len(src_lines))]
+                            tqdm(range(len(src_lines)))]
         else:
             emb_lines = [emb_scores_zero] * len(src_lines)
             scores_lines = [emb_scores_zero] * len(src_lines)
