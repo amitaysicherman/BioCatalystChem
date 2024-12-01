@@ -12,7 +12,7 @@ from tqdm import tqdm
 import os
 
 emb_zero = np.zeros((1,2560))
-scores_zero = np.zeros(2560)
+scores_zero = np.zeros((1))
 
 
 def to_torch_float(x):
