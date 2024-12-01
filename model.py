@@ -37,17 +37,21 @@ class DockingAwareAttention(nn.Module):
         self.alpha = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         self.beta = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         # learn emmbeding for empty lines (1, input_dim)
-        self.empty_emb = nn.Parameter(torch.randn(1, 1, output_dim))
+        self.empty_emb = nn.Embedding(1, output_dim)
 
     def replace_empty_emb(self, x, docking_scores):
-        # X is the representation of (batch_size, seq, input_dim)
+        # X is the representation of (batch_size, 1, input_dim)
         # docking_scores is the docking scores of (batch_size, seq)
 
         empty_mask = docking_scores.sum(dim=1) == 0
-        empty_emb_expanded = self.empty_emb.expand(x.size(0), x.size(1), -1)  # Shape: (batch_size, seq, input_dim)
-        x = torch.where(empty_mask.unsqueeze(1).unsqueeze(2), empty_emb_expanded, x)
+
+        empty_emb = self.empty_emb(torch.tensor([0], device=x.device))
+        empty_emb = empty_emb.unsqueeze(0).unsqueeze(1)
+        empty_emb = empty_emb.expand(x.size(0), 1, -1)
+        x = torch.where(empty_mask.unsqueeze(1), empty_emb, x)
         return x
-    def forward(self, x, docking_scores, mask=None):
+
+    def _forward(self, x, docking_scores, mask=None):
         """
         Args:
             x: Tensor of shape (batch_size, seq_len, input_dim)
@@ -63,7 +67,7 @@ class DockingAwareAttention(nn.Module):
 
         # Handle different DAA types
         if self.daa_type == DaaType.MEAN:
-            return self.replace_empty_emb(self.out_proj(x_mean), docking_scores)
+            return x_mean
 
         # Prepare docking scores
         docking_scores = docking_scores.unsqueeze(-1)  # (batch_size, seq_len, 1)
@@ -78,7 +82,7 @@ class DockingAwareAttention(nn.Module):
         if self.daa_type == DaaType.DOCKING:
             docking_x = (docking_scores * x).sum(dim=1)  # (batch_size, input_dim)
             docking_x = docking_x.unsqueeze(1)  # (batch_size, 1, input_dim)
-            return self.replace_empty_emb(self.out_proj(docking_x * self.alpha + x_mean), docking_scores)
+            return docking_x * self.alpha + x_mean
 
         # Multi-head attention processing for ALL type
         # Project inputs to Q, K, V
@@ -107,7 +111,15 @@ class DockingAwareAttention(nn.Module):
         context = torch.matmul(attn_weights, V)  # (batch_size, num_heads, seq_len, head_dim)
         context = context.transpose(1, 2).reshape(batch_size, seq_len, self.input_dim)
 
-        return self.replace_empty_emb(self.out_proj(context), docking_scores)
+        return context
+
+    def forward(self, x, docking_scores, mask=None):
+        res = self._forward(x, docking_scores, mask)
+        res = res[:, 0]
+        res = res.unsqueeze(1)
+        res = self.out_proj(res)
+        res = self.replace_empty_emb(res, docking_scores)
+        return res
 
 
 def get_layers(dims, dropout=0.0):
