@@ -16,7 +16,6 @@ def encode_eos_pad(tokenizer, text, max_length, no_pad=False,remove_unk=False):
     if SPACIAL_TOKENS[UNK] in tokens:
         if remove_unk:
             tokens = [x for x in tokens if x != SPACIAL_TOKENS[UNK]]
-        print(f"UNK in tokens: {text}")
     tokens = tokens + [tokenizer.eos_token_id]
     if no_pad:
         if len(tokens) > max_length:

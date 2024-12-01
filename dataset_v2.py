@@ -80,7 +80,7 @@ class SeqToSeqDataset(Dataset):
             scores = to_torch_float(scores_lines[i])
             if input_id is None or label is None or emb is None or scores is None:
                 continue
-            data.append({"input_ids": input_id, "labels": label, "emb": emb, "scores": scores, "id": torch.tensor([i])})
+            data.append({"input_ids": input_id, "labels": label, "emb": emb, "docking_scores": scores, "id": torch.tensor([i])})
         print(f"Dataset {split} loaded, len: {len(data)} / {len(src_lines)}")
         return data
 
