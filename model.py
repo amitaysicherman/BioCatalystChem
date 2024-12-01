@@ -75,6 +75,7 @@ class DockingAwareAttention(nn.Module):
         attn_weights = F.softmax(attn_weights, dim=-1)  # (batch_size, num_heads, seq_len, seq_len)
 
         if self.daa_type != DaaType.ALL:
+            docking_scores = docking_scores.expand(-1, self.num_heads, -1, -1)
             attn_weights = (1 - self.beta) * attn_weights + self.beta * docking_scores
 
         context = torch.matmul(attn_weights, V)  # (batch_size, num_heads, seq_len, head_dim)
