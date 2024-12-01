@@ -116,7 +116,7 @@ class CustomT5Model(T5ForConditionalGeneration):
 
         super(CustomT5Model, self).__init__(config)
         self.daa_type = DaaType(daa_type)
-        print(f"Using DAA type: {self.daa_type}")
+        print(f"Using DAA type: {self.daa_type}",self.daa_type==DaaType.MEAN)
         self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, daa_type)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb, emb_mask, docking_scores):
