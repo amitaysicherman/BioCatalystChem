@@ -106,10 +106,10 @@ class EvalGen(TrainerCallback):
         self.run_eval(state.epoch)
 
 
-def args_to_name(ec_type, lookup_len, daa_type):
+def args_to_name(ec_type, daa_type):
     run_name = f"{ec_type.name}"
     if ec_type != ec_type.PAPER and ec_type != ec_type.NO_EC:
-        run_name += f"_{lookup_len}_{daa_type.name}"
+        run_name += f"_{daa_type.name}"
     return run_name
 
 
@@ -127,7 +127,7 @@ def load_pretrained_model():
     return trainer_state["best_model_checkpoint"]
 
 
-def get_tokenizer_and_model(ec_type, lookup_len, daa_type):
+def get_tokenizer_and_model(ec_type, daa_type):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if ec_type == ECType.PAPER:
         new_tokens = get_ec_tokens()
@@ -138,7 +138,7 @@ def get_tokenizer_and_model(ec_type, lookup_len, daa_type):
     if (ec_type == ECType.PAPER or ec_type == ec_type.NO_EC):
         model = T5ForConditionalGeneration(config)
     else:
-        model = CustomT5Model(config, lookup_len, daa_type)
+        model = CustomT5Model(config, daa_type)
     pretrained_file = load_pretrained_model()
     pretrained_model = T5ForConditionalGeneration.from_pretrained(pretrained_file)
 
@@ -169,8 +169,8 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
         return batch
 
 
-def main(ec_type, lookup_len, daa_type, batch_size, batch_size_factor, learning_rate, max_length):
-    tokenizer, model = get_tokenizer_and_model(ec_type, lookup_len, daa_type=daa_type)
+def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_length):
+    tokenizer, model = get_tokenizer_and_model(ec_type, daa_type=daa_type)
     ecreact_dataset = "ecreact/level4"
     if ec_type == ECType.PAPER or ec_type == ECType.NO_EC:
         add_emb = False
@@ -182,7 +182,7 @@ def main(ec_type, lookup_len, daa_type, batch_size, batch_size_factor, learning_
                                     add_emb=[add_emb, False])
     val_dataset = SeqToSeqDataset([ecreact_dataset], "valid", **common_ds_args, add_emb=[add_emb])
     test_dataset = SeqToSeqDataset([ecreact_dataset], "test", **common_ds_args, add_emb=[add_emb])
-    run_name = args_to_name(ec_type, lookup_len, daa_type)
+    run_name = args_to_name(ec_type, daa_type)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
