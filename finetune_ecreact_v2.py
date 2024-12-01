@@ -177,7 +177,7 @@ def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_le
     else:
         add_emb = True
 
-    common_ds_args = {"tokenizer": tokenizer, "ec_type": ec_type, "max_length": max_length}
+    common_ds_args = {"tokenizer": tokenizer, "max_length": max_length}
     train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[20, 1], **common_ds_args,
                                     add_emb=[add_emb, False])
     val_dataset = SeqToSeqDataset([ecreact_dataset], "valid", **common_ds_args, add_emb=[add_emb])
