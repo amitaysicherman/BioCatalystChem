@@ -11,7 +11,7 @@ import random
 from tqdm import tqdm
 import os
 
-emb_scores_zero = np.zeros(2560)
+emb_scores_zero = np.zeros((2560,1))
 
 
 def to_torch_float(x):

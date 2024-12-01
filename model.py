@@ -36,6 +36,13 @@ class DockingAwareAttention(nn.Module):
         # Learnable parameters with more stable initialization
         self.alpha = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         self.beta = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
+        # learn emmbeding for empty lines (1, input_dim)
+        self.empty_emb = nn.Parameter(torch.randn(1, input_dim))
+
+    def replace_empty_emb(self, x, docking_scores):
+        empty_mask = docking_scores.sum(dim=1) == 0
+        x[empty_mask] = self.empty_emb
+        return x
 
     def forward(self, x, docking_scores, mask=None):
         """
@@ -53,7 +60,7 @@ class DockingAwareAttention(nn.Module):
 
         # Handle different DAA types
         if self.daa_type == DaaType.MEAN:
-            return self.out_proj(x_mean)
+            return self.replace_empty_emb(self.out_proj(x_mean), docking_scores)
 
         # Prepare docking scores
         docking_scores = docking_scores.unsqueeze(-1)  # (batch_size, seq_len, 1)
@@ -68,7 +75,7 @@ class DockingAwareAttention(nn.Module):
         if self.daa_type == DaaType.DOCKING:
             docking_x = (docking_scores * x).sum(dim=1)  # (batch_size, input_dim)
             docking_x = docking_x.unsqueeze(1)  # (batch_size, 1, input_dim)
-            return self.out_proj(docking_x * self.alpha + x_mean)
+            return self.replace_empty_emb(self.out_proj(docking_x * self.alpha + x_mean), docking_scores)
 
         # Multi-head attention processing for ALL type
         # Project inputs to Q, K, V
@@ -97,7 +104,7 @@ class DockingAwareAttention(nn.Module):
         context = torch.matmul(attn_weights, V)  # (batch_size, num_heads, seq_len, head_dim)
         context = context.transpose(1, 2).reshape(batch_size, seq_len, self.input_dim)
 
-        return self.out_proj(context)
+        return self.replace_empty_emb(self.out_proj(context), docking_scores)
 
 
 def get_layers(dims, dropout=0.0):
