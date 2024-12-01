@@ -60,14 +60,16 @@ class SeqToSeqDataset(Dataset):
         if self.sample_size is not None:
             src_lines, tgt_lines = zip(*random.sample(list(zip(src_lines, tgt_lines)), self.sample_size))
 
-        ec_lines = [get_ec_from_seq(text) for text in src_lines]
 
         if add_emb:
+            ec_lines = [get_ec_from_seq(text) for text in src_lines]
+
             uniprot_ids = [self.ec_to_uniprot[ec] if ec in self.ec_to_uniprot else None for ec in ec_lines]
             files_pathed = [f"datasets/docking/{uniprot_id}/protein.npy" for uniprot_id in uniprot_ids]
             emb_lines = [np.load(f) if os.path.exists(f) else None for f in tqdm(files_pathed)]
             scores_lines = [self.doker.dock_src_line(src_lines[i]) if emb_lines is not None else None for i in
                             tqdm(range(len(src_lines)))]
+
         else:
             emb_lines = [emb_scores_zero] * len(src_lines)
             scores_lines = [emb_scores_zero] * len(src_lines)
