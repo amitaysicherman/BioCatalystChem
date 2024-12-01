@@ -45,13 +45,10 @@ class DockingAwareAttention(nn.Module):
 
         empty_mask = docking_scores.sum(dim=1) == 0  # (batch_size)
         empty_mask = empty_mask.unsqueeze(1)  # (batch_size, 1)
-        print(empty_mask.shape)
         # Generate the embedding for empty inputs
         empty_emb = self.empty_emb(torch.tensor([0], device=x.device))  # (1, input_dim)
         empty_emb = empty_emb.unsqueeze(0)  # (1, 1, input_dim)
         empty_emb = empty_emb.expand(x.size(0), 1, -1)  # (batch_size, 1, input_dim)
-        print(empty_emb.shape)
-        print(x.shape)
         # Use torch.where for conditional replacement
         x = torch.where(empty_mask.unsqueeze(-1), empty_emb, x)
         return x
@@ -120,19 +117,10 @@ class DockingAwareAttention(nn.Module):
 
     def forward(self, x, docking_scores, mask=None):
         res = self._forward(x, docking_scores, mask)
-        print(res.shape)
         res = res[:, 0]
-        print(res.shape)
-
         res = res.unsqueeze(1)
-        print(res.shape)
-
         res = self.out_proj(res)
-        print(res.shape)
-
         res = self.replace_empty_emb(res, docking_scores)
-        print(res.shape)
-
         return res
 
 

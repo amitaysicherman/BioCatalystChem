@@ -11,8 +11,8 @@ import random
 from tqdm import tqdm
 import os
 
-emb_zero = np.zeros((1,2560))
-scores_zero = np.zeros((1))
+emb_zero = np.zeros((1, 2560))
+scores_zero = np.zeros(1)
 
 
 def to_torch_float(x):
@@ -61,7 +61,6 @@ class SeqToSeqDataset(Dataset):
         if self.sample_size is not None:
             src_lines, tgt_lines = zip(*random.sample(list(zip(src_lines, tgt_lines)), self.sample_size))
 
-
         if add_emb:
             ec_lines = [get_ec_from_seq(text) for text in src_lines]
 
@@ -83,7 +82,8 @@ class SeqToSeqDataset(Dataset):
             scores = to_torch_float(scores_lines[i])
             if input_id is None or label is None or emb is None or scores is None:
                 continue
-            data.append({"input_ids": input_id, "labels": label, "emb": emb, "docking_scores": scores, "id": torch.tensor([i])})
+            data.append(
+                {"input_ids": input_id, "labels": label, "emb": emb, "docking_scores": scores, "id": torch.tensor([i])})
         print(f"Dataset {split} loaded, len: {len(data)} / {len(src_lines)}")
         return data
 
