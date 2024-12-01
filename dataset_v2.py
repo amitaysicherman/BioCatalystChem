@@ -60,7 +60,7 @@ class SeqToSeqDataset(Dataset):
         if self.sample_size is not None:
             src_lines, tgt_lines = zip(*random.sample(list(zip(src_lines, tgt_lines)), self.sample_size))
 
-        ec_lines = [get_ec_from_seq(text, True) for text in src_lines]
+        ec_lines = [get_ec_from_seq(text) for text in src_lines]
 
         if add_emb:
             uniprot_ids = [self.ec_to_uniprot[ec] if ec in self.ec_to_uniprot else None for ec in ec_lines]
@@ -80,7 +80,7 @@ class SeqToSeqDataset(Dataset):
             scores = to_torch_float(scores_lines[i])
             if input_id is None or label is None or emb is None or scores is None:
                 continue
-            data.append({"input_ids": input_id, "labels": label, "emb": emb, "scores": scores, "id": i})
+            data.append({"input_ids": input_id, "labels": label, "emb": emb, "scores": scores, "id": torch.tensor([i])})
         print(f"Dataset {split} loaded, len: {len(data)} / {len(src_lines)}")
         return data
 

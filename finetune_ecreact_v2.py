@@ -154,8 +154,10 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
         if "emb" not in features[0]:
             return super().__call__(features)
         emb = [f.pop("emb") for f in features]
+        scores = [f.pop("scores") for f in features]
         batch = super().__call__(features)
         batch["emb"] = torch.stack(emb)  # Stack the 'emb' tensors into a batch
+        batch["scores"] = torch.stack(scores)
         return batch
 
 
