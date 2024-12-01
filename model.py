@@ -37,7 +37,7 @@ class DockingAwareAttention(nn.Module):
         self.alpha = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         self.beta = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         # learn emmbeding for empty lines (1, input_dim)
-        self.empty_emb = nn.Parameter(torch.randn(1, 1, input_dim))
+        self.empty_emb = nn.Parameter(torch.randn(1, 1, output_dim))
 
     def replace_empty_emb(self, x, docking_scores):
         # X is the representation of (batch_size, seq, input_dim)
