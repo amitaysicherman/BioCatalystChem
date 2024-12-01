@@ -70,7 +70,8 @@ class DockingAwareAttention(nn.Module):
                 self.head_dim ** 0.5)  # (batch_size, num_heads, seq_len, seq_len)
 
         if mask is not None:
-            attn_weights = attn_weights.masked_fill(mask == 0, float('-inf'))
+            attn_mask = mask.unsqueeze(1).unsqueeze(2) # (batch_size, 1, 1, seq_len)
+            attn_weights = attn_weights.masked_fill(attn_mask == 0, float('-inf'))
         attn_weights = F.softmax(attn_weights, dim=-1)  # (batch_size, num_heads, seq_len, seq_len)
 
         if self.daa_type != DaaType.ALL:
