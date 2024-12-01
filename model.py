@@ -14,20 +14,21 @@ class DaaType(Enum):
 
 
 class DockingAwareAttention(nn.Module):
-    def __init__(self, d_model, num_heads, daa_type=DaaType.ALL):
+    def __init__(self, input_dim, output_dim, num_heads, daa_type=DaaType.ALL):
         super(DockingAwareAttention, self).__init__()
-        self.d_model = d_model
+        self.input_dim = input_dim
+        self.output_dim = output_dim
         self.num_heads = num_heads
-        self.head_dim = d_model // num_heads
-        assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
+        self.head_dim = input_dim // num_heads
+        assert input_dim % num_heads == 0, "d_model must be divisible by num_heads"
 
         # Linear layers for Q, K, V
-        self.q_proj = nn.Linear(d_model, d_model)
-        self.k_proj = nn.Linear(d_model, d_model)
-        self.v_proj = nn.Linear(d_model, d_model)
+        self.q_proj = nn.Linear(input_dim, input_dim)
+        self.k_proj = nn.Linear(input_dim, input_dim)
+        self.v_proj = nn.Linear(input_dim, input_dim)
 
         # Output projection
-        self.out_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(input_dim, output_dim)
 
         self.daa_type = daa_type
 
@@ -99,7 +100,7 @@ class CustomT5Model(T5ForConditionalGeneration):
         self.daa_type = DaaType(daa_type)
         layers_dims = [prot_dim] + [config.d_model] * lookup_len
         self.lookup_proj = get_layers(layers_dims, dropout=config.dropout_rate)
-        self.docking_attention = DockingAwareAttention(config.d_model, config.num_heads, daa_type)
+        self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, daa_type)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb, emb_mask, docking_scores):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)

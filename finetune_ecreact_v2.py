@@ -49,7 +49,7 @@ def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3
         attention_mask = batch['attention_mask'].to(model.device).bool()
         labels = batch['labels'].to(model.device)
         emb = batch['emb'].to(model.device).float()
-        scores = batch['scores'].to(model.device).float()
+        scores = batch['docking_scores'].to(model.device).float()
         emb_mask = batch['emb_mask'].to(model.device).bool()
         if (emb == 0).all():
             emb_args = {}
@@ -153,18 +153,18 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
     def __call__(self, features):
         if "emb" not in features[0]:
             return super().__call__(features)
-        emb = [f.pop("emb") for f in features]
-        scores = [f.pop("docking_scores") for f in features]
-        batch = super().__call__(features)
-        # emd : (batch_size, seq_len, emb_dim)
-        # pad with zeros
-        max_len = max([e.shape[1] for e in emb])
-        batch['emb_mask'] = torch.stack([torch.cat([torch.ones(e.shape[1]), torch.zeros(max_len - e.shape[1])])
-                                         for e in emb])
-        emb = [torch.cat([e, torch.zeros(e.shape[0], max_len - e.shape[1], e.shape[2])]) for e in emb]
-        batch["emb"] = torch.stack(emb)  # Stack the 'emb' tensors into a batch
-        # scores : (batch_size, seq_len)
-        batch["scores"] = torch.stack([torch.cat([s, torch.zeros(max_len - s.shape[0])]) for s in scores])
+
+        regular_names = ["input_ids", "labels", "id"]
+        features_to_batch = [{k: f[k] for k in f if k in regular_names} for f in features]
+        batch = super().__call__(features_to_batch)
+
+        emb_list = [f["emb"] for f in features]
+        batch["emb"] = torch.nn.utils.rnn.pad_sequence(emb_list, batch_first=True, padding_value=0.0)
+        docking_scores_list = [f["docking_scores"] for f in features]
+        batch["docking_scores"] = torch.nn.utils.rnn.pad_sequence(docking_scores_list, batch_first=True,
+                                                                  padding_value=0.0)
+        emb_masks = [torch.ones(len(f["emb"])) for f in features]
+        batch["emb_mask"] = torch.nn.utils.rnn.pad_sequence(emb_masks, batch_first=True, padding_value=0)
 
         return batch
 
