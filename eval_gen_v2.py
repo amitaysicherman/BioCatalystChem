@@ -22,6 +22,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def name_to_args(name):
+    if "NO_EC" in name:
+        return {"ec_type": ECType.NO_EC, "daa_type": 0, "add_ec": 0}
+
     add_ec = 0
     if "ec" in name:
         add_ec = 1
