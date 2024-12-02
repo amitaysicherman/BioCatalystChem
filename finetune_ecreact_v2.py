@@ -40,11 +40,11 @@ def k_name(filename, k):
     return filename.replace(".txt", f"_k{k}.txt")
 
 
-def eval_dataset(model, tokenizer, dataloader, all_ids, output_file, all_k=[1, 3, 5]):
+def eval_dataset(model, tokenizer, dataloader, output_file, all_k=[1, 3, 5]):
     k = max(all_k)
     k_to_res = {k_: [] for k_ in all_k}
     for i, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
-        batch_ids = all_ids[i * len(batch['input_ids']):(i + 1) * len(batch['input_ids'])]
+        batch_ids = batch['id'].detach().cpu().numpy().tolist()
         input_ids = batch['input_ids'].to(model.device)
         attention_mask = batch['attention_mask'].to(model.device).bool()
         labels = batch['labels'].to(model.device)
@@ -84,20 +84,18 @@ class EvalGen(TrainerCallback):
                                             collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model),
                                             shuffle=False, drop_last=False)
 
-        self.valid_ids = valid_ds.samples_ids
         self.test_data_loader = DataLoader(test_ds, batch_size=batch_size, num_workers=0,
                                            collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=model),
                                            shuffle=False, drop_last=False)
-        self.test_ids = test_ds.samples_ids
         self.output_base = output_base
         os.makedirs(output_base, exist_ok=True)
 
     def run_eval(self, epoch):
         print(epoch)
         valid_output_file = f"{self.output_base}/valid_{epoch}.txt"
-        eval_dataset(self.model, self.tokenizer, self.valid_data_loader, self.valid_ids, valid_output_file)
+        eval_dataset(self.model, self.tokenizer, self.valid_data_loader, valid_output_file)
         test_output_file = f"{self.output_base}/test_{epoch}.txt"
-        eval_dataset(self.model, self.tokenizer, self.test_data_loader, self.test_ids, test_output_file)
+        eval_dataset(self.model, self.tokenizer, self.test_data_loader, test_output_file)
 
     # def on_train_begin(self, args, state, control, **kwargs):
     #     self.run_eval(0)
