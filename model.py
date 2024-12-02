@@ -7,9 +7,9 @@ from enum import Enum
 
 
 class DaaType(Enum):
-    ATTENTION = 0
+    MEAN = 0
     DOCKING = 1
-    MEAN = 2
+    ATTENTION = 2
     ALL = 3
 
 
@@ -34,8 +34,8 @@ class DockingAwareAttention(nn.Module):
         self.out_proj = nn.Linear(input_dim, output_dim)
 
         # Learnable parameters with more stable initialization
-        self.alpha = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
-        self.beta = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
+        self.alpha = nn.Parameter(torch.tensor(1, dtype=torch.float32))
+        self.beta = nn.Parameter(torch.tensor(1, dtype=torch.float32))
         # learn emmbeding for empty lines (1, input_dim)
         self.empty_emb = nn.Embedding(1, output_dim)
 
@@ -64,30 +64,23 @@ class DockingAwareAttention(nn.Module):
         """
         batch_size, seq_len, _ = x.size()
 
-        # Compute mean representation
         x_mean = x.mean(dim=1).unsqueeze(1)  # (batch_size, 1, input_dim)
 
-        # Handle different DAA types
         if self.daa_type == DaaType.MEAN:
             return x_mean
 
-        # Prepare docking scores
         docking_scores = docking_scores.unsqueeze(-1)  # (batch_size, seq_len, 1)
-
-        # Handle mask if provided
         if mask is not None:
             # Ensure mask is boolean and broadcast correctly
             d_mask = mask.bool().unsqueeze(-1)
             docking_scores = docking_scores.masked_fill(~d_mask, 0)
 
-        # Docking type specific processing
+        docking_x = (docking_scores * x).sum(dim=1)  # (batch_size, input_dim)
+        docking_x = docking_x.unsqueeze(1)  # (batch_size, 1, input_dim)
+        docking_x = docking_x * self.alpha + x_mean
         if self.daa_type == DaaType.DOCKING:
-            docking_x = (docking_scores * x).sum(dim=1)  # (batch_size, input_dim)
-            docking_x = docking_x.unsqueeze(1)  # (batch_size, 1, input_dim)
-            return docking_x * self.alpha + x_mean
+            return docking_x
 
-        # Multi-head attention processing for ALL type
-        # Project inputs to Q, K, V
         Q = self.q_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         K = self.k_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         V = self.v_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
@@ -101,24 +94,23 @@ class DockingAwareAttention(nn.Module):
         # Softmax attention weights
         attn_weights = F.softmax(attn_weights, dim=-1)
 
-        # Incorporate docking scores
-        if self.daa_type != DaaType.ALL:
+        if self.daa_type == DaaType.ALL:
             # Properly broadcast docking scores
             docking_scores_expanded = docking_scores.view(batch_size, 1, seq_len, 1).expand(
                 -1, self.num_heads, -1, -1
             )
             attn_weights = self.beta * attn_weights + docking_scores_expanded
 
-        # Compute context
         context = torch.matmul(attn_weights, V)  # (batch_size, num_heads, seq_len, head_dim)
-        context = context.transpose(1, 2).reshape(batch_size, seq_len, self.input_dim)
-
-        return context
+        context = context.transpose(1, 2).reshape(batch_size, seq_len,
+                                                  self.input_dim)  # (batch_size, seq_len, input_dim)
+        context = context[:, 0, :].unsqueeze(1)  # (batch_size, 1, input_dim)
+        if self.daa_type == DaaType.ATTENTION:
+            return context
+        return self.beta * context + docking_x
 
     def forward(self, x, docking_scores, mask=None):
         res = self._forward(x, docking_scores, mask)
-        res = res[:, 0]
-        res = res.unsqueeze(1)
         res = self.out_proj(res)
         res = self.replace_empty_emb(res, docking_scores)
         return res
