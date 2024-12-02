@@ -176,3 +176,27 @@ class CustomT5Model(T5ForConditionalGeneration):
         return super()._prepare_encoder_decoder_kwargs_for_generation(
             None, model_kwargs, model_input_name, generation_config
         )
+
+
+if __name__ == "__main__":
+    # Test the model
+    from transformers import PreTrainedTokenizerFast
+    from preprocessing.build_tokenizer import get_tokenizer_file_path, get_ec_tokens
+    tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
+    new_tokens = get_ec_tokens()
+    tokenizer.add_tokens(new_tokens)
+    config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
+                      eos_token_id=tokenizer.eos_token_id,
+                      decoder_start_token_id=tokenizer.pad_token_id)
+    for daa_type in [0, 1, 2,3]:
+        print(daa_type)
+        model = CustomT5Model(config, daa_type)
+        # print number of parameters
+        n1=sum(p.numel() for p in model.parameters())
+        print(f"Number of parameters:{n1:,}")
+        # number of params in the docking_attention submodule
+        n2=sum(p.numel() for p in model.docking_attention.parameters())
+        print(f"Number of parameters in docking_attention:{n2:,}")
+        # print number of parameters for each layer in docking_attention
+        for name, param in model.docking_attention.named_parameters():
+            print(name, f'{param.numel():,}')
