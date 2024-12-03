@@ -1,6 +1,6 @@
 import pandas as pd
 from transformers import PreTrainedTokenizerFast
-from transformers import T5ForConditionalGeneration
+from transformers import T5ForConditionalGeneration, T5Config
 import argparse
 from rdkit import Chem
 from torch.utils.data import DataLoader
@@ -114,7 +114,9 @@ def load_model_tokenizer_dataest(run_name, split, base_results_dir="results", sa
             model = T5ForConditionalGeneration.from_pretrained(cp)
         else:
             print("Loading custom model", cp)
-            model = CustomT5Model.from_pretrained(cp, daa_type=daa_type)
+            config = T5Config.from_pretrained(cp)
+            model = CustomT5Model(config, daa_type=daa_type)
+            model.load_state_dict(torch.load(f"{cp}/pytorch_model.bin"))
         model.to(device)
         model.eval()
         models.append(model)
