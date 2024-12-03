@@ -107,13 +107,13 @@ for dataset_name, dataset_filter in zip(datasets_names, datasets):
             configs = [configs[i] for i in range(len(configs)) if i not in remove_index]
             filter_configs.append((names, configs))
 
-def not_zero(x):
-    return x>0
-n=50
-new_names = [f"common_mol_{i}" for i in range(n)] + [f"common_ec_{i}" for i in range(n)]
-new_configs = [(f"common_mol_{i}", not_zero) for i in range(n)] + [(f"common_ec_{i}", not_zero) for i in range(n)]
-for i in range(len(new_names)):
-    filter_configs.append(([new_names[i]], [new_configs[i]]))
+# def not_zero(x):
+#     return x>0
+# n=50
+# new_names = [f"common_mol_{i}" for i in range(n)] + [f"common_ec_{i}" for i in range(n)]
+# new_configs = [(f"common_mol_{i}", not_zero) for i in range(n)] + [(f"common_ec_{i}", not_zero) for i in range(n)]
+# for i in range(len(new_names)):
+#     filter_configs.append(([new_names[i]], [new_configs[i]]))
 
 all_results = []
 for conf_name, filter_tags in tqdm(filter_configs):
