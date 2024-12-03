@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --time=1-00
-#SBATCH --array=1-40
+#SBATCH --array=1-10
 #SBATCH --mem=128G
 #SBATCH -c 4
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:L40:1
 #SBATCH --requeue
 
 # Get the list of directories in results/ containing "mix"
