@@ -28,3 +28,5 @@ RUN_NAMES=("${PREDEFINED_NAMES[@]}")
 RUN_NAME=${RUN_NAMES[$SLURM_ARRAY_TASK_ID - 1]} # Arrays are 0-indexed
 
 python eval_gen_v2.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split train --sample_size 5000
+python eval_gen_v2.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split valid
+python eval_gen_v2.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split test

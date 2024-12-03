@@ -14,7 +14,6 @@ from rdkit import RDLogger
 from dataset import ECType
 from preprocessing.build_tokenizer import get_ec_tokens
 from finetune_ecreact_v2 import CustomDataCollatorForSeq2Seq
-from collections import Counter
 
 RDLogger.DisableLog('rdApp.*')
 
@@ -35,7 +34,7 @@ def name_to_args(name):
         daa_type = parts[1]
     ec_type_name = parts[0]
     ec_type = ECType[ec_type_name]
-    return {"ec_type": ec_type, "daa_type": daa_type, "add_ec": add_ec}
+    return {"ec_type": ec_type, "daa_type": int(daa_type), "add_ec": add_ec}
 
 
 def tokens_to_canonical_smiles(tokenizer, tokens):
@@ -128,23 +127,6 @@ def load_model_tokenizer_dataest(run_name, split, base_results_dir="results", sa
                                   sample_size=sample_size)
 
     return models, tokenizer, gen_dataset, cp_steps
-
-
-def get_ec_from_df(dataset, per_level):
-    all_ec = dataset.all_ecs
-    if per_level != 0:
-        all_ec = [" ".join(ec.strip().split(" ")[:per_level]) for ec in all_ec]
-    else:
-        all_ec = ["0"] * len(all_ec)
-    return all_ec
-
-
-def get_training_ec_count(level):
-    with open("datasets/ecreact/level4/src-train.txt") as f:
-        src_lines = f.read().splitlines()
-    all_ec = [x.split("|")[1] for x in src_lines]
-    all_ec = [" ".join(ec.strip().split(" ")[:level]) for ec in all_ec]
-    return Counter(all_ec)
 
 
 if __name__ == "__main__":
