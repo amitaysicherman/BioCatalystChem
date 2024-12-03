@@ -107,12 +107,16 @@ class EvalGen(TrainerCallback):
         self.run_eval(state.epoch)
 
 
-def args_to_name(ec_type, daa_type, add_ec):
+def args_to_name(ec_type, daa_type, add_ec,add_mode,mix):
     run_name = f"{ec_type.name}"
     if ec_type != ec_type.PAPER and ec_type != ec_type.NO_EC:
         run_name += f"_{daa_type}"
     if add_ec:
         run_name += "_ec"
+    if add_mode:
+        run_name += "_add"
+    if mix:
+        run_name += "_mix"
     return run_name
 
 
@@ -130,7 +134,7 @@ def load_pretrained_model():
     return trainer_state["best_model_checkpoint"]
 
 
-def get_tokenizer_and_model(ec_type, daa_type, add_ec):
+def get_tokenizer_and_model(ec_type, daa_type, add_ec,add_mode):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if ec_type == ECType.PAPER or add_ec:
         new_tokens = get_ec_tokens()
@@ -141,7 +145,7 @@ def get_tokenizer_and_model(ec_type, daa_type, add_ec):
     if (ec_type == ECType.PAPER or ec_type == ec_type.NO_EC):
         model = T5ForConditionalGeneration(config)
     else:
-        model = CustomT5Model(config, daa_type)
+        model = CustomT5Model(config, daa_type,add_mode=add_mode)
     pretrained_file = load_pretrained_model()
     pretrained_model = T5ForConditionalGeneration.from_pretrained(pretrained_file)
 
@@ -172,8 +176,8 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
         return batch
 
 
-def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_length, add_ec):
-    tokenizer, model = get_tokenizer_and_model(ec_type, daa_type=daa_type, add_ec=add_ec)
+def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_length, add_ec,add_mode,mix):
+    tokenizer, model = get_tokenizer_and_model(ec_type, daa_type=daa_type, add_ec=add_ec,add_mode=add_mode)
     ecreact_dataset = "ecreact/level4"
     if ec_type == ECType.PAPER or ec_type == ECType.NO_EC:
         add_emb = False
@@ -181,11 +185,15 @@ def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_le
         add_emb = True
 
     common_ds_args = {"tokenizer": tokenizer, "max_length": max_length}
-    train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[20, 1], **common_ds_args,
-                                    add_emb=[add_emb, False])
+    if mix:
+        train_dataset = SeqToSeqDataset([ecreact_dataset, "uspto"], "train", weights=[20, 1], **common_ds_args,
+                                        add_emb=[add_emb, False])
+    else:
+        train_dataset = SeqToSeqDataset([ecreact_dataset], "train", weights=[20], **common_ds_args,
+                                        add_emb=[add_emb])
     val_dataset = SeqToSeqDataset([ecreact_dataset], "valid", **common_ds_args, add_emb=[add_emb])
     test_dataset = SeqToSeqDataset([ecreact_dataset], "test", **common_ds_args, add_emb=[add_emb])
-    run_name = args_to_name(ec_type, daa_type, add_ec)
+    run_name = args_to_name(ec_type, daa_type, add_ec,add_mode,mix)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
@@ -243,6 +251,9 @@ if __name__ == '__main__':
     parser.add_argument("--learning_rate", type=float, default=0.001)
     parser.add_argument("--max_length", type=int, default=200)
     parser.add_argument("--add_ec", type=int, default=0)
+    parser.add_argument("--add_mode", default=0, type=int)
+    parser.add_argument("--mix", default=1, type=int)
+
     args = parser.parse_args()
     ec_type = ECType(args.ec_type)
     batch_size = args.batch_size
@@ -251,5 +262,7 @@ if __name__ == '__main__':
     max_length = args.max_length
     daa_type = args.daa_type
     add_ec = args.add_ec
+    add_mode = args.add_mode
+    mix=args.mix
     main(ec_type=ec_type, daa_type=daa_type, batch_size=batch_size,
-         batch_size_factor=batch_size_factor, learning_rate=learning_rate, max_length=max_length, add_ec=add_ec)
+         batch_size_factor=batch_size_factor, learning_rate=learning_rate, max_length=max_length, add_ec=add_ec,add_mode=add_mode,mix=mix)

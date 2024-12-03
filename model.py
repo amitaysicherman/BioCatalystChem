@@ -128,10 +128,11 @@ def get_layers(dims, dropout=0.0):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, daa_type, prot_dim=2560):
+    def __init__(self, config: T5Config, daa_type,add_mode, prot_dim=2560):
 
         super(CustomT5Model, self).__init__(config)
         self.daa_type = DaaType(daa_type)
+        self.add_mode=add_mode
         self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, daa_type)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb, emb_mask, docking_scores):
@@ -139,12 +140,14 @@ class CustomT5Model(T5ForConditionalGeneration):
         batch_size, seq_length, emb_dim = input_embeddings.shape
         emb = self.docking_attention(emb, docking_scores, mask=emb_mask)[:, 0]  # CLS token
         emb = emb.unsqueeze(1)
-        new_input_embeddings = torch.cat([emb, input_embeddings], dim=1)
-
-        # Update attention mask
-        emb_attention = torch.ones(batch_size, emb.shape[1], device=attention_mask.device)
-        new_attention_mask = torch.cat([emb_attention, attention_mask], dim=1)
-        return new_input_embeddings, new_attention_mask
+        if not self.add_mode:
+            new_input_embeddings = torch.cat([emb, input_embeddings], dim=1)
+            # Update attention mask
+            emb_attention = torch.ones(batch_size, emb.shape[1], device=attention_mask.device)
+            attention_mask = torch.cat([emb_attention, attention_mask], dim=1)
+        else:
+            new_input_embeddings = input_embeddings + emb
+        return new_input_embeddings, attention_mask
 
     def forward(self, input_ids=None, attention_mask=None, labels=None, inputs_embeds=None, encoder_outputs=None,
                 emb=None, emb_mask=None, docking_scores=None, **kwargs):

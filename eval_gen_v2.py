@@ -21,9 +21,13 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def name_to_args(name):
+    name=name.replace("_mix","")
     if "NO_EC" in name:
-        return {"ec_type": ECType.NO_EC, "daa_type": 0, "add_ec": 0}
-
+        return {"ec_type": ECType.NO_EC, "daa_type": 0, "add_ec": 0,"add_mode":0}
+    add_mode=0
+    if "add" in name:
+        add_mode=1
+        name=name.replace("_add","")
     add_ec = 0
     if "ec" in name:
         add_ec = 1
@@ -34,7 +38,7 @@ def name_to_args(name):
         daa_type = parts[1]
     ec_type_name = parts[0]
     ec_type = ECType[ec_type_name]
-    return {"ec_type": ec_type, "daa_type": int(daa_type), "add_ec": add_ec}
+    return {"ec_type": ec_type, "daa_type": int(daa_type), "add_ec": add_ec,"add_mode":add_mode}
 
 
 def tokens_to_canonical_smiles(tokenizer, tokens):
@@ -95,11 +99,12 @@ def get_all_cp(base_dir):
     return all_cp, cp_steps
 
 
-def load_model_tokenizer_dataest(run_name, split, base_results_dir="results", sample_size=None):
+def load_model_tokenizer_dataest(run_name, split, base_results_dir, sample_size):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     daa_type = run_args["daa_type"]
     addec = run_args["add_ec"]
+    add_mode=run_args["add_mode"]
 
     ecreact_dataset = "ecreact/level4"
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
@@ -115,7 +120,7 @@ def load_model_tokenizer_dataest(run_name, split, base_results_dir="results", sa
         else:
             print("Loading custom model", cp)
             config = T5Config.from_pretrained(cp)
-            model = CustomT5Model(config, daa_type=daa_type)
+            model = CustomT5Model(config, daa_type=daa_type,add_mode=add_mode)
             model.load_state_dict(torch.load(f"{cp}/pytorch_model.bin"))
         model.to(device)
         model.eval()
@@ -141,7 +146,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     run_name = args.run_name
     sample_size = args.sample_size if args.sample_size > 0 else None
-
+    add_mode=args.add_mode
     print("---" * 10)
     print(f"Run: {run_name}")
     print("---" * 10)
