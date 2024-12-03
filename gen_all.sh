@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --time=1-00
-#SBATCH --array=1-10
+#SBATCH --array=1-40
 #SBATCH --mem=128G
 #SBATCH -c 4
-#SBATCH --gres=gpu:L40:1
+#SBATCH --gres=gpu:1
 #SBATCH --requeue
 
 # Get the list of directories in results/ containing "mix"
@@ -27,4 +27,4 @@ RUN_NAMES=("${PREDEFINED_NAMES[@]}")
 
 RUN_NAME=${RUN_NAMES[$SLURM_ARRAY_TASK_ID - 1]} # Arrays are 0-indexed
 
-python eval_gen.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split train --sample_size 5000
+python eval_gen_v2.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split train --sample_size 5000
