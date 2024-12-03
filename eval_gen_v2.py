@@ -96,7 +96,7 @@ def get_all_cp(base_dir):
     return all_cp, cp_steps
 
 
-def load_model_tokenizer_dataest(run_name, split, base_results_dir="results"):
+def load_model_tokenizer_dataest(run_name, split, base_results_dir="results", sample_size=None):
     run_args = name_to_args(run_name)
     ec_type = run_args["ec_type"]
     daa_type = run_args["daa_type"]
@@ -124,7 +124,8 @@ def load_model_tokenizer_dataest(run_name, split, base_results_dir="results"):
         add_emb = False
     else:
         add_emb = True
-    gen_dataset = SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, max_length=200, add_emb=[add_emb])
+    gen_dataset = SeqToSeqDataset([ecreact_dataset], split, tokenizer=tokenizer, max_length=200, add_emb=[add_emb],
+                                  sample_size=sample_size)
 
     return models, tokenizer, gen_dataset, cp_steps
 
@@ -152,15 +153,17 @@ if __name__ == "__main__":
     parser.add_argument("--split", default="test", type=str)
     parser.add_argument("--res_base", default="results", type=str)
     parser.add_argument("--bs", default=8, type=int)
-
+    parser.add_argument("--sample_size", default=0, type=int)
     args = parser.parse_args()
     run_name = args.run_name
+    sample_size = args.sample_size if args.sample_size > 0 else None
 
     print("---" * 10)
     print(f"Run: {run_name}")
     print("---" * 10)
     models, tokenizer, gen_dataset, cp_steps = load_model_tokenizer_dataest(run_name, args.split,
-                                                                            base_results_dir=args.res_base)
+                                                                            base_results_dir=args.res_base,
+                                                                            sample_size=sample_size)
 
     gen_dataloader = DataLoader(gen_dataset, batch_size=args.bs, num_workers=0,
                                 collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=models[0]))
