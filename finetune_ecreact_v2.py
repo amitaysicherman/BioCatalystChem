@@ -115,8 +115,8 @@ def args_to_name(ec_type, daa_type, add_ec,add_mode,mix):
         run_name += "_ec"
     if add_mode:
         run_name += "_add"
-    if mix:
-        run_name += "_mix"
+    if not mix:
+        run_name += "_nmix"
     return run_name
 
 

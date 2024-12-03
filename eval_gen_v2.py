@@ -21,7 +21,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def name_to_args(name):
-    name=name.replace("_mix","")
+    name=name.replace("_nmix","")
     if "NO_EC" in name:
         return {"ec_type": ECType.NO_EC, "daa_type": 0, "add_ec": 0,"add_mode":0}
     add_mode=0
