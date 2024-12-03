@@ -122,7 +122,7 @@ for conf_name, filter_tags in tqdm(filter_configs):
     index_test = sample_tags_test.get_query_indexes(filter_tags)
     config_results = dict()
     for name, obj in run_num_to_obj.items():
-        config_results[name] = obj.get_score_k(5, index_valid, index_test)
+        config_results[name] = obj.get_score_k(1, index_valid, index_test)
     config_results['count'] = len(index_test)
     for i in range(len(conf_name)):
         config_results[f'f_{filter_categories[i]}'] = conf_name[i]
