@@ -92,10 +92,12 @@ class EvalGen(TrainerCallback):
 
     def run_eval(self, epoch):
         print(epoch)
+        self.model.eval()
         valid_output_file = f"{self.output_base}/valid_{epoch}.txt"
         eval_dataset(self.model, self.tokenizer, self.valid_data_loader, valid_output_file)
         test_output_file = f"{self.output_base}/test_{epoch}.txt"
         eval_dataset(self.model, self.tokenizer, self.test_data_loader, test_output_file)
+        self.model.train()
 
     # def on_train_begin(self, args, state, control, **kwargs):
     #     self.run_eval(0)

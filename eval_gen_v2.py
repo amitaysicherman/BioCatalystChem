@@ -153,5 +153,5 @@ if __name__ == "__main__":
     with torch.no_grad():
         for j, model in enumerate(models):
             output_file = f"results/{run_name}/{args.split}_{cp_steps[j]}.txt"
-
-            eval_dataset(model, tokenizer, gen_dataloader, all_k=[1, 3, 5], output_file=output_file)
+            with torch.no_grad():
+                eval_dataset(model, tokenizer, gen_dataloader, all_k=[1, 3, 5], output_file=output_file)
