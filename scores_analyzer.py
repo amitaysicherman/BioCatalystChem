@@ -6,6 +6,9 @@ from tqdm import tqdm
 from preprocessing.sample_tagging import SampleTags
 
 
+
+
+
 def get_scores_from_df(df, indexes):
     if indexes is not None:
         indexes_in_df = [x for x in df.index if x in indexes]
@@ -30,7 +33,7 @@ def config_to_file_name(split, n, k):
 
 
 class ValTestFiles:
-    def __init__(self, run_name):
+    def __init__(self, run_name,max_e=5):
         self.run_name = run_name
         self.base_dir = f"results/{run_name}"
 
@@ -39,6 +42,7 @@ class ValTestFiles:
         valid_n_k = [(n, k) for split, n, k in all_split_n_k if split == "valid"]
         test_n_k = [(n, k) for split, n, k in all_split_n_k if split == "test"]
         n_k = set(valid_n_k).intersection(test_n_k)
+        n_k = set([(n, k) for n, k in n_k if k <= max_e])
         self.configs = n_k
         self.valid_config_to_df = {c: read_file(os.path.join(self.base_dir, config_to_file_name("valid", c[0], c[1])))
                                    for c in n_k}
@@ -107,13 +111,15 @@ for dataset_name, dataset_filter in zip(datasets_names, datasets):
             configs = [configs[i] for i in range(len(configs)) if i not in remove_index]
             filter_configs.append((names, configs))
 
-# def not_zero(x):
-#     return x>0
-# n=50
-# new_names = [f"common_mol_{i}" for i in range(n)] + [f"common_ec_{i}" for i in range(n)]
-# new_configs = [(f"common_mol_{i}", not_zero) for i in range(n)] + [(f"common_ec_{i}", not_zero) for i in range(n)]
-# for i in range(len(new_names)):
-#     filter_configs.append(([new_names[i]], [new_configs[i]]))
+
+
+def not_zero(x):
+    return x>0
+n=50
+new_names = [f"common_mol_{i}" for i in range(n)] + [f"common_ec_{i}" for i in range(n)]
+new_configs = [(f"common_mol_{i}", not_zero) for i in range(n)] + [(f"common_ec_{i}", not_zero) for i in range(n)]
+for i in range(len(new_names)):
+    filter_configs.append(([new_names[i]], [new_configs[i]]))
 
 all_results = []
 for conf_name, filter_tags in tqdm(filter_configs):

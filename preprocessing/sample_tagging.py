@@ -76,6 +76,8 @@ class SampleTags:
         for i in range(len(self.common_ec)):
             print(i, self.common_ec[i])
             self.df[f"common_ec_{i}"] = self.df["ec"].apply(lambda x: x == self.common_ec[i])
+    def add_legel_ec(self):
+        self.df["legal_ec"] = self.df["ec"].apply(lambda x: all([y.isdigit() for y in x.split(" ")]))
 
     def add_all_tag(self):
         self.add_number_of_molecules()
@@ -93,6 +95,7 @@ class SampleTags:
         self.add_num_train_tgt()
         self.add_most_common_molecules(n=50)
         self.add_most_common_ec(n=50)
+        self.add_legel_ec()
 
     def get_query_indexes(self, cols_funcs):
         filtered_df = self.df.copy()
