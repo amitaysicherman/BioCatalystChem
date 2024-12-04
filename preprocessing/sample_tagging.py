@@ -76,8 +76,10 @@ class SampleTags:
         for i in range(len(self.common_ec)):
             print(i, self.common_ec[i])
             self.df[f"common_ec_{i}"] = self.df["ec"].apply(lambda x: x == self.common_ec[i])
+
     def add_legel_ec(self):
-        self.df["legal_ec"] = self.df["ec"].apply(lambda x: all([y.isdigit() for y in x.split(" ")]))
+        self.df["legal_ec"] = self.df["ec"].apply(
+            lambda x: all([y.replace("[", "").replace("]", "")[1:].isdigit() for y in x.split(" ")]))
 
     def add_all_tag(self):
         self.add_number_of_molecules()
