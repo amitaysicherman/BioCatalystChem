@@ -4,22 +4,12 @@
 #SBATCH --requeue
 #SBATCH --gres=gpu:L40:1
 #SBATCH -c 8
-#SBATCH --array=1-14
+#SBATCH --array=1-4
 
-configs="--ec_type 2 --daa_type 0 --add_ec 0 --add_mode 1|\
-    --ec_type 2 --daa_type 1 --add_ec 0 --add_mode 1|\
-    --ec_type 2 --daa_type 2 --add_ec 0 --add_mode 1|\
-    --ec_type 2 --daa_type 3 --add_ec 0 --add_mode 1|\
-    --ec_type 0 --daa_type 0 --add_ec 0 --mix 0|\
-    --ec_type 1 --daa_type 0 --add_ec 0 --mix 0|\
-    --ec_type 2 --daa_type 0 --add_ec 0 --mix 0|\
-    --ec_type 2 --daa_type 1 --add_ec 0 --mix 0|\
-    --ec_type 2 --daa_type 2 --add_ec 0 --mix 0|\
-    --ec_type 2 --daa_type 3 --add_ec 0 --mix 0|\
-    --ec_type 2 --daa_type 0 --add_ec 0 --add_mode 1 --mix 0|\
-    --ec_type 2 --daa_type 1 --add_ec 0 --add_mode 1 --mix 0|\
-    --ec_type 2 --daa_type 2 --add_ec 0 --add_mode 1 --mix 0|\
-    --ec_type 2 --daa_type 3 --add_ec 0 --add_mode 1 --mix 0"
+configs="--ec_type 2 --daa_type 0 --add_ec 1 --mix 0|\
+    --ec_type 2 --daa_type 1 --add_ec 1 --mix 0|\
+    --ec_type 2 --daa_type 2 --add_ec 1 --mix 0|\
+    --ec_type 2 --daa_type 3 --add_ec 1 --mix 0"
 
 # Split the config string into an array using '|' as a delimiter
 IFS='|' read -ra config_array <<< "$configs"
