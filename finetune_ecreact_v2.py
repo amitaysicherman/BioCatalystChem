@@ -197,7 +197,7 @@ def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_le
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
-    num_train_epochs = 7
+    num_train_epochs = 25
     resume_from_checkpoint = False
     if os.path.exists(output_dir):
         dirs_in_output = os.listdir(output_dir)
@@ -211,7 +211,7 @@ def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_le
         warmup_ratio=0.05,
         logging_steps=1 / (num_train_epochs * num_train_epochs),
         save_steps=1 / num_train_epochs,
-        save_total_limit=4,
+        save_total_limit=0,
         save_strategy="steps",
         eval_strategy="no",
 
