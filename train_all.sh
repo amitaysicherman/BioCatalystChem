@@ -6,8 +6,7 @@
 #SBATCH -c 8
 #SBATCH --array=1-6
 
-configs="
-    --ec_type 0 |\
+configs="--ec_type 0 |\
     --ec_type 1 |\
     --ec_type 2 --daa_type 0|\
     --ec_type 2 --daa_type 1|\
