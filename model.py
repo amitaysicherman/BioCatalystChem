@@ -72,7 +72,8 @@ class DockingAwareAttention(nn.Module):
         if self.lin_attn:
             attn_weights = self.lin_w(x).squeeze(-1)
             if mask is not None:
-                attn_weights = attn_weights.masked_fill(~mask, float('-inf'))  # (batch_size, seq_len)
+                attn_mask = mask.bool()
+                attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))  # (batch_size, seq_len)
             attn_weights = F.softmax(attn_weights, dim=-1)  # (batch_size, seq_len)
             attn_weights = attn_weights.unsqueeze(-1)  # (batch_size, seq_len, 1)
             return (attn_weights * x).sum(dim=1).unsqueeze(1)  # (batch_size, 1, input_dim)
