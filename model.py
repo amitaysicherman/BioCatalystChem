@@ -14,7 +14,7 @@ class DaaType(Enum):
 
 
 class DockingAwareAttention(nn.Module):
-    def __init__(self, input_dim, output_dim, num_heads, daa_type=DaaType.ALL):
+    def __init__(self, input_dim, output_dim, num_heads, daa_type=DaaType.ALL, lin_attn=False):
         super(DockingAwareAttention, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -24,11 +24,15 @@ class DockingAwareAttention(nn.Module):
 
         # Ensure input dimension is divisible by number of heads
         assert input_dim % num_heads == 0, "input_dim must be divisible by num_heads"
-
-        # Linear layers for Q, K, V
-        self.q_proj = nn.Linear(input_dim, input_dim)
-        self.k_proj = nn.Linear(input_dim, input_dim)
-        self.v_proj = nn.Linear(input_dim, input_dim)
+        self.lin_attn = lin_attn
+        if lin_attn:
+            # learn the attention weights directly
+            self.lin_w = nn.Linear(input_dim, 1)
+        else:
+            # Linear layers for Q, K, V
+            self.q_proj = nn.Linear(input_dim, input_dim)
+            self.k_proj = nn.Linear(input_dim, input_dim)
+            self.v_proj = nn.Linear(input_dim, input_dim)
 
         # Output projection
         self.out_proj = nn.Linear(input_dim, output_dim)
@@ -53,6 +57,39 @@ class DockingAwareAttention(nn.Module):
         x = torch.where(empty_mask.unsqueeze(-1), empty_emb, x)
         return x
 
+    def _forward_mean(self, x, docking_scores, mask=None):
+        return x.mean(dim=1).unsqueeze(1)
+
+    def _forward_docking(self, x, docking_scores, mask=None):
+        docking_scores = docking_scores.unsqueeze(-1)
+        if mask is not None:
+            d_mask = mask.bool().unsqueeze(-1)
+            docking_scores = docking_scores.masked_fill(~d_mask, 0)
+        return (docking_scores * x).sum(dim=1).unsqueeze(1)
+
+    def _forward_attention(self, x, docking_scores, mask=None):
+        batch_size, seq_len, _ = x.size()
+        if self.lin_attn:
+            attn_weights = self.lin_w(x).squeeze(-1)
+            if mask is not None:
+                attn_weights = attn_weights.masked_fill(~mask, float('-inf'))  # (batch_size, seq_len)
+            attn_weights = F.softmax(attn_weights, dim=-1)  # (batch_size, seq_len)
+            attn_weights = attn_weights.unsqueeze(-1)  # (batch_size, seq_len, 1)
+            return (attn_weights * x).sum(dim=1).unsqueeze(1)  # (batch_size, 1, input_dim)
+
+        else:
+            Q = self.q_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+            K = self.k_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+            V = self.v_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+            attn_weights = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5)
+            if mask is not None:
+                attn_mask = mask.bool().unsqueeze(1).unsqueeze(2)
+                attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))
+            attn_weights = F.softmax(attn_weights, dim=-1)
+            context = torch.matmul(attn_weights, V)
+            context = context.transpose(1, 2).reshape(batch_size, seq_len, self.input_dim)
+            return context[:, 0, :].unsqueeze(1)
+
     def _forward(self, x, docking_scores, mask=None):
         """
         Args:
@@ -63,51 +100,17 @@ class DockingAwareAttention(nn.Module):
             Tensor of shape (batch_size, seq_len, output_dim)
         """
         batch_size, seq_len, _ = x.size()
-
-        x_mean = x.mean(dim=1).unsqueeze(1)  # (batch_size, 1, input_dim)
-
+        x_mean = self._forward_mean(x, docking_scores, mask)
         if self.daa_type == DaaType.MEAN:
             return x_mean
-
-        docking_scores = docking_scores.unsqueeze(-1)  # (batch_size, seq_len, 1)
-        if mask is not None:
-            # Ensure mask is boolean and broadcast correctly
-            d_mask = mask.bool().unsqueeze(-1)
-            docking_scores = docking_scores.masked_fill(~d_mask, 0)
-
-        docking_x = (docking_scores * x).sum(dim=1)  # (batch_size, input_dim)
-        docking_x = docking_x.unsqueeze(1)  # (batch_size, 1, input_dim)
-        docking_x = docking_x * self.alpha + x_mean
+        x_docking = self._forward_docking(x, docking_scores, mask)
         if self.daa_type == DaaType.DOCKING:
-            return docking_x
-
-        Q = self.q_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        K = self.k_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        V = self.v_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        # Compute scaled dot-product attention
-        attn_weights = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5)
-        # Apply mask if provided
-        if mask is not None:
-            attn_mask = mask.bool().unsqueeze(1).unsqueeze(2)  # (batch_size, 1, 1, seq_len)
-            attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))
-
-        # Softmax attention weights
-        attn_weights = F.softmax(attn_weights, dim=-1)
-
-        if self.daa_type == DaaType.ALL:
-            # Properly broadcast docking scores
-            docking_scores_expanded = docking_scores.view(batch_size, 1, seq_len, 1).expand(
-                -1, self.num_heads, -1, -1
-            )
-            attn_weights = self.beta * attn_weights + docking_scores_expanded
-
-        context = torch.matmul(attn_weights, V)  # (batch_size, num_heads, seq_len, head_dim)
-        context = context.transpose(1, 2).reshape(batch_size, seq_len,
-                                                  self.input_dim)  # (batch_size, seq_len, input_dim)
-        context = context[:, 0, :].unsqueeze(1)  # (batch_size, 1, input_dim)
+            return self.alpha * x_mean + x_docking
+        x_attention = self._forward_attention(x, docking_scores, mask)
         if self.daa_type == DaaType.ATTENTION:
-            return context
-        return self.beta * context + docking_x
+            return x_attention
+        # ALL
+        return self.alpha * x_mean + self.beta * x_docking + x_attention
 
     def forward(self, x, docking_scores, mask=None):
         res = self._forward(x, docking_scores, mask)
@@ -128,12 +131,12 @@ def get_layers(dims, dropout=0.0):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, daa_type,add_mode, prot_dim=2560):
+    def __init__(self, config: T5Config, daa_type, add_mode, prot_dim=2560,lin_attn=False):
 
         super(CustomT5Model, self).__init__(config)
         self.daa_type = DaaType(daa_type)
-        self.add_mode=add_mode
-        self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, daa_type)
+        self.add_mode = add_mode
+        self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, daa_type,lin_attn=lin_attn)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb, emb_mask, docking_scores):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)
@@ -185,20 +188,21 @@ if __name__ == "__main__":
     # Test the model
     from transformers import PreTrainedTokenizerFast
     from preprocessing.build_tokenizer import get_tokenizer_file_path, get_ec_tokens
+
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     new_tokens = get_ec_tokens()
     tokenizer.add_tokens(new_tokens)
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
                       decoder_start_token_id=tokenizer.pad_token_id)
-    for daa_type in [0, 1, 2,3]:
+    for daa_type in [0, 1, 2, 3]:
         print(daa_type)
-        model = CustomT5Model(config, daa_type)
+        model = CustomT5Model(config, daa_type, add_mode=False, prot_dim=2560,lin_attn=False)
         # print number of parameters
-        n1=sum(p.numel() for p in model.parameters())
+        n1 = sum(p.numel() for p in model.parameters())
         print(f"Number of parameters:{n1:,}")
         # number of params in the docking_attention submodule
-        n2=sum(p.numel() for p in model.docking_attention.parameters())
+        n2 = sum(p.numel() for p in model.docking_attention.parameters())
         print(f"Number of parameters in docking_attention:{n2:,}")
         # print number of parameters for each layer in docking_attention
         for name, param in model.docking_attention.named_parameters():
