@@ -4,7 +4,7 @@
 #SBATCH --requeue
 #SBATCH --gres=gpu:L40:1
 #SBATCH -c 8
-#SBATCH --array=1-6
+#SBATCH --array=1-8
 
 configs="--ec_type 2 --daa_type 0 --mix 0|\
     --ec_type 2 --daa_type 1 --mix 0|\
