@@ -138,7 +138,7 @@ class CustomT5Model(T5ForConditionalGeneration):
         super(CustomT5Model, self).__init__(config)
         self.daa_type = DaaType(daa_type)
         self.add_mode = add_mode
-        self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, daa_type,
+        self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, self.daa_type,
                                                        lin_attn=lin_attn)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb, emb_mask, docking_scores):
@@ -210,3 +210,5 @@ if __name__ == "__main__":
         # print number of parameters for each layer in docking_attention
         for name, param in model.docking_attention.named_parameters():
             print(name, f'{param.numel():,}')
+        print("==" * 20)
+#
