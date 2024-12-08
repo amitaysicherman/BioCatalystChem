@@ -11,7 +11,9 @@ configs="--ec_type 2 --daa_type 0 --mix 0|\
     --ec_type 2 --daa_type 2 --mix 0|\
     --ec_type 2 --daa_type 3 --mix 0|\
     --ec_type 2 --daa_type 2 --mix 0 --linat 1|\
-    --ec_type 2 --daa_type 3 --mix 0 --linat 1"
+    --ec_type 2 --daa_type 3 --mix 0 --linat 1|\
+    --ec_type 0|\
+    --ec_type 1"
 
 # Split the config string into an array using '|' as a delimiter
 IFS='|' read -ra config_array <<< "$configs"
