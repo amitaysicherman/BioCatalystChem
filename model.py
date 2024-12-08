@@ -25,14 +25,15 @@ class DockingAwareAttention(nn.Module):
         # Ensure input dimension is divisible by number of heads
         assert input_dim % num_heads == 0, "input_dim must be divisible by num_heads"
         self.lin_attn = lin_attn
-        if lin_attn:
-            # learn the attention weights directly
-            self.lin_w = nn.Linear(input_dim, 1)
-        else:
-            # Linear layers for Q, K, V
-            self.q_proj = nn.Linear(input_dim, input_dim)
-            self.k_proj = nn.Linear(input_dim, input_dim)
-            self.v_proj = nn.Linear(input_dim, input_dim)
+        if daa_type == DaaType.ATTENTION or daa_type == DaaType.ALL:
+            if lin_attn:
+                # learn the attention weights directly
+                self.lin_w = nn.Linear(input_dim, 1)
+            else:
+                # Linear layers for Q, K, V
+                self.q_proj = nn.Linear(input_dim, input_dim)
+                self.k_proj = nn.Linear(input_dim, input_dim)
+                self.v_proj = nn.Linear(input_dim, input_dim)
 
         # Output projection
         self.out_proj = nn.Linear(input_dim, output_dim)
@@ -132,12 +133,13 @@ def get_layers(dims, dropout=0.0):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, daa_type, add_mode, prot_dim=2560,lin_attn=False):
+    def __init__(self, config: T5Config, daa_type, add_mode, prot_dim=2560, lin_attn=False):
 
         super(CustomT5Model, self).__init__(config)
         self.daa_type = DaaType(daa_type)
         self.add_mode = add_mode
-        self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, daa_type,lin_attn=lin_attn)
+        self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, daa_type,
+                                                       lin_attn=lin_attn)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb, emb_mask, docking_scores):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)
@@ -198,7 +200,7 @@ if __name__ == "__main__":
                       decoder_start_token_id=tokenizer.pad_token_id)
     for daa_type in [0, 1, 2, 3]:
         print(daa_type)
-        model = CustomT5Model(config, daa_type, add_mode=False, prot_dim=2560,lin_attn=False)
+        model = CustomT5Model(config, daa_type, add_mode=False, prot_dim=2560, lin_attn=False)
         # print number of parameters
         n1 = sum(p.numel() for p in model.parameters())
         print(f"Number of parameters:{n1:,}")
