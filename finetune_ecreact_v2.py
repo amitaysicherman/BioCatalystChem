@@ -107,16 +107,19 @@ class EvalGen(TrainerCallback):
         self.run_eval(state.epoch)
 
 
-def args_to_name(ec_type, daa_type, add_ec,add_mode,mix):
+def args_to_name(ec_type, daa_type, add_ec, add_mode, mix, lin_attn):
     run_name = f"{ec_type.name}"
     if ec_type != ec_type.PAPER and ec_type != ec_type.NO_EC:
         run_name += f"_{daa_type}"
+        if daa_type == 2 or daa_type == 3 and lin_attn:
+            run_name += f"_linattn"
     if add_ec:
         run_name += "_ec"
     if add_mode:
         run_name += "_add"
     if not mix:
         run_name += "_nmix"
+
     return run_name
 
 
@@ -134,7 +137,7 @@ def load_pretrained_model():
     return trainer_state["best_model_checkpoint"]
 
 
-def get_tokenizer_and_model(ec_type, daa_type, add_ec,add_mode):
+def get_tokenizer_and_model(ec_type, daa_type, add_ec, add_mode, linat):
     tokenizer = PreTrainedTokenizerFast.from_pretrained(get_tokenizer_file_path())
     if ec_type == ECType.PAPER or add_ec:
         new_tokens = get_ec_tokens()
@@ -145,7 +148,7 @@ def get_tokenizer_and_model(ec_type, daa_type, add_ec,add_mode):
     if (ec_type == ECType.PAPER or ec_type == ec_type.NO_EC):
         model = T5ForConditionalGeneration(config)
     else:
-        model = CustomT5Model(config, daa_type,add_mode=add_mode)
+        model = CustomT5Model(config, daa_type, add_mode=add_mode, lin_attn=linat)
     pretrained_file = load_pretrained_model()
     pretrained_model = T5ForConditionalGeneration.from_pretrained(pretrained_file)
 
@@ -176,8 +179,9 @@ class CustomDataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
         return batch
 
 
-def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_length, add_ec,add_mode,mix):
-    tokenizer, model = get_tokenizer_and_model(ec_type, daa_type=daa_type, add_ec=add_ec,add_mode=add_mode)
+def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_length, add_ec, add_mode, mix, linat):
+    tokenizer, model = get_tokenizer_and_model(ec_type, daa_type=daa_type, add_ec=add_ec, add_mode=add_mode,
+                                               linat=linat)
     ecreact_dataset = "ecreact/level4"
     if ec_type == ECType.PAPER or ec_type == ECType.NO_EC:
         add_emb = False
@@ -193,11 +197,11 @@ def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_le
                                         add_emb=[add_emb])
     val_dataset = SeqToSeqDataset([ecreact_dataset], "valid", **common_ds_args, add_emb=[add_emb])
     test_dataset = SeqToSeqDataset([ecreact_dataset], "test", **common_ds_args, add_emb=[add_emb])
-    run_name = args_to_name(ec_type, daa_type, add_ec,add_mode,mix)
+    run_name = args_to_name(ec_type, daa_type, add_ec, add_mode, mix, linat)
     print(f"Run name: {run_name}")
     # Training arguments
     output_dir = f"results/{run_name}"
-    num_train_epochs = 25
+    num_train_epochs = 5
     resume_from_checkpoint = False
     if os.path.exists(output_dir):
         dirs_in_output = os.listdir(output_dir)
@@ -211,7 +215,7 @@ def main(ec_type, daa_type, batch_size, batch_size_factor, learning_rate, max_le
         warmup_ratio=0.05,
         logging_steps=1 / (num_train_epochs * num_train_epochs),
         save_steps=1 / num_train_epochs,
-        save_total_limit=0,
+        save_total_limit=3,
         save_strategy="steps",
         eval_strategy="no",
 
@@ -253,6 +257,7 @@ if __name__ == '__main__':
     parser.add_argument("--add_ec", type=int, default=0)
     parser.add_argument("--add_mode", default=0, type=int)
     parser.add_argument("--mix", default=1, type=int)
+    parser.add_argument("--linat", default=0, type=int)
 
     args = parser.parse_args()
     ec_type = ECType(args.ec_type)
@@ -263,6 +268,8 @@ if __name__ == '__main__':
     daa_type = args.daa_type
     add_ec = args.add_ec
     add_mode = args.add_mode
-    mix=args.mix
+    mix = args.mix
+    linat = args.linat
     main(ec_type=ec_type, daa_type=daa_type, batch_size=batch_size,
-         batch_size_factor=batch_size_factor, learning_rate=learning_rate, max_length=max_length, add_ec=add_ec,add_mode=add_mode,mix=mix)
+         batch_size_factor=batch_size_factor, learning_rate=learning_rate, max_length=max_length, add_ec=add_ec,
+         add_mode=add_mode, mix=mix, linat=linat)
