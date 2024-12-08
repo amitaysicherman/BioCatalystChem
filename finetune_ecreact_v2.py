@@ -111,7 +111,7 @@ def args_to_name(ec_type, daa_type, add_ec, add_mode, mix, lin_attn):
     run_name = f"{ec_type.name}"
     if ec_type != ec_type.PAPER and ec_type != ec_type.NO_EC:
         run_name += f"_{daa_type}"
-        if daa_type == 2 or daa_type == 3 and lin_attn:
+        if (daa_type == 2 or daa_type == 3) and lin_attn:
             run_name += f"_linattn"
     if add_ec:
         run_name += "_ec"
