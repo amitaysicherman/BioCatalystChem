@@ -35,4 +35,4 @@ fi
 RUN_NAME=${RUN_NAMES[$INDEX]}
 
 # Run the Python evaluation script
-python eval_gen_v2.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split $SPLIT
+python eval_gen_v2.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split $SPLIT --remove_stereo 1 --last_only 1

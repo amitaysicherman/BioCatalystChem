@@ -156,6 +156,7 @@ if __name__ == "__main__":
     parser.add_argument("--bs", default=8, type=int)
     parser.add_argument("--sample_size", default=0, type=int)
     parser.add_argument("--remove_stereo", default=0, type=int)
+    parser.add_argument("--last_only", default=1, type=int)
     args = parser.parse_args()
     run_name = args.run_name
     sample_size = args.sample_size if args.sample_size > 0 else None
@@ -166,7 +167,9 @@ if __name__ == "__main__":
     models, tokenizer, gen_dataset, cp_steps = load_model_tokenizer_dataest(run_name, args.split,
                                                                             base_results_dir=args.res_base,
                                                                             sample_size=sample_size)
-
+    if args.last_only:
+        models = [models[-1]]
+        cp_steps = [cp_steps[-1]]
     gen_dataloader = DataLoader(gen_dataset, batch_size=args.bs, num_workers=0,
                                 collate_fn=CustomDataCollatorForSeq2Seq(tokenizer, model=models[0]))
 
