@@ -26,9 +26,9 @@ INDEX=$((SLURM_ARRAY_TASK_ID - 1))
 
 # Determine the split based on the index
 if [ "$INDEX" -lt 6 ]; then
-  SPLIT="valid"
-else
   SPLIT="test"
+else
+  SPLIT="valid"
   INDEX=$((INDEX - 6)) # Adjust the index if greater than 6
 fi
 
