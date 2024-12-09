@@ -160,7 +160,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     run_name = args.run_name
     sample_size = args.sample_size if args.sample_size > 0 else None
-    add_mode = args.add_mode
     print("---" * 10)
     print(f"Run: {run_name}")
     print("---" * 10)
