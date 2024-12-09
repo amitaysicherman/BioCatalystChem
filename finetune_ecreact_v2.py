@@ -116,7 +116,8 @@ def args_to_name(ec_type, daa_type, add_ec, add_mode, mix, lin_attn, n_bottlenec
         if n_bottlenecks > 0:
             run_name += f"_bottlenecks{n_bottlenecks}"
         if emb_dropout > 0:
-            run_name += f"_embdropout{emb_dropout.replace('.', '')}"
+            emb_dropout_str = str(emb_dropout).replace(".", "")
+            run_name += f"_embdropout{emb_dropout_str}"
     if add_ec:
         run_name += "_ec"
     if add_mode:
