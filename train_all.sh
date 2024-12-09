@@ -6,14 +6,13 @@
 #SBATCH -c 8
 #SBATCH --array=1-8
 
-configs="--ec_type 2 --daa_type 0|\
-    --ec_type 2 --daa_type 1|\
-    --ec_type 2 --daa_type 2|\
-    --ec_type 2 --daa_type 3|\
-    --ec_type 2 --daa_type 2 --linat 1|\
-    --ec_type 2 --daa_type 3 --linat 1|\
-    --ec_type 0|\
-    --ec_type 1"
+configs="--ec_type 2 --daa_type 3 --mix 0|\
+          --ec_type 2 --daa_type 3 --mix 0 --emb_dropout 0.1|\
+          --ec_type 2 --daa_type 3 --mix 0 --emb_dropout 0.3|\
+          --ec_type 2 --daa_type 3 --mix 0 --emb_dropout 0.5|\
+          --ec_type 2 --daa_type 3 --mix 0 --n_bottlenecks 1|\
+          --ec_type 2 --daa_type 3 --mix 0 --n_bottlenecks 4|\
+          --ec_type 2 --daa_type 3 --mix 0 --n_bottlenecks 4 --emb_dropout 0.3"
 
 # Split the config string into an array using '|' as a delimiter
 IFS='|' read -ra config_array <<< "$configs"
