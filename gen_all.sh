@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --time=1-00
-#SBATCH --array=1-10
+#SBATCH --array=1-12
 #SBATCH --mem=128G
 #SBATCH -c 4
 #SBATCH --gres=gpu:L40:1
@@ -10,21 +10,29 @@
 RESULTS_DIR="results/"
 
 PREDEFINED_NAMES=(
-    "PRETRAINED_1"
-    "NO_EC"
-    "PAPER"
-    "PRETRAINED_2"
-    "PRETRAINED_0"
-    "PRETRAINED_3"
-    "PRETRAINED_0_ec"
-    "PRETRAINED_1_ec"
-    "PRETRAINED_3_ec"
-    "PRETRAINED_2_ec"
+ 'PAPER_nmix',
+ 'PRETRAINED_1_nmix',
+ 'PRETRAINED_2_nmix',
+ 'NO_EC_nmix',
+ 'PRETRAINED_3_nmix',
+ 'PRETRAINED_0_nmix',
 )
 
 # Assign PREDEFINED_NAMES to RUN_NAMES
 RUN_NAMES=("${PREDEFINED_NAMES[@]}")
 
-RUN_NAME=${RUN_NAMES[$SLURM_ARRAY_TASK_ID - 1]} # Arrays are 0-indexed
-python eval_gen_v2.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split train --sample_size 10000
-#python eval_gen_v2.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split test
+# Calculate the 0-based index for the current task
+INDEX=$((SLURM_ARRAY_TASK_ID - 1))
+
+# Determine the split based on the index
+if [ "$INDEX" -lt 6 ]; then
+  SPLIT="valid"
+else
+  SPLIT="test"
+  INDEX=$((INDEX - 6)) # Adjust the index if greater than 6
+fi
+
+RUN_NAME=${RUN_NAMES[$INDEX]}
+
+# Run the Python evaluation script
+python eval_gen_v2.py --run_name $RUN_NAME --res_base ${RESULTS_DIR} --bs 16 --split $SPLIT

@@ -26,12 +26,15 @@ logger.setLevel(rkl.ERROR)
 rkrb.DisableLog("rdApp.error")
 
 
-def tokens_to_canonical_smiles(tokenizer, tokens):
+
+def tokens_to_canonical_smiles(tokenizer, tokens,remove_stereo=False):
     smiles = tokenizer.decode(tokens, skip_special_tokens=True)
     smiles = smiles.replace(" ", "")
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         return smiles
+    if remove_stereo:
+        Chem.RemoveStereochemistry(mol)
     return Chem.MolToSmiles(mol, canonical=True)
 
 
