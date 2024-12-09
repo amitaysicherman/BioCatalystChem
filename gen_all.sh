@@ -10,12 +10,12 @@
 RESULTS_DIR="results/"
 
 PREDEFINED_NAMES=(
- 'PAPER_nmix',
- 'PRETRAINED_1_nmix',
- 'PRETRAINED_2_nmix',
- 'NO_EC_nmix',
- 'PRETRAINED_3_nmix',
- 'PRETRAINED_0_nmix',
+ 'PAPER_nmix'
+ 'PRETRAINED_1_nmix'
+ 'PRETRAINED_2_nmix'
+ 'NO_EC_nmix'
+ 'PRETRAINED_3_nmix'
+ 'PRETRAINED_0_nmix'
 )
 
 # Assign PREDEFINED_NAMES to RUN_NAMES
