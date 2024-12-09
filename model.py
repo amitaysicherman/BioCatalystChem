@@ -121,6 +121,30 @@ class DockingAwareAttention(nn.Module):
         return res
 
 
+class Bottleneck(nn.Module):
+    def __init__(self, input_dim, k,low_dim):
+        super(Bottleneck, self).__init__()
+        self.input_dim = input_dim
+
+        self.k = k
+        self.low_dim = low_dim
+        self.bottlenecks = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(input_dim, low_dim),
+                nn.ReLU(),
+                nn.Linear(low_dim, input_dim)
+            ) for _ in range(k)])
+
+    def forward(self, x):
+        # x is of shape (batch_size, 1, input_dim)
+        x = x.squeeze(1) # (batch_size, input_dim)
+        output=[]
+        for bottleneck in self.bottlenecks:
+            output.append(bottleneck(x).unsqueeze(1))
+        return torch.cat(output, dim=1) # (batch_size, k, input_dim)
+
+
+
 def get_layers(dims, dropout=0.0):
     layers = torch.nn.Sequential()
     for i in range(len(dims) - 1):
@@ -133,19 +157,28 @@ def get_layers(dims, dropout=0.0):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, daa_type, add_mode, prot_dim=2560, lin_attn=False):
+    def __init__(self, config: T5Config, daa_type, add_mode, prot_dim=2560, lin_attn=False,n_bottlenecks=0,bottlenecks_low_dim=64,emb_dropout=0.0):
 
         super(CustomT5Model, self).__init__(config)
         self.daa_type = DaaType(daa_type)
         self.add_mode = add_mode
         self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, self.daa_type,
                                                        lin_attn=lin_attn)
+        if n_bottlenecks>0:
+            self.bottleneck = Bottleneck(config.d_model,n_bottlenecks,bottlenecks_low_dim)
+        if emb_dropout > 0:
+            self.dropout = nn.Dropout(emb_dropout)
 
     def prep_input_embeddings(self, input_ids, attention_mask, emb, emb_mask, docking_scores):
         input_embeddings = self.shared(input_ids)  # Shape: (batch_size, sequence_length, embedding_dim)
         batch_size, seq_length, emb_dim = input_embeddings.shape
         emb = self.docking_attention(emb, docking_scores, mask=emb_mask)[:, 0]  # CLS token
         emb = emb.unsqueeze(1)
+        if hasattr(self, "bottleneck"):
+            emb = self.bottleneck(emb)
+        if hasattr(self, "dropout"):
+            emb = self.dropout(emb)
+
         if not self.add_mode:
             new_input_embeddings = torch.cat([emb, input_embeddings], dim=1)
             # Update attention mask
@@ -198,18 +231,24 @@ if __name__ == "__main__":
     config = T5Config(vocab_size=len(tokenizer.get_vocab()), pad_token_id=tokenizer.pad_token_id,
                       eos_token_id=tokenizer.eos_token_id,
                       decoder_start_token_id=tokenizer.pad_token_id)
-    for daa_type in [0, 1, 2, 3]:
-        for lin_attn in [0, 1]:
-            print(daa_type, lin_attn)
-            model = CustomT5Model(config, daa_type, add_mode=False, prot_dim=2560, lin_attn=lin_attn)
-            # print number of parameters
-            n1 = sum(p.numel() for p in model.parameters())
-            print(f"Number of parameters:{n1:,}")
-            # number of params in the docking_attention submodule
-            n2 = sum(p.numel() for p in model.docking_attention.parameters())
-            print(f"Number of parameters in docking_attention:{n2:,}")
-            # print number of parameters for each layer in docking_attention
-            for name, param in model.docking_attention.named_parameters():
-                print(name, f'{param.numel():,}')
-            print("==" * 20)
-#
+    # for daa_type in [0, 1, 2, 3]:
+    #     for lin_attn in [0, 1]:
+    daa_type = 3
+    lin_attn = 0
+    for n_bottlenecks in [0, 1, 2]:
+        for bottlenecks_low_dim in [64, 128]:
+            for emb_dropout in [0.0, 0.1, 0.2]:
+                print(daa_type, lin_attn, n_bottlenecks, bottlenecks_low_dim, emb_dropout)
+                model = CustomT5Model(config, daa_type, add_mode=False, prot_dim=2560, lin_attn=lin_attn,
+                                      n_bottlenecks=n_bottlenecks, bottlenecks_low_dim=bottlenecks_low_dim,
+                                      emb_dropout=emb_dropout)
+                # print number of parameters
+                n1 = sum(p.numel() for p in model.parameters())
+                print(f"Number of parameters:{n1:,}")
+                # number of params in the docking_attention submodule
+                n2 = sum(p.numel() for p in model.docking_attention.parameters())
+                print(f"Number of parameters in docking_attention:{n2:,}")
+                # print number of parameters for each layer in docking_attention
+                for name, param in model.docking_attention.named_parameters():
+                    print(name, f'{param.numel():,}')
+                print("==" * 20)
