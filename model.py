@@ -15,7 +15,6 @@ class DaaType(Enum):
 
 class DockingAwareAttentionLastPredictionWeight:
     def __init__(self):
-        self.mean_weight = None
         self.docking_weight = None
         self.attention_weight = None
 
@@ -128,10 +127,6 @@ class DockingAwareAttention(nn.Module):
         return self.alpha * x_mean + self.beta * x_docking + x_attention
 
     def forward(self, x, docking_scores, mask=None):
-        if mask is not None:
-            self.prediction_weight.attention_weight = mask.float().sum(dim=1).detach().cpu().numpy()
-        else:
-            self.prediction_weight.attention_weight = torch.ones(x.size(0)).cpu().numpy()*x.size(1)
         res = self._forward(x, docking_scores, mask)
         res = self.out_proj(res)
         res = self.replace_empty_emb(res, docking_scores)
