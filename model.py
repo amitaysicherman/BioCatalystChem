@@ -98,7 +98,7 @@ class DockingAwareAttention(nn.Module):
                 attn_mask = mask.bool().unsqueeze(1).unsqueeze(2)
                 attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))
             attn_weights = F.softmax(attn_weights, dim=-1)
-            self.prediction_weight.attention_weight = attn_weights[:,:,0,:].squeeze(2).mean(-1).detach().cpu().numpy()# (batch_size, num_heads, seq_len, seq_len)
+            self.prediction_weight.attention_weight = attn_weights[:,:,0,:].squeeze(2).mean(1).detach().cpu().numpy()# (batch_size, num_heads, seq_len, seq_len)
             context = torch.matmul(attn_weights, V)
             context = context.transpose(1, 2).reshape(batch_size, seq_len, self.input_dim)
             return context[:, 0, :].unsqueeze(1)
