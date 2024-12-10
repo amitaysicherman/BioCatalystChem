@@ -13,6 +13,15 @@ class DaaType(Enum):
     ALL = 3
 
 
+class DockingAwareAttentionLastPredictionWeight:
+    def __init__(self):
+        self.alpha = None
+        self.beta = None
+        self.mean_weight = None
+        self.docking_weight = None
+        self.attention_weight = None
+
+
 class DockingAwareAttention(nn.Module):
     def __init__(self, input_dim, output_dim, num_heads, daa_type=DaaType.ALL, lin_attn=False):
         super(DockingAwareAttention, self).__init__()
@@ -21,6 +30,7 @@ class DockingAwareAttention(nn.Module):
         self.num_heads = num_heads
         self.head_dim = input_dim // num_heads
         self.daa_type = daa_type
+        self.prediction_weight =  DockingAwareAttentionLastPredictionWeight()
 
         # Ensure input dimension is divisible by number of heads
         assert input_dim % num_heads == 0, "input_dim must be divisible by num_heads"
@@ -62,10 +72,11 @@ class DockingAwareAttention(nn.Module):
         return x.mean(dim=1).unsqueeze(1)
 
     def _forward_docking(self, x, docking_scores, mask=None):
-        docking_scores = docking_scores.unsqueeze(-1)
+        docking_scores = docking_scores.unsqueeze(-1) # (batch_size, seq_len, 1)
         if mask is not None:
             d_mask = mask.bool().unsqueeze(-1)
             docking_scores = docking_scores.masked_fill(~d_mask, 0)
+        self.prediction_weight.docking_weight=docking_scores.cpu().numpy()
         return (docking_scores * x).sum(dim=1).unsqueeze(1)
 
     def _forward_attention(self, x, docking_scores, mask=None):
@@ -76,7 +87,9 @@ class DockingAwareAttention(nn.Module):
                 attn_mask = mask.bool()
                 attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))  # (batch_size, seq_len)
             attn_weights = F.softmax(attn_weights, dim=-1)  # (batch_size, seq_len)
+            self.prediction_weight.attention_weight = attn_weights.cpu().numpy()
             attn_weights = attn_weights.unsqueeze(-1)  # (batch_size, seq_len, 1)
+
             return (attn_weights * x).sum(dim=1).unsqueeze(1)  # (batch_size, 1, input_dim)
 
         else:
@@ -88,6 +101,7 @@ class DockingAwareAttention(nn.Module):
                 attn_mask = mask.bool().unsqueeze(1).unsqueeze(2)
                 attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))
             attn_weights = F.softmax(attn_weights, dim=-1)
+            self.prediction_weight.attention_weight = attn_weights.cpu().numpy()
             context = torch.matmul(attn_weights, V)
             context = context.transpose(1, 2).reshape(batch_size, seq_len, self.input_dim)
             return context[:, 0, :].unsqueeze(1)
@@ -115,6 +129,21 @@ class DockingAwareAttention(nn.Module):
         return self.alpha * x_mean + self.beta * x_docking + x_attention
 
     def forward(self, x, docking_scores, mask=None):
+        # Save alpha and beta as float values
+        self.prediction_weight.mean_weight = self.alpha.item()
+        self.prediction_weight.docking_weight = self.beta.item()
+        # prediction_weight.mean_weight
+        # if mask is not none -  1/mask.sum() == 1, else 1/x.size(1)
+        if mask is not None:
+            self.prediction_weight.attention_weight = mask.float().sum(dim=1).cpu().numpy()
+        else:
+            self.prediction_weight.attention_weight = x.size(1)*torch.ones(x.size(0)).cpu().numpy()
+        if mask is not None:
+            mask = mask.float()
+            mask = mask / mask.sum(dim=1, keepdim=True)
+        else:
+            mask = 1 / x.size(1)
+        self.prediction_weight.mean_weight
         res = self._forward(x, docking_scores, mask)
         res = self.out_proj(res)
         res = self.replace_empty_emb(res, docking_scores)
@@ -122,7 +151,7 @@ class DockingAwareAttention(nn.Module):
 
 
 class Bottleneck(nn.Module):
-    def __init__(self, input_dim, k,low_dim):
+    def __init__(self, input_dim, k, low_dim):
         super(Bottleneck, self).__init__()
         self.input_dim = input_dim
 
@@ -137,12 +166,11 @@ class Bottleneck(nn.Module):
 
     def forward(self, x):
         # x is of shape (batch_size, 1, input_dim)
-        x = x.squeeze(1) # (batch_size, input_dim)
-        output=[]
+        x = x.squeeze(1)  # (batch_size, input_dim)
+        output = []
         for bottleneck in self.bottlenecks:
             output.append(bottleneck(x).unsqueeze(1))
-        return torch.cat(output, dim=1) # (batch_size, k, input_dim)
-
+        return torch.cat(output, dim=1)  # (batch_size, k, input_dim)
 
 
 def get_layers(dims, dropout=0.0):
@@ -157,15 +185,16 @@ def get_layers(dims, dropout=0.0):
 
 
 class CustomT5Model(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, daa_type, add_mode, prot_dim=2560, lin_attn=False,n_bottlenecks=0,bottlenecks_low_dim=64,emb_dropout=0.0):
+    def __init__(self, config: T5Config, daa_type, add_mode, prot_dim=2560, lin_attn=False, n_bottlenecks=0,
+                 bottlenecks_low_dim=64, emb_dropout=0.0):
 
         super(CustomT5Model, self).__init__(config)
         self.daa_type = DaaType(daa_type)
         self.add_mode = add_mode
         self.docking_attention = DockingAwareAttention(prot_dim, config.d_model, config.num_heads, self.daa_type,
                                                        lin_attn=lin_attn)
-        if n_bottlenecks>0:
-            self.bottleneck = Bottleneck(config.d_model,n_bottlenecks,bottlenecks_low_dim)
+        if n_bottlenecks > 0:
+            self.bottleneck = Bottleneck(config.d_model, n_bottlenecks, bottlenecks_low_dim)
         if emb_dropout > 0:
             self.dropout = nn.Dropout(emb_dropout)
 
