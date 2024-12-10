@@ -76,7 +76,7 @@ class DockingAwareAttention(nn.Module):
         if mask is not None:
             d_mask = mask.bool().unsqueeze(-1)
             docking_scores = docking_scores.masked_fill(~d_mask, 0)
-        self.prediction_weight.docking_weight=docking_scores.cpu().numpy()
+        self.prediction_weight.docking_weight=docking_scores.detach().cpu().numpy()
         return (docking_scores * x).sum(dim=1).unsqueeze(1)
 
     def _forward_attention(self, x, docking_scores, mask=None):
@@ -87,7 +87,7 @@ class DockingAwareAttention(nn.Module):
                 attn_mask = mask.bool()
                 attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))  # (batch_size, seq_len)
             attn_weights = F.softmax(attn_weights, dim=-1)  # (batch_size, seq_len)
-            self.prediction_weight.attention_weight = attn_weights.cpu().numpy()
+            self.prediction_weight.attention_weight = attn_weights.detach().cpu().numpy()
             attn_weights = attn_weights.unsqueeze(-1)  # (batch_size, seq_len, 1)
 
             return (attn_weights * x).sum(dim=1).unsqueeze(1)  # (batch_size, 1, input_dim)
@@ -101,7 +101,7 @@ class DockingAwareAttention(nn.Module):
                 attn_mask = mask.bool().unsqueeze(1).unsqueeze(2)
                 attn_weights = attn_weights.masked_fill(~attn_mask, float('-inf'))
             attn_weights = F.softmax(attn_weights, dim=-1)
-            self.prediction_weight.attention_weight = attn_weights.cpu().numpy()
+            self.prediction_weight.attention_weight = attn_weights.detach().cpu().numpy()
             context = torch.matmul(attn_weights, V)
             context = context.transpose(1, 2).reshape(batch_size, seq_len, self.input_dim)
             return context[:, 0, :].unsqueeze(1)
@@ -135,15 +135,9 @@ class DockingAwareAttention(nn.Module):
         # prediction_weight.mean_weight
         # if mask is not none -  1/mask.sum() == 1, else 1/x.size(1)
         if mask is not None:
-            self.prediction_weight.attention_weight = mask.float().sum(dim=1).cpu().numpy()
+            self.prediction_weight.attention_weight = mask.float().sum(dim=1).detach().cpu().numpy()
         else:
             self.prediction_weight.attention_weight = x.size(1)*torch.ones(x.size(0)).cpu().numpy()
-        if mask is not None:
-            mask = mask.float()
-            mask = mask / mask.sum(dim=1, keepdim=True)
-        else:
-            mask = 1 / x.size(1)
-        self.prediction_weight.mean_weight
         res = self._forward(x, docking_scores, mask)
         res = self.out_proj(res)
         res = self.replace_empty_emb(res, docking_scores)
