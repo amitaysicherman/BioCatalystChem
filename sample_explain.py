@@ -1,3 +1,4 @@
+import numpy as np
 from transformers import PreTrainedTokenizerFast
 from transformers import T5ForConditionalGeneration, T5Config
 from preprocessing.build_tokenizer import get_tokenizer_file_path
@@ -8,6 +9,11 @@ from finetune_ecreact_v2 import CustomDataCollatorForSeq2Seq
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from rdkit import Chem
+from rdkit.Chem import AllChem
+from PIL import Image
+import io
+from collections import defaultdict
+import pandas as pd
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -174,6 +180,68 @@ def plot_difference_with_annotations(correct_smiles, incorrect_smiles, label_smi
     plt.show()
 
 
+
+
+def draw_reaction_to_plt(reaction_smiles):
+    """
+    Draws a reaction from its SMILES representation and displays it in a matplotlib figure.
+
+    Args:
+        reaction_smiles (str): SMILES string of the reaction (e.g., 'CCO.O=O>>CC(O)O').
+    """
+    try:
+        # Parse the reaction SMILES into RDKit Reaction object
+        reaction = AllChem.ReactionFromSmarts(reaction_smiles)
+        if not reaction:
+            print("Invalid reaction SMILES.")
+            return
+
+        # Draw the reaction to a PIL image
+        img = Draw.ReactionToImage(reaction, subImgSize=(300, 300))
+
+        # Convert PIL image to a format compatible with matplotlib
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        img = Image.open(buf)
+
+        # Plot the image using matplotlib
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.imshow(img)
+        ax.axis("off")  # Turn off axes
+        plt.show()
+
+    except Exception as e:
+        print(f"Error while drawing reaction: {e}")
+
+
+from vis.pymol_prot_mols import get_residue_ids_from_pdb, v_cmap
+from vis.utils import replace_local_pathes
+def create_pymol_script_with_sdf(pdb_file: str, color_values,output_script):
+    residue_ids = get_residue_ids_from_pdb(pdb_file)
+    with open(output_script, 'w') as f:
+        f.write(f"load {pdb_file}, protein\n")
+        for (chain_id, res_num), value in zip(residue_ids, color_values):
+            r, g, b, _ = v_cmap(value)
+            f.write(f"set_color color_{chain_id}_{res_num}, [{r}, {g}, {b}]\n")
+            f.write(f"color color_{chain_id}_{res_num}, protein and chain {chain_id} and resi {res_num}\n")
+        f.write("show cartoon, protein\n")
+    print(f"PyMOL script '{output_script}' created successfully.")
+
+
+def get_line_by_id(id_):
+    with open("datasets/ecreact/level4/src-test.txt") as f:
+        lines = f.read().splitlines()
+    return lines[id_]
+
+ec_mapping = pd.read_csv("datasets/ec_map.csv")
+ec_to_uniprot = defaultdict(str)
+for i, row in ec_mapping.iterrows():
+    ec_to_uniprot[row["EC_full"]] = row["Uniprot_id"]
+def uniprot_to_pdb_file(uniprot_id):
+    return f"datasets/pdb_files/{uniprot_id}/{uniprot_id}_esmfold.pdb"
+
+
 for i, batch in tqdm(enumerate(dataset), total=len(dataset)):
     batch_ids, input_ids, attention_mask, labels, emb, scores, emb_mask = batch_to_type(batch)
 
@@ -191,10 +259,23 @@ for i, batch in tqdm(enumerate(dataset), total=len(dataset)):
     baseline_is_correct = label_smiles == baseline_preds
     if model_is_correct and not baseline_is_correct:
         print(f"Found first case where model is correct and baseline is not, at batch ID {id_}.")
-        plot_difference_with_annotations(
-            correct_smiles=model_preds,
-            incorrect_smiles=baseline_preds,
-            label_smiles=label_smiles,
-            title=f"Batch ID: {id_}",
-        )
+        input_smiles = tokens_to_canonical_smiles(tokenizer, input_ids[0])
+        line,ec= get_line_by_id(id_).split("|")
+        pdb_file=uniprot_to_pdb_file(ec_to_uniprot[ec])
+        n=len(scores[0])-2
+        s_mean=np.ones(n)*(1/n)
+        s_dock=scores[0][1:-1].detach().cpu().numpy()
+        s_attn=model.docking_attention.prediction_weight.attention_weight
+        for (s,att) in [(s_mean,"mean"),(s_dock,"dock"),(s_attn,"attn")]:
+            create_pymol_script_with_sdf(pdb_file, s, f"vis/figures/protein_molecules_{id_}_{att}.pml")
+            replace_local_pathes(f"vis/figures/protein_molecules_{id_}_{att}.pml")
+        # create_pymol_script_with_sdf()
+        # reaction_smiles =f"{input_smiles}>>{label_smiles}"
+        # draw_reaction_to_plt(reaction_smiles)
+        # plot_difference_with_annotations(
+        #     correct_smiles=model_preds,
+        #     incorrect_smiles=baseline_preds,
+        #     label_smiles=label_smiles,
+        #     title=f"Batch ID: {id_}",
+        # )
 

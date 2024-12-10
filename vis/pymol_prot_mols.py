@@ -78,43 +78,44 @@ def plot_tsne(all_vecs, uniport_to_ec, protein_id, mol_ids=None):
     plt.close(fig)
 
 
-import argparse
+if __name__ == "__main__":
+    import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--protein_id", type=str, default=["E9P8D2", "F0E1K6","H2K888"], nargs="+")
-args = parser.parse_args()
-id_to_smile, smile_to_id, uniport_to_ec = load_maps()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--protein_id", type=str, default=["E9P8D2", "F0E1K6","H2K888"], nargs="+")
+    args = parser.parse_args()
+    id_to_smile, smile_to_id, uniport_to_ec = load_maps()
 
-all_vecs = []
-all_mols_ids = []
-for protein_id in args.protein_id:
-    protein_vecs = []
-    protein_ec = uniport_to_ec[protein_id]
-    pdb_file = f"datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb"
-    molecules_ids = os.listdir(f"datasets/docking2/{protein_id}")
-    c1 = len(molecules_ids)
-    molecules_ids = remove_dup_mis_mols(molecules_ids, id_to_smile)
-    c2 = len(molecules_ids)
-    print(f"Found {c1} molecules for protein {protein_id}, after removing duplicates: {c2}")
-    for m in molecules_ids:
-        sdf_files = glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf")
-        mc1 = len(sdf_files)
-        sdf_files = filter_molecule_by_len(sdf_files, 0.5)
-        mc2 = len(sdf_files)
-        print(f"Found {mc1} molecules for protein {protein_id}, after filtering by length: {mc2}")
-        docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
-        if len(protein_vecs) == 0:
-            protein_vecs.append(get_protein_mol_att(protein_id, m, 0.0, True, return_weights=False))
-            all_mols_ids.append("-")
-        protein_vecs.append(docking_attention_emd)
-        all_mols_ids.append(m)
-        plot_w(w, protein_id, m)
-        w = MinMaxScaler(feature_range=(0, 1)).fit_transform(np.log(w).reshape(-1, 1)).flatten()
-        output_script = f"vis/scripts/protein_molecules_{protein_id}_{m}.pml"
-        create_pymol_script_with_sdf(pdb_file, sdf_files, w, output_script=output_script)
-        replace_local_pathes(output_script)
-    all_vecs.append(protein_vecs)
+    all_vecs = []
+    all_mols_ids = []
+    for protein_id in args.protein_id:
+        protein_vecs = []
+        protein_ec = uniport_to_ec[protein_id]
+        pdb_file = f"datasets/pdb_files/{protein_id}/{protein_id}_esmfold.pdb"
+        molecules_ids = os.listdir(f"datasets/docking2/{protein_id}")
+        c1 = len(molecules_ids)
+        molecules_ids = remove_dup_mis_mols(molecules_ids, id_to_smile)
+        c2 = len(molecules_ids)
+        print(f"Found {c1} molecules for protein {protein_id}, after removing duplicates: {c2}")
+        for m in molecules_ids:
+            sdf_files = glob.glob(f"datasets/docking2/{protein_id}/{m}/complex_0/*.sdf")
+            mc1 = len(sdf_files)
+            sdf_files = filter_molecule_by_len(sdf_files, 0.5)
+            mc2 = len(sdf_files)
+            print(f"Found {mc1} molecules for protein {protein_id}, after filtering by length: {mc2}")
+            docking_attention_emd, w = get_protein_mol_att(protein_id, m, 0.9, True, return_weights=True)
+            if len(protein_vecs) == 0:
+                protein_vecs.append(get_protein_mol_att(protein_id, m, 0.0, True, return_weights=False))
+                all_mols_ids.append("-")
+            protein_vecs.append(docking_attention_emd)
+            all_mols_ids.append(m)
+            plot_w(w, protein_id, m)
+            w = MinMaxScaler(feature_range=(0, 1)).fit_transform(np.log(w).reshape(-1, 1)).flatten()
+            output_script = f"vis/scripts/protein_molecules_{protein_id}_{m}.pml"
+            create_pymol_script_with_sdf(pdb_file, sdf_files, w, output_script=output_script)
+            replace_local_pathes(output_script)
+        all_vecs.append(protein_vecs)
 
-# create 2D plot of protein embeddings with TSNE
-plot_tsne(all_vecs, uniport_to_ec, args.protein_id)
-plot_tsne(all_vecs, uniport_to_ec, args.protein_id, all_mols_ids)
+    # create 2D plot of protein embeddings with TSNE
+    plot_tsne(all_vecs, uniport_to_ec, args.protein_id)
+    plot_tsne(all_vecs, uniport_to_ec, args.protein_id, all_mols_ids)
